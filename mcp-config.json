@@ -1,0 +1,9 @@
+{
+  "name": "azure-devops-bot",
+  "description": "Azure DevOps work items MCP server",
+  "command": "tsx",
+  "args": ["src/mcp-server.ts"],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
