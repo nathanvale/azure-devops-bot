@@ -11,7 +11,13 @@
     "mcp": "tsx src/mcp-server.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:integration": "vitest --project=mcp-integration",
+    "test:unit": "vitest --exclude=./tests/integration/**/*.test.ts",
+    "test:ci": "vitest --run --coverage",
+    "db:reset": "rm -f prisma/dev.db && pnpm prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
@@ -20,9 +26,14 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.15.0",
     "@prisma/client": "^6.11.1",
-    "@types/node": "^24.0.10",
     "prisma": "^6.11.1",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10",
+    "@vitest/coverage-v8": "^3.2.4",
+    "msw": "^2.10.3",
+    "vitest": "^3.2.4"
   }
 }

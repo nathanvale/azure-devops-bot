@@ -26,8 +26,25 @@ export class SyncService {
     }
   }
   
+  private getSyncInterval(): number {
+    const envInterval = process.env.AZURE_DEVOPS_SYNC_INTERVAL_MINUTES;
+    const defaultInterval = 5; // 5 minutes default
+    
+    if (envInterval) {
+      const parsed = parseInt(envInterval, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        console.warn(`⚠️  Invalid AZURE_DEVOPS_SYNC_INTERVAL_MINUTES value: ${envInterval}. Using default ${defaultInterval} minutes.`);
+        return defaultInterval * 60 * 1000;
+      }
+      return parsed * 60 * 1000;
+    }
+    
+    return defaultInterval * 60 * 1000;
+  }
+
   async startBackgroundSync(): Promise<void> {
-    const SYNC_INTERVAL = 30 * 60 * 1000; // 30 minutes
+    const SYNC_INTERVAL = this.getSyncInterval();
+    const intervalMinutes = SYNC_INTERVAL / (60 * 1000);
     
     this.syncInterval = setInterval(async () => {
       try {
@@ -37,7 +54,7 @@ export class SyncService {
       }
     }, SYNC_INTERVAL);
     
-    console.log('🔄 Background sync started (every 30 minutes)');
+    console.log(`🔄 Background sync started (every ${intervalMinutes} minutes)`);
   }
   
   stopBackgroundSync(): void {

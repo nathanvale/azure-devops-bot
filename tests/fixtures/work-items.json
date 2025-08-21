@@ -1,0 +1,111 @@
+{
+  "activeWorkItems": [
+    {
+      "id": 1234,
+      "rev": 1,
+      "fields": {
+        "System.Id": 1234,
+        "System.Title": "Implement user authentication",
+        "System.State": "Active",
+        "System.WorkItemType": "User Story",
+        "System.AssignedTo": {
+          "displayName": "Nathan Vale",
+          "uniqueName": "nathan.vale@example.com"
+        },
+        "System.CreatedDate": "2025-01-01T10:00:00Z",
+        "System.ChangedDate": "2025-01-08T10:00:00Z",
+        "System.AreaPath": "Customer Services Platform",
+        "System.IterationPath": "Customer Services Platform\\Sprint 1",
+        "Microsoft.VSTS.Common.Priority": 1,
+        "Microsoft.VSTS.Common.Severity": "2 - High",
+        "System.Description": "As a user, I want to authenticate so that I can access the system"
+      }
+    },
+    {
+      "id": 9876,
+      "rev": 1,
+      "fields": {
+        "System.Id": 9876,
+        "System.Title": "Create API endpoints",
+        "System.State": "Active",
+        "System.WorkItemType": "Task",
+        "System.AssignedTo": {
+          "displayName": "Nathan Vale",
+          "uniqueName": "nathan.vale@example.com"
+        },
+        "System.CreatedDate": "2025-01-02T10:00:00Z",
+        "System.ChangedDate": "2025-01-08T10:00:00Z",
+        "System.AreaPath": "Customer Services Platform",
+        "System.IterationPath": "Customer Services Platform\\Sprint 1",
+        "Microsoft.VSTS.Common.Priority": 2,
+        "System.Description": "Create REST API endpoints for user management"
+      }
+    }
+  ],
+  "completedWorkItems": [
+    {
+      "id": 5678,
+      "rev": 1,
+      "fields": {
+        "System.Id": 5678,
+        "System.Title": "Setup CI/CD pipeline",
+        "System.State": "Done",
+        "System.WorkItemType": "Task",
+        "System.AssignedTo": {
+          "displayName": "Nathan Vale",
+          "uniqueName": "nathan.vale@example.com"
+        },
+        "System.CreatedDate": "2024-12-15T10:00:00Z",
+        "System.ChangedDate": "2025-01-05T10:00:00Z",
+        "System.AreaPath": "Customer Services Platform",
+        "System.IterationPath": "Customer Services Platform\\Sprint 1",
+        "Microsoft.VSTS.Common.Priority": 2,
+        "System.Description": "Setup automated build and deployment pipeline"
+      }
+    }
+  ],
+  "userStories": [
+    {
+      "id": 1234,
+      "rev": 1,
+      "fields": {
+        "System.Id": 1234,
+        "System.Title": "Implement user authentication",
+        "System.State": "Active",
+        "System.WorkItemType": "User Story",
+        "System.AssignedTo": {
+          "displayName": "Nathan Vale",
+          "uniqueName": "nathan.vale@example.com"
+        },
+        "System.CreatedDate": "2025-01-01T10:00:00Z",
+        "System.ChangedDate": "2025-01-08T10:00:00Z",
+        "System.AreaPath": "Customer Services Platform",
+        "System.IterationPath": "Customer Services Platform\\Sprint 1",
+        "Microsoft.VSTS.Common.Priority": 1,
+        "Microsoft.VSTS.Common.Severity": "2 - High",
+        "System.Description": "As a user, I want to authenticate so that I can access the system",
+        "Microsoft.VSTS.Common.AcceptanceCriteria": "Given a user with valid credentials\nWhen they attempt to log in\nThen they should be authenticated and redirected to the dashboard"
+      }
+    }
+  ],
+  "newWorkItem": {
+    "id": 12345,
+    "rev": 1,
+    "fields": {
+      "System.Id": 12345,
+      "System.Title": "New Test Work Item",
+      "System.State": "New",
+      "System.WorkItemType": "User Story",
+      "System.AssignedTo": {
+        "displayName": "Nathan Vale",
+        "uniqueName": "nathan.vale@example.com"
+      },
+      "System.CreatedDate": "2025-01-08T10:00:00Z",
+      "System.ChangedDate": "2025-01-08T10:00:00Z",
+      "System.AreaPath": "Customer Services Platform",
+      "System.IterationPath": "Customer Services Platform\\Current Sprint",
+      "Microsoft.VSTS.Common.Priority": 2,
+      "System.Description": "A test work item for validation"
+    }
+  }
+}

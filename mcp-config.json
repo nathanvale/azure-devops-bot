@@ -2,7 +2,10 @@
   "name": "azure-devops-bot",
   "description": "Azure DevOps work items MCP server",
   "command": "tsx",
-  "args": ["src/mcp-server.ts"],
+  "args": [
+    "src/mcp-server.ts",
+    "--emails=nathan.vale@fwc.gov.au,ITEX-NV@fwc.gov.au"
+  ],
   "env": {
     "NODE_ENV": "production"
   }

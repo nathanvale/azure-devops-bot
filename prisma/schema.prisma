@@ -11,14 +11,97 @@ datasource db {
 }
 
 model WorkItem {
-  id              Int      @id
-  title           String
-  state           String
-  type            String
-  assignedTo      String
-  azureUrl        String
-  lastUpdatedAt   DateTime
-  lastSyncedAt    DateTime @default(now())
+  id                Int      @id
+  title             String
+  state             String
+  type              String
+  assignedTo        String
+  azureUrl          String
+  description       String?
   
+  // Sprint/Board Info (for your reports)
+  iterationPath     String?  // e.g., "S3-Sprint 15"
+  areaPath          String?  // e.g., "Stage 3 Team"
+  boardColumn       String?  // e.g., "2. Build"
+  boardColumnDone   Boolean  @default(false)
+  
+  // Priority/Tags
+  priority          Int?
+  severity          String?
+  tags              String?  // JSON array as string
+  
+  // All the dates
+  createdDate       DateTime?
+  changedDate       DateTime? // For "Days Since Updated" 
+  closedDate        DateTime?
+  resolvedDate      DateTime?
+  activatedDate     DateTime?
+  stateChangeDate   DateTime?
+  
+  // People
+  createdBy         String?
+  changedBy         String?
+  closedBy          String?
+  resolvedBy        String?
+  
+  // Work tracking
+  storyPoints       Float?
+  effort            Float?
+  remainingWork     Float?
+  completedWork     Float?
+  originalEstimate  Float?
+  
+  // Content
+  acceptanceCriteria String?
+  reproSteps         String?
+  systemInfo         String?
+  
+  // Related items
+  parentId          Int?
+  
+  // Additional Azure DevOps fields
+  rev               Int?
+  reason            String?
+  watermark         Int?
+  url               String?
+  commentCount      Int?     @default(0)
+  hasAttachments    Boolean  @default(false)
+  teamProject       String?
+  areaId            Int?
+  nodeId            Int?
+  stackRank         Float?
+  valueArea         String?
+  
+  // Store EVERYTHING from Azure DevOps (backup)
+  rawJson           String
+  
+  // Sync metadata
+  lastUpdatedAt     DateTime
+  lastSyncedAt      DateTime @default(now())
+  
+  // Relations
+  comments          WorkItemComment[]
+  
+  @@index([type])
+  @@index([state])
+  @@index([assignedTo])
+  @@index([iterationPath])
+  @@index([changedDate])
+  @@index([createdDate])
   @@map("work_items")
+}
+
+model WorkItemComment {
+  id           String   @id // Azure DevOps comment ID
+  workItemId   Int
+  text         String
+  createdBy    String
+  createdDate  DateTime
+  modifiedBy   String?
+  modifiedDate DateTime?
+  
+  workItem     WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  
+  @@index([workItemId])
+  @@map("work_item_comments")
 }

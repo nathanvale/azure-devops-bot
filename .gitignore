@@ -3,3 +3,11 @@ node_modules
 .env
 
 /src/generated/prisma
+
+dist
+
+.claude/settings.local.json
+
+prisma/dev.db
+
+.logs

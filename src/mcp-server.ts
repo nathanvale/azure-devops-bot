@@ -8,15 +8,18 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { SyncService } from './sync-service.js';
-import { DatabaseService } from './database.js';
-import { QueryEngine } from './query-engine.js';
+import { SyncService } from './services/sync-service.js';
+import { DatabaseService } from './services/database.js';
+import { QueryEngine } from './services/query-engine.js';
+import { AzureDevOpsClient } from './services/azure-devops.js';
+import { AzureAuth } from './services/auth.js';
 
-class AzureDevOpsMCPServer {
+export class AzureDevOpsMCPServer {
   private server: Server;
   private syncService: SyncService;
   private db: DatabaseService;
   private queryEngine: QueryEngine;
+  public userEmails: string[] = [];
 
   constructor() {
     this.server = new Server(
@@ -38,20 +41,42 @@ class AzureDevOpsMCPServer {
     this.setupHandlers();
   }
 
+  private getConfiguredEmails(): string[] {
+    // Check for command line arguments first
+    const args = process.argv.slice(2);
+    const emailArg = args.find(arg => arg.startsWith('--emails='));
+    
+    if (!emailArg) {
+      console.error('Error: Email addresses must be provided via --emails parameter');
+      console.error('Example: pnpm mcp --emails=user1@domain.com,user2@domain.com');
+      process.exit(1);
+    }
+    
+    const emails = emailArg.split('=')[1].split(',').map(email => email.trim()).filter(email => email.length > 0);
+    
+    if (emails.length === 0) {
+      console.error('Error: At least one valid email address must be provided');
+      console.error('Example: pnpm mcp --emails=user1@domain.com,user2@domain.com');
+      process.exit(1);
+    }
+    
+    return emails;
+  }
+
   private setupHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: [
           {
             name: 'get_work_items',
-            description: 'Get all work items assigned to you from Azure DevOps',
+            description: 'Get all work items (stories, bugs, tasks) assigned to you from Azure DevOps',
             inputSchema: {
               type: 'object',
               properties: {
                 filter: {
                   type: 'string',
-                  description: 'Optional filter: "active", "open", "user-stories", or "all"',
-                  enum: ['active', 'open', 'user-stories', 'all']
+                  description: 'Optional filter: "active", "open", "user-stories", "bugs", "tasks", or "all"',
+                  enum: ['active', 'open', 'user-stories', 'bugs', 'tasks', 'all']
                 }
               }
             }
@@ -72,7 +97,7 @@ class AzureDevOpsMCPServer {
           },
           {
             name: 'sync_data',
-            description: 'Manually sync work items from Azure DevOps',
+            description: 'Manually sync all relevant work items (current assignments + completed work) from Azure DevOps',
             inputSchema: {
               type: 'object',
               properties: {}
@@ -135,19 +160,25 @@ class AzureDevOpsMCPServer {
 
     switch (filter) {
       case 'active':
-        items = await this.db.getWorkItemsByState('Active');
+        items = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
         break;
       case 'open':
-        const newItems = await this.db.getWorkItemsByState('New');
-        const activeItems = await this.db.getWorkItemsByState('Active');
-        const inProgressItems = await this.db.getWorkItemsByState('In Progress');
+        const newItems = await this.db.getWorkItemsByStateForUsers('New', this.userEmails);
+        const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
+        const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
         items = [...newItems, ...activeItems, ...inProgressItems];
         break;
       case 'user-stories':
-        items = await this.db.getWorkItemsByType('User Story');
+        items = await this.db.getWorkItemsByTypeForUsers('User Story', this.userEmails);
+        break;
+      case 'bugs':
+        items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails);
+        break;
+      case 'tasks':
+        items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails);
         break;
       default:
-        items = await this.db.getAllWorkItems();
+        items = await this.db.getWorkItemsForUsers(this.userEmails);
     }
 
     return {
@@ -166,7 +197,7 @@ class AzureDevOpsMCPServer {
       throw new Error('Query is required');
     }
 
-    const response = await this.queryEngine.processQuery(query);
+    const response = await this.queryEngine.processQuery(query, this.userEmails);
     
     return {
       content: [
@@ -209,15 +240,22 @@ class AzureDevOpsMCPServer {
     };
   }
 
+
   async start() {
+    // Configure user emails for Azure DevOps queries
+    this.userEmails = this.getConfiguredEmails();
+    AzureDevOpsClient.setUserEmails(this.userEmails);
+    
+    console.error(`Configured to filter for work items assigned to: ${this.userEmails.join(', ')}`);
+
+    // Start background sync (shows interval message)
+    await this.syncService.startBackgroundSync();
+
     // Perform initial sync if needed
     const shouldSync = await this.syncService.shouldSync();
     if (shouldSync) {
       await this.syncService.performSync();
     }
-
-    // Start background sync
-    await this.syncService.startBackgroundSync();
 
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
