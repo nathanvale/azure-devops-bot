@@ -11,3 +11,8 @@ dist
 prisma/dev.db
 
 .logs
+
+coverage
+
+# Obsidian vault files
+.obsidian/

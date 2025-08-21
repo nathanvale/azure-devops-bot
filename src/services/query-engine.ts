@@ -1,82 +1,17 @@
 import { DatabaseService } from './database.js';
-import { EnhancedQueryEngine } from './enhanced-query-engine.js';
 
 export class QueryEngine {
   private db: DatabaseService;
-  private enhancedEngine: EnhancedQueryEngine;
   
   constructor(db: DatabaseService) {
     this.db = db;
-    this.enhancedEngine = new EnhancedQueryEngine(db);
   }
   
   async processQuery(query: string, userEmails?: string[]): Promise<string> {
-    // Try enhanced query processing first
-    const enhancedResult = await this.tryEnhancedQuery(query, userEmails);
-    if (enhancedResult) {
-      return enhancedResult;
-    }
-
-    // Fall back to legacy simple queries for backwards compatibility
-    return this.processLegacyQuery(query, userEmails);
+    return this.processBasicQuery(query, userEmails);
   }
 
-  private async tryEnhancedQuery(query: string, userEmails?: string[]): Promise<string | null> {
-    const normalizedQuery = query.toLowerCase().trim();
-    
-    // Use enhanced engine for complex queries
-    if (this.isComplexQuery(normalizedQuery)) {
-      return await this.enhancedEngine.processQuery(query, userEmails);
-    }
-    
-    return null;
-  }
-
-  private isComplexQuery(query: string): boolean {
-    const normalizedQuery = query.trim().toLowerCase();
-    
-    // Check for simple legacy patterns FIRST to override enhanced indicators
-    const simpleLegacyQueries = [
-      // Exact matches
-      'bugs', 'bug', 'tasks', 'task', 'stories', 'story', 'user stories', 'user story',
-      'today', 'working', 'current', 'open', 'active', 'closed', 'completed', 'done',
-      'historical', 'history', 'past', 'old', 'previous', 'backlog', 'summary', 'all',
-      
-      // Common variations
-      'show me bugs', 'show me tasks', 'show me stories', 'show me user stories',
-      'show me open work items', 'show me open work', 'show me active items',
-      'show me all work items', 'show me my backlog', 'give me a summary',
-      'what am i working on', 'what am i working on today', 'what stories do i have',
-      'show me active work items', 'show me open items'
-    ];
-
-    if (simpleLegacyQueries.includes(normalizedQuery)) {
-      return false;
-    }
-
-    // Enhanced query indicators - only check after ruling out simple legacy patterns
-    const enhancedIndicators = [
-      // Content search with specific patterns
-      'containing', 'related to', 'mention', 'about authentication', 'about database',
-      // Date ranges  
-      'last month', 'last year', 'this year', 'in 202', 'since 202', 'from 202',
-      // Complex combinations 
-      'bugs containing', 'stories with', 'tasks about', 'work items with',
-      // Past tense (completed work) - be specific
-      'fixed', 'solved', 'finished',
-      // Quoted searches
-      '"'
-    ];
-
-    // Check for enhanced indicators
-    if (enhancedIndicators.some(indicator => normalizedQuery.includes(indicator))) {
-      return true;
-    }
-
-    return false;
-  }
-
-  private async processLegacyQuery(query: string, userEmails?: string[]): Promise<string> {
+  private async processBasicQuery(query: string, userEmails?: string[]): Promise<string> {
     const normalizedQuery = query.toLowerCase().trim();
     
     // Simple keyword matching

@@ -79,14 +79,14 @@ export class AzureDevOpsBot {
       
       console.log(`✅ All email addresses validated successfully: ${valid.join(', ')}`);
       
-      // Start background sync (shows interval message)
-      await this.syncService.startBackgroundSync();
+      // Start background detailed sync (shows interval message)
+      await this.syncService.startBackgroundSync(true);
       
       // Check if we need to sync
       const shouldSync = await this.syncService.shouldSync();
       if (shouldSync) {
-        console.log('🔄 Syncing work items...');
-        await this.syncService.performSync();
+        console.log('🔄 Syncing work items with detailed metadata...');
+        await this.syncService.performSyncDetailed();
       }
       
       // Get query from command line args

@@ -57,6 +57,7 @@ describe('AzureDevOpsMCPServer', () => {
     // Setup default mock implementations
     mockSyncService.shouldSync = vi.fn().mockResolvedValue(false)
     mockSyncService.performSync = vi.fn().mockResolvedValue(undefined)
+    mockSyncService.performSyncDetailed = vi.fn().mockResolvedValue(undefined)
     mockSyncService.startBackgroundSync = vi.fn().mockResolvedValue(undefined)
     mockSyncService.close = vi.fn().mockResolvedValue(undefined)
 
@@ -177,8 +178,8 @@ describe('AzureDevOpsMCPServer', () => {
       const result = await listToolsHandler()
       const tool = result.tools.find((t: any) => t.name === 'sync_data')
 
-      expect(tool.description).toContain('Manually sync all relevant work items')
-      expect(tool.inputSchema.properties).toEqual({})
+      expect(tool.description).toContain('Manually sync all work items with detailed metadata')
+      expect(tool.inputSchema.properties).toHaveProperty('concurrency')
     })
 
     it('should define get_work_item_url tool correctly', async () => {
@@ -364,7 +365,15 @@ describe('AzureDevOpsMCPServer', () => {
 
     describe('query_work tool', () => {
       it('should process natural language queries', async () => {
-        mockQueryEngine.processQuery.mockResolvedValue('Query response')
+        const activeItems = [{ id: 1, title: 'Active Item', state: 'Active' }]
+        const inProgressItems = [{ id: 2, title: 'In Progress Item', state: 'In Progress' }]
+        const expectedItems = [...activeItems, ...inProgressItems]
+        
+        mockDb.getWorkItemsByStateForUsers.mockImplementation((state: string) => {
+          if (state === 'Active') return Promise.resolve(activeItems)
+          if (state === 'In Progress') return Promise.resolve(inProgressItems)
+          return Promise.resolve([])
+        })
 
         const result = await callToolHandler({
           params: {
@@ -373,8 +382,9 @@ describe('AzureDevOpsMCPServer', () => {
           }
         })
 
-        expect(mockQueryEngine.processQuery).toHaveBeenCalledWith('show me my active work', ['test@example.com', 'test2@example.com'])
-        expect(result.content[0].text).toBe('Query response')
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('Active', ['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('In Progress', ['test@example.com', 'test2@example.com'])
+        expect(result.content[0].text).toBe(JSON.stringify(expectedItems, null, 2))
       })
 
       it('should handle missing query argument', async () => {
@@ -389,8 +399,8 @@ describe('AzureDevOpsMCPServer', () => {
         expect(result.content[0].text).toContain('Query is required')
       })
 
-      it('should handle query engine errors', async () => {
-        mockQueryEngine.processQuery.mockRejectedValue(new Error('Query failed'))
+      it('should handle database errors', async () => {
+        mockDb.getWorkItemsForUsers.mockRejectedValue(new Error('Database failed'))
 
         const result = await callToolHandler({
           params: {
@@ -400,13 +410,13 @@ describe('AzureDevOpsMCPServer', () => {
         })
 
         expect(result.content[0].text).toContain('Error')
-        expect(result.content[0].text).toContain('Query failed')
+        expect(result.content[0].text).toContain('Database failed')
       })
     })
 
     describe('sync_data tool', () => {
       it('should perform manual sync', async () => {
-        mockSyncService.performSync.mockResolvedValue(undefined)
+        mockSyncService.performSyncDetailed.mockResolvedValue(undefined)
 
         const result = await callToolHandler({
           params: {
@@ -415,12 +425,12 @@ describe('AzureDevOpsMCPServer', () => {
           }
         })
 
-        expect(mockSyncService.performSync).toHaveBeenCalledTimes(1)
-        expect(result.content[0].text).toBe('Successfully synced work items from Azure DevOps')
+        expect(mockSyncService.performSyncDetailed).toHaveBeenCalledTimes(1)
+        expect(result.content[0].text).toBe('Successfully synced work items with detailed metadata from Azure DevOps (concurrency: 5)')
       })
 
       it('should handle sync errors', async () => {
-        mockSyncService.performSync.mockRejectedValue(new Error('Sync failed'))
+        mockSyncService.performSyncDetailed.mockRejectedValue(new Error('Sync failed'))
 
         const result = await callToolHandler({
           params: {
@@ -514,7 +524,7 @@ describe('AzureDevOpsMCPServer', () => {
 
       await server.start()
 
-      expect(mockSyncService.performSync).toHaveBeenCalledTimes(1)
+      expect(mockSyncService.performSyncDetailed).toHaveBeenCalledTimes(1)
     })
 
     it('should skip initial sync when not needed', async () => {
@@ -522,7 +532,7 @@ describe('AzureDevOpsMCPServer', () => {
 
       await server.start()
 
-      expect(mockSyncService.performSync).not.toHaveBeenCalled()
+      expect(mockSyncService.performSyncDetailed).not.toHaveBeenCalled()
     })
 
     it('should start background sync', async () => {
