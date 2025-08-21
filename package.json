@@ -17,7 +17,9 @@
     "test:integration": "vitest --project=mcp-integration",
     "test:unit": "vitest --exclude=./tests/integration/**/*.test.ts",
     "test:ci": "vitest --run --coverage",
-    "db:reset": "rm -f prisma/dev.db && pnpm prisma migrate deploy"
+    "db:reset": "rm -f prisma/dev.db && pnpm prisma migrate deploy",
+    "db:init": "tsx scripts/init-database.ts",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +27,7 @@
   "description": "",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.15.0",
+    "@orchestr8/resilience": "file:../../../@orchestr8/packages/resilience",
     "@prisma/client": "^6.11.1",
     "prisma": "^6.11.1",
     "tsx": "^4.20.3",

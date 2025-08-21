@@ -97,10 +97,17 @@ export class AzureDevOpsMCPServer {
           },
           {
             name: 'sync_data',
-            description: 'Manually sync all relevant work items (current assignments + completed work) from Azure DevOps',
+            description: 'Manually sync all work items with detailed metadata from Azure DevOps using parallel processing',
             inputSchema: {
               type: 'object',
-              properties: {}
+              properties: {
+                concurrency: {
+                  type: 'number',
+                  description: 'Optional concurrency limit for parallel fetching (default: 5)',
+                  minimum: 1,
+                  maximum: 20
+                }
+              }
             }
           },
           {
@@ -133,7 +140,7 @@ export class AzureDevOpsMCPServer {
             return await this.handleQueryWork(args);
           
           case 'sync_data':
-            return await this.handleSyncData();
+            return await this.handleSyncData(args);
           
           case 'get_work_item_url':
             return await this.handleGetWorkItemUrl(args);
@@ -197,26 +204,51 @@ export class AzureDevOpsMCPServer {
       throw new Error('Query is required');
     }
 
-    const response = await this.queryEngine.processQuery(query, this.userEmails);
+    // Simple keyword-based filtering to return raw JSON data
+    const normalizedQuery = query.toLowerCase().trim();
+    let items;
+
+    if (normalizedQuery.includes('bug')) {
+      items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails);
+    } else if (normalizedQuery.includes('task')) {
+      items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails);
+    } else if (normalizedQuery.includes('story') || normalizedQuery.includes('user story')) {
+      items = await this.db.getWorkItemsByTypeForUsers('User Story', this.userEmails);
+    } else if (normalizedQuery.includes('active') || normalizedQuery.includes('current')) {
+      const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
+      const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
+      items = [...activeItems, ...inProgressItems];
+    } else if (normalizedQuery.includes('open')) {
+      const newItems = await this.db.getWorkItemsByStateForUsers('New', this.userEmails);
+      const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
+      const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
+      items = [...newItems, ...activeItems, ...inProgressItems];
+    } else if (normalizedQuery.includes('closed') || normalizedQuery.includes('completed')) {
+      items = await this.db.getWorkItemsByStateForUsers('Closed', this.userEmails);
+    } else {
+      // Default: return all work items
+      items = await this.db.getWorkItemsForUsers(this.userEmails);
+    }
     
     return {
       content: [
         {
           type: 'text',
-          text: response
+          text: JSON.stringify(items, null, 2)
         }
       ]
     };
   }
 
-  private async handleSyncData() {
-    await this.syncService.performSync();
+  private async handleSyncData(args: any) {
+    const concurrency = args?.concurrency || 5;
+    await this.syncService.performSyncDetailed(concurrency);
     
     return {
       content: [
         {
           type: 'text',
-          text: 'Successfully synced work items from Azure DevOps'
+          text: `Successfully synced work items with detailed metadata from Azure DevOps (concurrency: ${concurrency})`
         }
       ]
     };
@@ -248,13 +280,14 @@ export class AzureDevOpsMCPServer {
     
     console.error(`Configured to filter for work items assigned to: ${this.userEmails.join(', ')}`);
 
-    // Start background sync (shows interval message)
-    await this.syncService.startBackgroundSync();
+    // Start background sync using detailed sync (shows interval message)
+    await this.syncService.startBackgroundSync(true);
 
-    // Perform initial sync if needed
+    // Perform initial detailed sync if needed
     const shouldSync = await this.syncService.shouldSync();
     if (shouldSync) {
-      await this.syncService.performSync();
+      console.error('Performing initial detailed sync...');
+      await this.syncService.performSyncDetailed();
     }
 
     const transport = new StdioServerTransport();

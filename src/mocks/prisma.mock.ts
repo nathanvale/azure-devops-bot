@@ -52,6 +52,19 @@ export const mockPrismaClient = {
     deleteMany: vi.fn(),
     count: vi.fn(),
   },
+  workItemComment: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    createMany: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+    count: vi.fn(),
+  },
   syncMetadata: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -72,6 +85,11 @@ export const resetPrismaMocks = () => {
       mock.mockReset()
     }
   })
+  Object.values(mockPrismaClient.workItemComment).forEach(mock => {
+    if (vi.isMockFunction(mock)) {
+      mock.mockReset()
+    }
+  })
   Object.values(mockPrismaClient.syncMetadata).forEach(mock => {
     if (vi.isMockFunction(mock)) {
       mock.mockReset()
@@ -82,6 +100,9 @@ export const resetPrismaMocks = () => {
   }
   if (vi.isMockFunction(mockPrismaClient.$disconnect)) {
     mockPrismaClient.$disconnect.mockReset()
+  }
+  if (vi.isMockFunction(mockPrismaClient.$transaction)) {
+    mockPrismaClient.$transaction.mockReset()
   }
 }
 
@@ -129,6 +150,15 @@ export const setupPrismaDefaults = () => {
   })
   mockPrismaClient.$connect.mockResolvedValue(undefined)
   mockPrismaClient.$disconnect.mockResolvedValue(undefined)
+  mockPrismaClient.$transaction.mockImplementation(async (operations) => {
+    // For normal operation, execute all operations and return array of results
+    if (Array.isArray(operations)) {
+      return await Promise.all(operations)
+    } else {
+      // Handle function-based transactions
+      return await operations(mockPrismaClient)
+    }
+  })
 }
 
 // Mock the @prisma/client module
