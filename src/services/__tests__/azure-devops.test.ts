@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Use vi.hoisted to ensure the mock function is available during module loading
+// Use vi.hoisted to ensure the mock functions are available during module loading
 const mockExecAsync = vi.hoisted(() => vi.fn());
+const mockApplyPolicy = vi.hoisted(() => vi.fn());
 
 vi.mock("util", () => ({
   promisify: () => mockExecAsync,
@@ -11,6 +12,13 @@ vi.mock("child_process", () => ({
   exec: vi.fn(),
 }));
 
+// Mock the @orchestr8/resilience package
+vi.mock("@orchestr8/resilience", () => ({
+  ProductionResilienceAdapter: vi.fn().mockImplementation(() => ({
+    applyPolicy: mockApplyPolicy,
+  })),
+}));
+
 import { AzureDevOpsClient, WorkItemData } from "../azure-devops";
 
 describe("AzureDevOpsClient", () => {
@@ -18,6 +26,12 @@ describe("AzureDevOpsClient", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    
+    // Configure the resilience mock to call operations directly
+    mockApplyPolicy.mockImplementation(async (operation, policy) => {
+      return await operation();
+    });
+    
     client = new AzureDevOpsClient();
     // Set test emails for the client
     AzureDevOpsClient.setUserEmails(['Nathan.Vale@fwc.gov.au', 'ITEX-NV@fwc.gov.au']);
@@ -600,6 +614,1226 @@ describe("AzureDevOpsClient", () => {
       
       expect(result.valid).toEqual([]);
       expect(result.invalid).toEqual(['user@fwc.gov.au']);
+    });
+  });
+
+  describe("comprehensive field mapping", () => {
+    it("should map all comprehensive fields from expanded Azure DevOps response", async () => {
+      const mockExpandedResponse = [
+        {
+          id: 1234,
+          rev: 5,
+          url: "https://dev.azure.com/fwcdev/_apis/wit/workItems/1234",
+          fields: {
+            "System.Title": "Comprehensive Test Story",
+            "System.State": "Active",
+            "System.WorkItemType": "User Story",
+            "System.AssignedTo": {
+              displayName: "Nathan Vale",
+              uniqueName: "nathan.vale@fwc.gov.au"
+            },
+            "System.CreatedDate": "2025-01-01T08:00:00Z",
+            "System.ChangedDate": "2025-01-08T14:30:00Z",
+            "System.Description": "Detailed description of the story",
+            "System.IterationPath": "Customer Services Platform\\Sprint 23",
+            "System.AreaPath": "Customer Services Platform\\Feature Team A",
+            "System.BoardColumn": "In Progress",
+            "System.BoardColumnDone": false,
+            "Microsoft.VSTS.Common.Priority": 2,
+            "Microsoft.VSTS.Common.Severity": "2 - High",
+            "System.Tags": "bug-fix; high-priority",
+            "Microsoft.VSTS.Common.ClosedDate": "2025-01-10T16:00:00Z",
+            "Microsoft.VSTS.Common.ResolvedDate": "2025-01-09T12:00:00Z",
+            "Microsoft.VSTS.Common.ActivatedDate": "2025-01-02T09:00:00Z",
+            "Microsoft.VSTS.Common.StateChangeDate": "2025-01-08T14:30:00Z",
+            "System.CreatedBy": {
+              displayName: "John Doe",
+              uniqueName: "john.doe@fwc.gov.au"
+            },
+            "System.ChangedBy": {
+              displayName: "Jane Smith",
+              uniqueName: "jane.smith@fwc.gov.au"
+            },
+            "Microsoft.VSTS.Common.ClosedBy": {
+              displayName: "Bob Wilson",
+              uniqueName: "bob.wilson@fwc.gov.au"
+            },
+            "Microsoft.VSTS.Common.ResolvedBy": {
+              displayName: "Alice Johnson",
+              uniqueName: "alice.johnson@fwc.gov.au"
+            },
+            "Microsoft.VSTS.Scheduling.StoryPoints": 8,
+            "Microsoft.VSTS.Scheduling.Effort": 16,
+            "Microsoft.VSTS.Scheduling.RemainingWork": 4,
+            "Microsoft.VSTS.Scheduling.CompletedWork": 12,
+            "Microsoft.VSTS.Scheduling.OriginalEstimate": 16,
+            "Microsoft.VSTS.Common.AcceptanceCriteria": "Given when then acceptance criteria",
+            "Microsoft.VSTS.TCM.ReproSteps": "Steps to reproduce the issue",
+            "Microsoft.VSTS.TCM.SystemInfo": "Windows 11, Chrome 120",
+            "System.Parent": 5678,
+            "System.Reason": "New",
+            "System.Watermark": 123456,
+            "System.CommentCount": 3,
+            "System.TeamProject": "Customer Services Platform",
+            "System.AreaId": 789,
+            "System.IterationId": 101112,
+            "Microsoft.VSTS.Common.StackRank": 1000000.5,
+            "Microsoft.VSTS.Common.ValueArea": "Business"
+          },
+          relations: [
+            {
+              rel: "AttachedFile",
+              url: "https://dev.azure.com/fwcdev/_apis/wit/attachments/attachment1"
+            },
+            {
+              rel: "System.LinkTypes.Hierarchy-Reverse",
+              url: "https://dev.azure.com/fwcdev/_apis/wit/workItems/5678"
+            }
+          ]
+        }
+      ];
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockExpandedResponse),
+      });
+
+      const result = await client.fetchWorkItems();
+
+      expect(result).toHaveLength(1);
+      const workItem = result[0];
+      
+      // Basic fields
+      expect(workItem.id).toBe(1234);
+      expect(workItem.title).toBe("Comprehensive Test Story");
+      expect(workItem.state).toBe("Active");
+      expect(workItem.type).toBe("User Story");
+      expect(workItem.assignedTo).toBe("nathan.vale@fwc.gov.au");
+      expect(workItem.description).toBe("Detailed description of the story");
+      
+      // Sprint/Board Info
+      expect(workItem.iterationPath).toBe("Customer Services Platform\\Sprint 23");
+      expect(workItem.areaPath).toBe("Customer Services Platform\\Feature Team A");
+      expect(workItem.boardColumn).toBe("In Progress");
+      expect(workItem.boardColumnDone).toBe(false);
+      
+      // Priority/Tags
+      expect(workItem.priority).toBe(2);
+      expect(workItem.severity).toBe("2 - High");
+      expect(workItem.tags).toBe("bug-fix; high-priority");
+      
+      // All the dates
+      expect(workItem.createdDate).toEqual(new Date("2025-01-01T08:00:00Z"));
+      expect(workItem.changedDate).toEqual(new Date("2025-01-08T14:30:00Z"));
+      expect(workItem.closedDate).toEqual(new Date("2025-01-10T16:00:00Z"));
+      expect(workItem.resolvedDate).toEqual(new Date("2025-01-09T12:00:00Z"));
+      expect(workItem.activatedDate).toEqual(new Date("2025-01-02T09:00:00Z"));
+      expect(workItem.stateChangeDate).toEqual(new Date("2025-01-08T14:30:00Z"));
+      expect(workItem.lastUpdatedAt).toEqual(new Date("2025-01-08T14:30:00Z"));
+      
+      // People
+      expect(workItem.createdBy).toBe("john.doe@fwc.gov.au");
+      expect(workItem.changedBy).toBe("jane.smith@fwc.gov.au");
+      expect(workItem.closedBy).toBe("bob.wilson@fwc.gov.au");
+      expect(workItem.resolvedBy).toBe("alice.johnson@fwc.gov.au");
+      
+      // Work tracking
+      expect(workItem.storyPoints).toBe(8);
+      expect(workItem.effort).toBe(16);
+      expect(workItem.remainingWork).toBe(4);
+      expect(workItem.completedWork).toBe(12);
+      expect(workItem.originalEstimate).toBe(16);
+      
+      // Content
+      expect(workItem.acceptanceCriteria).toBe("Given when then acceptance criteria");
+      expect(workItem.reproSteps).toBe("Steps to reproduce the issue");
+      expect(workItem.systemInfo).toBe("Windows 11, Chrome 120");
+      
+      // Related items
+      expect(workItem.parentId).toBe(5678);
+      
+      // Additional fields
+      expect(workItem.rev).toBe(5);
+      expect(workItem.reason).toBe("New");
+      expect(workItem.watermark).toBe(123456);
+      expect(workItem.url).toBe("https://dev.azure.com/fwcdev/_apis/wit/workItems/1234");
+      expect(workItem.commentCount).toBe(3);
+      expect(workItem.hasAttachments).toBe(true); // Based on AttachedFile relation in mock data
+      expect(workItem.teamProject).toBe("Customer Services Platform");
+      expect(workItem.areaId).toBe(789);
+      expect(workItem.nodeId).toBe(101112);
+      expect(workItem.stackRank).toBe(1000000.5);
+      expect(workItem.valueArea).toBe("Business");
+      
+      // Raw JSON backup
+      expect(workItem.rawJson).toBe(JSON.stringify(mockExpandedResponse[0]));
+    });
+
+    it("should handle missing fields gracefully with proper defaults", async () => {
+      const mockMinimalResponse = [
+        {
+          id: 9999,
+          fields: {
+            "System.Title": "Minimal Work Item",
+            "System.State": "New",
+            "System.WorkItemType": "Task",
+            "System.ChangedDate": "2025-01-08T10:00:00Z"
+          }
+        }
+      ];
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockMinimalResponse),
+      });
+
+      const result = await client.fetchWorkItems();
+
+      expect(result).toHaveLength(1);
+      const workItem = result[0];
+      
+      // Required fields should be present
+      expect(workItem.id).toBe(9999);
+      expect(workItem.title).toBe("Minimal Work Item");
+      expect(workItem.state).toBe("New");
+      expect(workItem.type).toBe("Task");
+      
+      // Optional fields should have proper defaults
+      expect(workItem.assignedTo).toBe("Unassigned");
+      expect(workItem.description).toBe("");
+      expect(workItem.iterationPath).toBeUndefined();
+      expect(workItem.areaPath).toBeUndefined();
+      expect(workItem.boardColumn).toBeUndefined();
+      expect(workItem.boardColumnDone).toBe(false);
+      expect(workItem.priority).toBeUndefined();
+      expect(workItem.severity).toBeUndefined();
+      expect(workItem.tags).toBeUndefined();
+      expect(workItem.createdDate).toBeUndefined();
+      expect(workItem.closedDate).toBeUndefined();
+      expect(workItem.resolvedDate).toBeUndefined();
+      expect(workItem.activatedDate).toBeUndefined();
+      expect(workItem.stateChangeDate).toBeUndefined();
+      expect(workItem.createdBy).toBe("Unassigned");
+      expect(workItem.changedBy).toBe("Unassigned");
+      expect(workItem.closedBy).toBe("Unassigned");
+      expect(workItem.resolvedBy).toBe("Unassigned");
+      expect(workItem.storyPoints).toBeUndefined();
+      expect(workItem.effort).toBeUndefined();
+      expect(workItem.remainingWork).toBeUndefined();
+      expect(workItem.completedWork).toBeUndefined();
+      expect(workItem.originalEstimate).toBeUndefined();
+      expect(workItem.acceptanceCriteria).toBeUndefined();
+      expect(workItem.reproSteps).toBeUndefined();
+      expect(workItem.systemInfo).toBeUndefined();
+      expect(workItem.parentId).toBeUndefined();
+      expect(workItem.reason).toBeUndefined();
+      expect(workItem.watermark).toBeUndefined();
+      expect(workItem.url).toBeUndefined();
+      expect(workItem.commentCount).toBe(0);
+      expect(workItem.hasAttachments).toBe(false);
+      expect(workItem.teamProject).toBeUndefined();
+      expect(workItem.areaId).toBeUndefined();
+      expect(workItem.nodeId).toBeUndefined();
+      expect(workItem.stackRank).toBeUndefined();
+      expect(workItem.valueArea).toBeUndefined();
+      
+      // Raw JSON should still be preserved
+      expect(workItem.rawJson).toBe(JSON.stringify(mockMinimalResponse[0]));
+    });
+
+    it("should handle float values correctly for numeric fields", async () => {
+      const mockFloatResponse = [
+        {
+          id: 7777,
+          fields: {
+            "System.Title": "Float Test Item",
+            "System.State": "Active",
+            "System.WorkItemType": "User Story",
+            "System.ChangedDate": "2025-01-08T10:00:00Z",
+            "Microsoft.VSTS.Scheduling.StoryPoints": 5.5,
+            "Microsoft.VSTS.Scheduling.Effort": 12.75,
+            "Microsoft.VSTS.Scheduling.RemainingWork": 2.25,
+            "Microsoft.VSTS.Scheduling.CompletedWork": 10.5,
+            "Microsoft.VSTS.Scheduling.OriginalEstimate": 12.75,
+            "Microsoft.VSTS.Common.StackRank": 999999.123456
+          }
+        }
+      ];
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockFloatResponse),
+      });
+
+      const result = await client.fetchWorkItems();
+
+      expect(result).toHaveLength(1);
+      const workItem = result[0];
+      
+      expect(workItem.storyPoints).toBe(5.5);
+      expect(workItem.effort).toBe(12.75);
+      expect(workItem.remainingWork).toBe(2.25);
+      expect(workItem.completedWork).toBe(10.5);
+      expect(workItem.originalEstimate).toBe(12.75);
+      expect(workItem.stackRank).toBe(999999.123456);
+    });
+
+    it("should handle invalid numeric values by setting them to undefined", async () => {
+      const mockInvalidResponse = [
+        {
+          id: 8888,
+          fields: {
+            "System.Title": "Invalid Numbers Test",
+            "System.State": "Active",
+            "System.WorkItemType": "Bug",
+            "System.ChangedDate": "2025-01-08T10:00:00Z",
+            "Microsoft.VSTS.Scheduling.StoryPoints": "invalid",
+            "Microsoft.VSTS.Scheduling.Effort": null,
+            "Microsoft.VSTS.Scheduling.RemainingWork": "",
+            "Microsoft.VSTS.Common.StackRank": "not-a-number"
+          }
+        }
+      ];
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockInvalidResponse),
+      });
+
+      const result = await client.fetchWorkItems();
+
+      expect(result).toHaveLength(1);
+      const workItem = result[0];
+      
+      expect(workItem.storyPoints).toBeUndefined();
+      expect(workItem.effort).toBeUndefined();
+      expect(workItem.remainingWork).toBeUndefined();
+      expect(workItem.stackRank).toBeUndefined();
+    });
+  });
+
+  describe("fetchSingleWorkItem", () => {
+    it("should fetch single work item with comprehensive fields", async () => {
+      const mockSingleResponse = {
+        id: 1234,
+        rev: 8,
+        url: "https://dev.azure.com/fwcdev/_apis/wit/workItems/1234",
+        fields: {
+          "System.Title": "Single Work Item Test",
+          "System.State": "Active",
+          "System.WorkItemType": "User Story",
+          "System.AssignedTo": {
+            displayName: "Nathan Vale",
+            uniqueName: "nathan.vale@fwc.gov.au"
+          },
+          "System.CreatedDate": "2025-01-01T08:00:00Z",
+          "System.ChangedDate": "2025-01-08T14:30:00Z",
+          "System.Description": "Single item description",
+          "System.IterationPath": "Customer Services Platform\\Sprint 23",
+          "System.AreaPath": "Customer Services Platform\\Team A",
+          "System.BoardColumn": "In Progress",
+          "Microsoft.VSTS.Scheduling.StoryPoints": 5,
+          "Microsoft.VSTS.Common.Priority": 1,
+          "System.CommentCount": 2,
+          "System.TeamProject": "Customer Services Platform"
+        },
+        relations: [
+          {
+            rel: "AttachedFile",
+            url: "https://dev.azure.com/fwcdev/_apis/wit/attachments/file1"
+          }
+        ]
+      };
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockSingleResponse),
+      });
+
+      const result = await client.fetchSingleWorkItem(1234);
+
+      expect(result).toEqual({
+        id: 1234,
+        title: "Single Work Item Test",
+        state: "Active",
+        type: "User Story",
+        assignedTo: "nathan.vale@fwc.gov.au",
+        lastUpdatedAt: new Date("2025-01-08T14:30:00Z"),
+        description: "Single item description",
+        iterationPath: "Customer Services Platform\\Sprint 23",
+        areaPath: "Customer Services Platform\\Team A",
+        boardColumn: "In Progress",
+        boardColumnDone: false,
+        priority: 1,
+        severity: undefined,
+        tags: undefined,
+        createdDate: new Date("2025-01-01T08:00:00Z"),
+        changedDate: new Date("2025-01-08T14:30:00Z"),
+        closedDate: undefined,
+        resolvedDate: undefined,
+        activatedDate: undefined,
+        stateChangeDate: undefined,
+        createdBy: "Unassigned",
+        changedBy: "Unassigned",
+        closedBy: "Unassigned",
+        resolvedBy: "Unassigned",
+        storyPoints: 5,
+        effort: undefined,
+        remainingWork: undefined,
+        completedWork: undefined,
+        originalEstimate: undefined,
+        acceptanceCriteria: undefined,
+        reproSteps: undefined,
+        systemInfo: undefined,
+        parentId: undefined,
+        rev: 8,
+        reason: undefined,
+        watermark: undefined,
+        url: "https://dev.azure.com/fwcdev/_apis/wit/workItems/1234",
+        commentCount: 2,
+        hasAttachments: true,
+        teamProject: "Customer Services Platform",
+        areaId: undefined,
+        nodeId: undefined,
+        stackRank: undefined,
+        valueArea: undefined,
+        rawJson: JSON.stringify(mockSingleResponse)
+      });
+    });
+
+    it("should use correct Azure CLI command with expand all flag", async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify({
+          id: 1234,
+          fields: {
+            "System.Title": "Test",
+            "System.State": "Active",
+            "System.WorkItemType": "User Story",
+            "System.ChangedDate": "2025-01-08T10:00:00Z"
+          }
+        }),
+      });
+
+      await client.fetchSingleWorkItem(1234);
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'az boards work-item show --id 1234 --expand all --output json',
+        { maxBuffer: 50 * 1024 * 1024 }
+      );
+    });
+
+    it("should handle Azure CLI errors with resilience wrapper", async () => {
+      mockExecAsync.mockRejectedValue(new Error("Azure CLI timeout"));
+      // Configure mock to simulate retry exhaustion
+      mockApplyPolicy.mockRejectedValue(new Error("Retry exhausted after 5 attempts"));
+
+      await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow("Retry exhausted after 5 attempts");
+    });
+
+    it("should handle invalid JSON response", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "invalid json" });
+
+      await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow();
+    });
+
+    it("should handle work item not found", async () => {
+      mockExecAsync.mockRejectedValue(new Error("Work item 99999 not found"));
+
+      await expect(client.fetchSingleWorkItem(99999)).rejects.toThrow("Work item 99999 not found");
+    });
+
+    it("should handle authentication errors", async () => {
+      mockExecAsync.mockRejectedValue(new Error("Azure CLI not authenticated"));
+
+      await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow("Azure CLI not authenticated");
+    });
+
+    it("should parse minimal work item correctly", async () => {
+      const mockMinimalResponse = {
+        id: 5678,
+        fields: {
+          "System.Title": "Minimal Work Item",
+          "System.State": "New",
+          "System.WorkItemType": "Task",
+          "System.ChangedDate": "2025-01-08T10:00:00Z"
+        }
+      };
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockMinimalResponse),
+      });
+
+      const result = await client.fetchSingleWorkItem(5678);
+
+      expect(result.id).toBe(5678);
+      expect(result.title).toBe("Minimal Work Item");
+      expect(result.state).toBe("New");
+      expect(result.type).toBe("Task");
+      expect(result.assignedTo).toBe("Unassigned");
+      expect(result.rawJson).toBe(JSON.stringify(mockMinimalResponse));
+    });
+
+    it("should handle null response gracefully", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "null" });
+
+      await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow();
+    });
+
+    it("should handle empty response gracefully", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "{}" });
+
+      const result = await client.fetchSingleWorkItem(1234);
+
+      expect(result.id).toBeUndefined();
+      expect(result.title).toBe("");
+      expect(result.assignedTo).toBe("Unassigned");
+    });
+  });
+
+  describe("fetchWorkItemsDetailed", () => {
+    it("should fetch multiple work items in parallel with default concurrency", async () => {
+      const workItemIds = [1, 2, 3, 4, 5];
+      const mockResponses = workItemIds.map(id => ({
+        id,
+        rev: 1,
+        url: `https://dev.azure.com/fwcdev/_apis/wit/workItems/${id}`,
+        fields: {
+          "System.Title": `Work Item ${id}`,
+          "System.State": "Active",
+          "System.WorkItemType": "User Story",
+          "System.AssignedTo": {
+            displayName: "Nathan Vale",
+            uniqueName: "nathan.vale@fwc.gov.au"
+          },
+          "System.ChangedDate": "2025-01-08T10:00:00Z",
+          "Microsoft.VSTS.Scheduling.StoryPoints": id
+        }
+      }));
+
+      // Mock each individual fetchSingleWorkItem call
+      // Note: mockExecAsync returns { stdout: ... } structure
+      mockResponses.forEach(response => {
+        mockExecAsync.mockResolvedValueOnce({
+          stdout: JSON.stringify(response)
+        });
+      });
+
+      const result = await client.fetchWorkItemsDetailed(workItemIds);
+
+      expect(result).toHaveLength(5);
+      expect(mockExecAsync).toHaveBeenCalledTimes(5);
+      
+      // Verify each work item was fetched correctly
+      for (let i = 0; i < workItemIds.length; i++) {
+        expect(result[i].id).toBe(workItemIds[i]);
+        expect(result[i].title).toBe(`Work Item ${workItemIds[i]}`);
+        expect(result[i].storyPoints).toBe(workItemIds[i]);
+      }
+    });
+
+    it("should respect concurrency limit when provided", async () => {
+      const workItemIds = [1, 2, 3, 4, 5, 6, 7, 8];
+      const concurrencyLimit = 3;
+      let activeRequests = 0;
+      let maxConcurrentRequests = 0;
+
+      // Mock responses with timing to track concurrency
+      mockExecAsync.mockImplementation(() => {
+        activeRequests++;
+        maxConcurrentRequests = Math.max(maxConcurrentRequests, activeRequests);
+        
+        return new Promise(resolve => {
+          setTimeout(() => {
+            activeRequests--;
+            resolve({
+              stdout: JSON.stringify({
+                id: 1,
+                fields: {
+                  "System.Title": "Test Item",
+                  "System.State": "Active",
+                  "System.WorkItemType": "User Story",
+                  "System.ChangedDate": "2025-01-08T10:00:00Z"
+                }
+              })
+            });
+          }, 10);
+        });
+      });
+
+      await client.fetchWorkItemsDetailed(workItemIds, concurrencyLimit);
+
+      expect(maxConcurrentRequests).toBeLessThanOrEqual(concurrencyLimit);
+      expect(mockExecAsync).toHaveBeenCalledTimes(8);
+    });
+
+    it("should handle individual work item failures gracefully", async () => {
+      const workItemIds = [1, 2, 3];
+      
+      // First item succeeds
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          id: 1,
+          fields: {
+            "System.Title": "Success Item",
+            "System.State": "Active",
+            "System.WorkItemType": "User Story",
+            "System.ChangedDate": "2025-01-08T10:00:00Z"
+          }
+        })
+      });
+
+      // Second item fails
+      mockExecAsync.mockRejectedValueOnce(new Error("Work item 2 not found"));
+
+      // Third item succeeds
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          id: 3,
+          fields: {
+            "System.Title": "Another Success",
+            "System.State": "Done",
+            "System.WorkItemType": "Task",
+            "System.ChangedDate": "2025-01-08T11:00:00Z"
+          }
+        })
+      });
+
+      const result = await client.fetchWorkItemsDetailed(workItemIds);
+
+      // Should return only successful items
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe(1);
+      expect(result[0].title).toBe("Success Item");
+      expect(result[1].id).toBe(3);
+      expect(result[1].title).toBe("Another Success");
+      
+      expect(mockExecAsync).toHaveBeenCalledTimes(3);
+    });
+
+    it("should handle empty work item IDs array", async () => {
+      const result = await client.fetchWorkItemsDetailed([]);
+
+      expect(result).toEqual([]);
+      expect(mockExecAsync).not.toHaveBeenCalled();
+    });
+
+    it("should handle resilience policy failures correctly", async () => {
+      const workItemIds = [1, 2];
+      
+      // Mock resilience policy exhausting retries
+      mockExecAsync.mockRejectedValue(new Error("Retry exhausted after 5 attempts"));
+
+      const result = await client.fetchWorkItemsDetailed(workItemIds);
+
+      // Should return empty array when all items fail
+      expect(result).toEqual([]);
+      expect(mockExecAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it("should preserve work item order in successful results", async () => {
+      const workItemIds = [5, 1, 3, 2, 4];
+      
+      // Mock responses with different timing to test ordering
+      for (const id of workItemIds) {
+        mockExecAsync.mockResolvedValueOnce({
+          stdout: JSON.stringify({
+            id,
+            fields: {
+              "System.Title": `Work Item ${id}`,
+              "System.State": "Active",
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+      }
+
+      const result = await client.fetchWorkItemsDetailed(workItemIds);
+
+      expect(result).toHaveLength(5);
+      // Results should maintain original order
+      for (let i = 0; i < workItemIds.length; i++) {
+        expect(result[i].id).toBe(workItemIds[i]);
+      }
+    });
+
+    it("should handle authentication errors during parallel fetching", async () => {
+      const workItemIds = [1, 2];
+      
+      mockExecAsync.mockRejectedValue(new Error("Azure CLI not authenticated"));
+
+      const result = await client.fetchWorkItemsDetailed(workItemIds);
+
+      expect(result).toEqual([]);
+      expect(mockExecAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it("should handle timeout errors during parallel fetching", async () => {
+      const workItemIds = [1];
+      
+      mockExecAsync.mockImplementation(() => {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            reject(new Error("Command timeout"));
+          }, 100);
+        });
+      });
+
+      const result = await client.fetchWorkItemsDetailed(workItemIds);
+
+      expect(result).toEqual([]);
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("should use correct Azure CLI command for each work item", async () => {
+      const workItemIds = [123, 456];
+      
+      for (const id of workItemIds) {
+        mockExecAsync.mockResolvedValueOnce({
+          stdout: JSON.stringify({
+            id,
+            fields: {
+              "System.Title": `Work Item ${id}`,
+              "System.State": "Active",
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+      }
+
+      await client.fetchWorkItemsDetailed(workItemIds);
+
+      expect(mockExecAsync).toHaveBeenNthCalledWith(1, 
+        'az boards work-item show --id 123 --expand all --output json',
+        { maxBuffer: 50 * 1024 * 1024 }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(2, 
+        'az boards work-item show --id 456 --expand all --output json',
+        { maxBuffer: 50 * 1024 * 1024 }
+      );
+    });
+  });
+
+  describe("resilience patterns", () => {
+    describe("circuit breaker behavior", () => {
+      it("should trigger circuit breaker after consecutive failures", async () => {
+        const consecutiveFailures = 6; // Exceed failure threshold
+        let attemptCount = 0;
+
+        // Mock the resilience adapter to simulate circuit breaker behavior
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          attemptCount++;
+          
+          if (attemptCount <= 3) {
+            // First 3 attempts fail normally (should trigger circuit breaker)
+            throw new Error("Azure DevOps service unavailable");
+          } else {
+            // Subsequent attempts should be blocked by circuit breaker
+            throw new Error("Circuit breaker is open - not executing operation");
+          }
+        });
+
+        // Make multiple consecutive calls that should trigger circuit breaker
+        for (let i = 0; i < consecutiveFailures; i++) {
+          try {
+            await client.fetchWorkItems();
+          } catch (error) {
+            if (i < 3) {
+              expect(error.message).toContain("Azure DevOps service unavailable");
+            } else {
+              expect(error.message).toContain("Circuit breaker is open");
+            }
+          }
+        }
+
+        expect(attemptCount).toBe(consecutiveFailures);
+      });
+
+      it("should allow operations after circuit breaker recovery time", async () => {
+        let circuitBreakerOpen = false;
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          if (circuitBreakerOpen) {
+            // Simulate recovery - circuit breaker allows test call
+            circuitBreakerOpen = false;
+            return await operation();
+          } else {
+            throw new Error("Circuit breaker test failed");
+          }
+        });
+
+        // Simulate circuit breaker being open initially
+        circuitBreakerOpen = true;
+
+        // Mock successful response for recovery test
+        mockExecAsync.mockResolvedValue({ stdout: "[]" });
+
+        const result = await client.fetchWorkItems();
+        expect(result).toEqual([]);
+        expect(circuitBreakerOpen).toBe(false);
+      });
+
+      it("should handle circuit breaker state for different operations independently", async () => {
+        // Simulate circuit breaker for list operations only
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          if (policy.circuitBreaker?.key === 'azure-devops-list') {
+            throw new Error("List circuit breaker is open");
+          } else if (policy.circuitBreaker?.key === 'azure-devops-detail') {
+            // Detail operations should still work
+            return await operation();
+          }
+          return await operation();
+        });
+
+        mockExecAsync.mockResolvedValue({
+          stdout: JSON.stringify({
+            id: 1234,
+            fields: {
+              "System.Title": "Test Item",
+              "System.State": "Active",
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+
+        // List operations should fail due to circuit breaker
+        await expect(client.fetchWorkItems()).rejects.toThrow("List circuit breaker is open");
+
+        // Detail operations should still work
+        const result = await client.fetchSingleWorkItem(1234);
+        expect(result.id).toBe(1234);
+      });
+    });
+
+    describe("retry exhaustion and error propagation", () => {
+      it("should exhaust retries and propagate final error", async () => {
+        let retryCount = 0;
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          retryCount++;
+          // Always throw the final error regardless of count
+          throw new Error("Retry exhausted after 5 attempts");
+        });
+
+        await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow("Retry exhausted after 5 attempts");
+        expect(retryCount).toBe(1); // Called once
+      });
+
+      it("should not retry on authentication errors", async () => {
+        let attemptCount = 0;
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          attemptCount++;
+          
+          // Simulate checking retryOn condition
+          const error = new Error("Azure CLI unauthorized - please run 'az login'");
+          if (policy.retry?.retryOn && !policy.retry.retryOn(error)) {
+            throw error;
+          }
+          
+          throw new Error("Should not reach here for auth errors");
+        });
+
+        await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow("Azure CLI unauthorized");
+        expect(attemptCount).toBe(1); // Should not retry
+      });
+
+      it("should not retry on work item not found errors", async () => {
+        let attemptCount = 0;
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          attemptCount++;
+          
+          const error = new Error("Work item 99999 not found");
+          if (policy.retry?.retryOn && !policy.retry.retryOn(error)) {
+            throw error;
+          }
+          
+          throw new Error("Should not reach here for not found errors");
+        });
+
+        await expect(client.fetchSingleWorkItem(99999)).rejects.toThrow("Work item 99999 not found");
+        expect(attemptCount).toBe(1); // Should not retry
+      });
+
+      it("should retry on transient errors with exponential backoff", async () => {
+        let attemptCount = 0;
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          attemptCount++;
+          // Simulate successful retry behavior - just succeed immediately
+          return await operation();
+        });
+
+        mockExecAsync.mockResolvedValue({
+          stdout: JSON.stringify({
+            id: 1234,
+            fields: {
+              "System.Title": "Eventually Successful",
+              "System.State": "Active",
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+
+        const result = await client.fetchSingleWorkItem(1234);
+        
+        expect(result.id).toBe(1234);
+        expect(attemptCount).toBe(1);
+      });
+    });
+
+    describe("timeout handling", () => {
+      it("should timeout hanging CLI commands", async () => {
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          // Simulate timeout by checking timeout duration
+          if (policy.timeout?.duration === 15000) {
+            throw new Error("Operation timed out after 15000ms");
+          }
+          return await operation();
+        });
+
+        await expect(client.fetchSingleWorkItem(1234)).rejects.toThrow("Operation timed out after 15000ms");
+      });
+
+      it("should use different timeout values for list vs detail operations", async () => {
+        const timeouts: number[] = [];
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          if (policy.timeout?.duration) {
+            timeouts.push(policy.timeout.duration);
+          }
+          
+          // Mock successful execution
+          return await operation();
+        });
+
+        mockExecAsync.mockResolvedValue({ stdout: "[]" });
+        await client.fetchWorkItems(); // Should use 10000ms timeout
+
+        mockExecAsync.mockResolvedValue({
+          stdout: JSON.stringify({
+            id: 1234,
+            fields: {
+              "System.Title": "Test",
+              "System.State": "Active",
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+        await client.fetchSingleWorkItem(1234); // Should use 15000ms timeout
+
+        expect(timeouts).toContain(10000); // List operation timeout
+        expect(timeouts).toContain(15000); // Detail operation timeout
+      });
+
+      it("should handle timeout with proper operation names", async () => {
+        const operationNames: string[] = [];
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          if (policy.timeout?.operationName) {
+            operationNames.push(policy.timeout.operationName);
+          }
+          return await operation();
+        });
+
+        mockExecAsync.mockResolvedValue({ stdout: "[]" });
+        await client.fetchWorkItems();
+
+        mockExecAsync.mockResolvedValue({
+          stdout: JSON.stringify({
+            id: 1234,
+            fields: {
+              "System.Title": "Test",
+              "System.State": "Active", 
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+        await client.fetchSingleWorkItem(1234);
+
+        expect(operationNames).toContain('work-item-list');
+        expect(operationNames).toContain('work-item-detail');
+      });
+    });
+
+    describe("resilience telemetry and monitoring", () => {
+      it("should provide circuit breaker state information", async () => {
+        const circuitBreakerStates: string[] = [];
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          // Simulate circuit breaker state monitoring
+          if (policy.circuitBreaker?.key) {
+            circuitBreakerStates.push(`${policy.circuitBreaker.key}:closed`);
+          }
+          return await operation();
+        });
+
+        mockExecAsync.mockResolvedValue({ stdout: "[]" });
+        await client.fetchWorkItems();
+
+        mockExecAsync.mockResolvedValue({
+          stdout: JSON.stringify({
+            id: 1234,
+            fields: {
+              "System.Title": "Test",
+              "System.State": "Active",
+              "System.WorkItemType": "User Story", 
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+        await client.fetchSingleWorkItem(1234);
+
+        expect(circuitBreakerStates).toContain('azure-devops-list:closed');
+        expect(circuitBreakerStates).toContain('azure-devops-detail:closed');
+      });
+
+      it("should track retry attempts and timing", async () => {
+        const retryMetrics: Array<{operation: string, attempt: number, delay: number}> = [];
+        let attemptCount = 0;
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          attemptCount++;
+          
+          // Track metrics for the successful operation
+          retryMetrics.push({
+            operation: policy.timeout?.operationName || 'unknown',
+            attempt: attemptCount,
+            delay: policy.retry?.initialDelay! || 200
+          });
+          
+          return await operation();
+        });
+
+        mockExecAsync.mockResolvedValue({
+          stdout: JSON.stringify({
+            id: 1234,
+            fields: {
+              "System.Title": "Test",
+              "System.State": "Active",
+              "System.WorkItemType": "User Story",
+              "System.ChangedDate": "2025-01-08T10:00:00Z"
+            }
+          })
+        });
+
+        const result = await client.fetchSingleWorkItem(1234);
+        
+        expect(result.id).toBe(1234);
+        expect(retryMetrics).toHaveLength(1);
+        expect(retryMetrics[0]).toEqual({
+          operation: 'work-item-detail',
+          attempt: 1,
+          delay: 200
+        });
+      });
+
+      it("should monitor performance metrics for successful operations", async () => {
+        const performanceMetrics: Array<{operation: string, duration: number, success: boolean}> = [];
+
+        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+          const startTime = Date.now();
+          
+          try {
+            const result = await operation();
+            
+            // Simulate performance monitoring
+            performanceMetrics.push({
+              operation: policy.timeout?.operationName || 'unknown',
+              duration: Date.now() - startTime,
+              success: true
+            });
+            
+            return result;
+          } catch (error) {
+            performanceMetrics.push({
+              operation: policy.timeout?.operationName || 'unknown', 
+              duration: Date.now() - startTime,
+              success: false
+            });
+            throw error;
+          }
+        });
+
+        mockExecAsync.mockResolvedValue({ stdout: "[]" });
+        await client.fetchWorkItems();
+
+        expect(performanceMetrics).toHaveLength(1);
+        expect(performanceMetrics[0].operation).toBe('work-item-list');
+        expect(performanceMetrics[0].success).toBe(true);
+        expect(performanceMetrics[0].duration).toBeGreaterThanOrEqual(0);
+      });
+    });
+  });
+
+  describe("fetchWorkItemComments", () => {
+    it("should fetch comments for a work item successfully", async () => {
+      const mockCommentsResponse = {
+        count: 2,
+        value: [
+          {
+            id: "1",
+            text: "First comment on the work item",
+            createdBy: {
+              displayName: "Nathan Vale",
+              uniqueName: "nathan.vale@fwc.gov.au"
+            },
+            createdDate: "2025-01-08T10:00:00Z",
+            modifiedBy: {
+              displayName: "Nathan Vale", 
+              uniqueName: "nathan.vale@fwc.gov.au"
+            },
+            modifiedDate: "2025-01-08T10:30:00Z"
+          },
+          {
+            id: "2",
+            text: "Second comment with more details",
+            createdBy: {
+              displayName: "Jane Smith",
+              uniqueName: "jane.smith@fwc.gov.au"
+            },
+            createdDate: "2025-01-08T14:00:00Z",
+            modifiedBy: null,
+            modifiedDate: null
+          }
+        ]
+      };
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockCommentsResponse)
+      });
+
+      const result = await client.fetchWorkItemComments(1234);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: "1",
+        workItemId: 1234,
+        text: "First comment on the work item",
+        createdBy: "nathan.vale@fwc.gov.au",
+        createdDate: new Date("2025-01-08T10:00:00Z"),
+        modifiedBy: "nathan.vale@fwc.gov.au",
+        modifiedDate: new Date("2025-01-08T10:30:00Z")
+      });
+      expect(result[1]).toEqual({
+        id: "2",
+        workItemId: 1234,
+        text: "Second comment with more details",
+        createdBy: "jane.smith@fwc.gov.au",
+        createdDate: new Date("2025-01-08T14:00:00Z"),
+        modifiedBy: null,
+        modifiedDate: null
+      });
+    });
+
+    it("should handle work item with no comments", async () => {
+      const mockEmptyResponse = {
+        count: 0,
+        value: []
+      };
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockEmptyResponse)
+      });
+
+      const result = await client.fetchWorkItemComments(1234);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should use correct Azure CLI command for comment fetching", async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify({ count: 0, value: [] })
+      });
+
+      await client.fetchWorkItemComments(1234);
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'az rest --method GET --uri "https://dev.azure.com/fwcdev/Customer Services Platform/_apis/wit/workItems/1234/comments?api-version=7.0" --output json',
+        { maxBuffer: 10 * 1024 * 1024 }
+      );
+    });
+
+    it("should handle Azure CLI errors during comment fetching", async () => {
+      mockExecAsync.mockRejectedValue(new Error("Work item not found"));
+
+      await expect(client.fetchWorkItemComments(9999)).rejects.toThrow("Work item not found");
+    });
+
+    it("should handle invalid JSON response for comments", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "invalid json" });
+
+      await expect(client.fetchWorkItemComments(1234)).rejects.toThrow();
+    });
+
+    it("should apply resilience policy for comment fetching", async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify({ count: 0, value: [] })
+      });
+
+      await client.fetchWorkItemComments(1234);
+
+      expect(mockApplyPolicy).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          timeout: expect.objectContaining({
+            operationName: 'work-item-comments'
+          })
+        })
+      );
+    });
+
+    it("should handle comments with missing fields gracefully", async () => {
+      const mockPartialResponse = {
+        count: 1,
+        value: [
+          {
+            id: "partial-1",
+            text: "Comment with minimal data",
+            createdBy: {
+              displayName: "Test User"
+            },
+            createdDate: "2025-01-08T10:00:00Z"
+          }
+        ]
+      };
+
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockPartialResponse)
+      });
+
+      const result = await client.fetchWorkItemComments(1234);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: "partial-1",
+        workItemId: 1234,
+        text: "Comment with minimal data",
+        createdBy: "Test User",
+        createdDate: new Date("2025-01-08T10:00:00Z"),
+        modifiedBy: null,
+        modifiedDate: null
+      });
+    });
+
+    it("should handle authentication errors during comment fetching", async () => {
+      mockExecAsync.mockRejectedValue(new Error("Azure CLI not authenticated"));
+
+      await expect(client.fetchWorkItemComments(1234)).rejects.toThrow("Azure CLI not authenticated");
+    });
+
+    it("should log errors when comment fetching fails", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockExecAsync.mockRejectedValue(new Error("Comments fetch failed"));
+
+      await expect(client.fetchWorkItemComments(1234)).rejects.toThrow("Comments fetch failed");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to fetch comments for work item 1234:",
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 

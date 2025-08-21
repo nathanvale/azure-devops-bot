@@ -9,6 +9,13 @@ vi.mock("../auth");
 vi.mock("../azure-devops");
 vi.mock("../database");
 
+// Mock the resilience package
+vi.mock("@orchestr8/resilience", () => ({
+  ProductionResilienceAdapter: vi.fn().mockImplementation(() => ({
+    applyPolicy: vi.fn().mockImplementation((operation, policy) => operation())
+  }))
+}));
+
 describe("SyncService", () => {
   let service: SyncService;
   let mockAuth: AzureAuth;
@@ -30,9 +37,13 @@ describe("SyncService", () => {
     // Setup default mock implementations
     mockAuth.ensureAuth = vi.fn().mockResolvedValue(undefined);
     mockClient.fetchWorkItems = vi.fn().mockResolvedValue([]);
+    mockClient.fetchWorkItemsDetailed = vi.fn().mockResolvedValue([]);
     mockDb.syncWorkItems = vi.fn().mockResolvedValue(undefined);
     mockDb.getLastSyncTime = vi.fn().mockResolvedValue(null);
     mockDb.close = vi.fn().mockResolvedValue(undefined);
+    mockDb.needsCommentSync = vi.fn().mockResolvedValue(false);
+    mockDb.storeWorkItemComments = vi.fn().mockResolvedValue(undefined);
+    mockClient.fetchWorkItemComments = vi.fn().mockResolvedValue([]);
 
     // Mock console methods
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -173,7 +184,7 @@ describe("SyncService", () => {
         5 * 60 * 1000 // 5 minutes (default)
       );
       expect(console.log).toHaveBeenCalledWith(
-        "🔄 Background sync started (every 5 minutes)"
+        "🔄 Background detailed sync started (every 5 minutes)"
       );
     });
 
@@ -190,7 +201,7 @@ describe("SyncService", () => {
         10 * 60 * 1000 // 10 minutes
       );
       expect(console.log).toHaveBeenCalledWith(
-        "🔄 Background sync started (every 10 minutes)"
+        "🔄 Background detailed sync started (every 10 minutes)"
       );
 
       // Restore original environment
@@ -215,7 +226,7 @@ describe("SyncService", () => {
         5 * 60 * 1000 // 5 minutes (default fallback)
       );
       expect(console.log).toHaveBeenCalledWith(
-        "🔄 Background sync started (every 5 minutes)"
+        "🔄 Background detailed sync started (every 5 minutes)"
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         "⚠️  Invalid AZURE_DEVOPS_SYNC_INTERVAL_MINUTES value: invalid. Using default 5 minutes."
@@ -231,11 +242,11 @@ describe("SyncService", () => {
       }
     });
 
-    it("should perform sync when interval triggers", async () => {
+    it("should perform detailed sync when interval triggers by default", async () => {
       vi.useFakeTimers();
 
-      const performSyncSpy = vi
-        .spyOn(service, "performSync")
+      const performSyncDetailedSpy = vi
+        .spyOn(service, "performSyncDetailed")
         .mockResolvedValue();
 
       await service.startBackgroundSync();
@@ -243,7 +254,27 @@ describe("SyncService", () => {
       // Fast-forward time by 5 minutes
       vi.advanceTimersByTime(5 * 60 * 1000);
 
+      expect(performSyncDetailedSpy).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it("should perform basic sync when useDetailedSync is false", async () => {
+      vi.useFakeTimers();
+
+      const performSyncSpy = vi
+        .spyOn(service, "performSync")
+        .mockResolvedValue();
+
+      await service.startBackgroundSync(false);
+
+      // Fast-forward time by 5 minutes
+      vi.advanceTimersByTime(5 * 60 * 1000);
+
       expect(performSyncSpy).toHaveBeenCalledTimes(1);
+      expect(console.log).toHaveBeenCalledWith(
+        "🔄 Background sync started (every 5 minutes)"
+      );
 
       vi.useRealTimers();
     });
@@ -251,8 +282,8 @@ describe("SyncService", () => {
     it("should handle sync errors in background without throwing", async () => {
       vi.useFakeTimers();
 
-      const performSyncSpy = vi
-        .spyOn(service, "performSync")
+      const performSyncDetailedSpy = vi
+        .spyOn(service, "performSyncDetailed")
         .mockRejectedValue(new Error("Background sync failed"));
 
       const consoleErrorSpy = vi
@@ -264,7 +295,7 @@ describe("SyncService", () => {
       // Fast-forward time by 5 minutes to trigger the interval
       await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
 
-      expect(performSyncSpy).toHaveBeenCalledTimes(1);
+      expect(performSyncDetailedSpy).toHaveBeenCalledTimes(1);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Background sync failed:",
         expect.any(Error)
@@ -277,8 +308,8 @@ describe("SyncService", () => {
     it("should continue background sync after errors", async () => {
       vi.useFakeTimers();
 
-      const performSyncSpy = vi
-        .spyOn(service, "performSync")
+      const performSyncDetailedSpy = vi
+        .spyOn(service, "performSyncDetailed")
         .mockRejectedValueOnce(new Error("First sync failed"))
         .mockResolvedValueOnce();
 
@@ -286,11 +317,11 @@ describe("SyncService", () => {
 
       // First interval - should fail
       vi.advanceTimersByTime(5 * 60 * 1000);
-      expect(performSyncSpy).toHaveBeenCalledTimes(1);
+      expect(performSyncDetailedSpy).toHaveBeenCalledTimes(1);
 
       // Second interval - should succeed
       vi.advanceTimersByTime(5 * 60 * 1000);
-      expect(performSyncSpy).toHaveBeenCalledTimes(2);
+      expect(performSyncDetailedSpy).toHaveBeenCalledTimes(2);
 
       vi.useRealTimers();
     });
@@ -398,6 +429,180 @@ describe("SyncService", () => {
     });
   });
 
+  describe("performSyncDetailed", () => {
+    it("should sync work items using detailed fetching workflow", async () => {
+      const mockWorkItemIds = [
+        { id: 1234 },
+        { id: 5678 }
+      ];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Detailed Item 1",
+          state: "Active",
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          iterationPath: "Sprint 1",
+          storyPoints: 5,
+          rawJson: '{"id": 1234, "expanded": true}'
+        },
+        {
+          id: 5678,
+          title: "Detailed Item 2", 
+          state: "Done",
+          type: "Task",
+          assignedTo: "john.doe@example.com",
+          lastUpdatedAt: new Date(),
+          iterationPath: "Sprint 1",
+          effort: 3,
+          rawJson: '{"id": 5678, "expanded": true}'
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+
+      await service.performSyncDetailed();
+
+      expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItemsDetailed).toHaveBeenCalledWith([1234, 5678], 5);
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockDetailedWorkItems);
+      expect(console.log).toHaveBeenCalledWith("✅ Synced 2 work items with detailed data");
+    });
+
+    it("should handle custom concurrency limit", async () => {
+      const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }, { id: 9012 }];
+      const mockDetailedWorkItems = [];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+
+      await service.performSyncDetailed(10);
+
+      expect(mockClient.fetchWorkItemsDetailed).toHaveBeenCalledWith([1234, 5678, 9012], 10);
+    });
+
+    it("should handle empty work items list in detailed sync", async () => {
+      mockClient.fetchWorkItems.mockResolvedValue([]);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue([]);
+
+      await service.performSyncDetailed();
+
+      expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItemsDetailed).toHaveBeenCalledWith([], 5);
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith([]);
+      expect(console.log).toHaveBeenCalledWith("✅ Synced 0 work items with detailed data");
+    });
+
+    it("should handle partial failures in detailed fetching", async () => {
+      const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }, { id: 9012 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Success Item",
+          state: "Active", 
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          rawJson: '{"id": 1234}'
+        }
+        // Note: 5678 and 9012 failed to fetch
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+
+      await service.performSyncDetailed();
+
+      expect(mockClient.fetchWorkItemsDetailed).toHaveBeenCalledWith([1234, 5678, 9012], 5);
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockDetailedWorkItems);
+      expect(console.log).toHaveBeenCalledWith("✅ Synced 1 work items with detailed data");
+    });
+
+    it("should log performance metrics for detailed sync", async () => {
+      const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }];
+      const mockDetailedWorkItems = [];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+
+      const startTime = Date.now();
+      await service.performSyncDetailed();
+      const endTime = Date.now();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringMatching(/⏱️  Detailed sync completed in \d+ms/)
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        `📊 Work items: 2 discovered, 0 detailed fetched with concurrency 5`
+      );
+    });
+
+    it("should handle authentication failure in detailed sync", async () => {
+      mockAuth.ensureAuth.mockRejectedValue(new Error("Authentication failed"));
+
+      await expect(service.performSyncDetailed()).rejects.toThrow("Authentication failed");
+
+      expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItems).not.toHaveBeenCalled();
+      expect(mockClient.fetchWorkItemsDetailed).not.toHaveBeenCalled();
+      expect(mockDb.syncWorkItems).not.toHaveBeenCalled();
+    });
+
+    it("should handle work item discovery failure in detailed sync", async () => {
+      mockClient.fetchWorkItems.mockRejectedValue(new Error("Discovery failed"));
+
+      await expect(service.performSyncDetailed()).rejects.toThrow("Discovery failed");
+
+      expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItemsDetailed).not.toHaveBeenCalled();
+      expect(mockDb.syncWorkItems).not.toHaveBeenCalled();
+    });
+
+    it("should handle detailed fetch failure", async () => {
+      const mockWorkItemIds = [{ id: 1234 }];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockRejectedValue(new Error("Detailed fetch failed"));
+
+      await expect(service.performSyncDetailed()).rejects.toThrow("Detailed fetch failed");
+
+      expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItemsDetailed).toHaveBeenCalledWith([1234], 5);
+      expect(mockDb.syncWorkItems).not.toHaveBeenCalled();
+    });
+
+    it("should handle database sync failure in detailed sync", async () => {
+      const mockWorkItemIds = [{ id: 1234 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Test Item",
+          state: "Active",
+          type: "User Story", 
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          rawJson: '{"id": 1234}'
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+      mockDb.syncWorkItems.mockRejectedValue(new Error("Database sync failed"));
+
+      await expect(service.performSyncDetailed()).rejects.toThrow("Database sync failed");
+
+      expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItemsDetailed).toHaveBeenCalledWith([1234], 5);
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockDetailedWorkItems);
+    });
+  });
+
   describe("integration scenarios", () => {
     it("should handle complete sync lifecycle", async () => {
       // Setup initial state
@@ -437,6 +642,230 @@ describe("SyncService", () => {
       // If we still performed sync, it should work
       await service.performSync();
       expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("comment sync integration", () => {
+    it("should sync comments for work items that need comment sync", async () => {
+      const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Item with comments",
+          state: "Active",
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 3,
+          changedDate: new Date(),
+          rawJson: '{"id": 1234}'
+        },
+        {
+          id: 5678,
+          title: "Item without comments",
+          state: "Done",
+          type: "Task",
+          assignedTo: "john.doe@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 0,
+          changedDate: new Date(),
+          rawJson: '{"id": 5678}'
+        }
+      ];
+
+      const mockComments = [
+        {
+          id: 1,
+          workItemId: 1234,
+          text: "First comment",
+          createdBy: "nathan.vale@example.com",
+          createdDate: new Date(),
+          modifiedBy: "nathan.vale@example.com",
+          modifiedDate: new Date()
+        },
+        {
+          id: 2,
+          workItemId: 1234,
+          text: "Second comment",
+          createdBy: "john.doe@example.com",
+          createdDate: new Date(),
+          modifiedBy: "john.doe@example.com",
+          modifiedDate: new Date()
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+      mockDb.needsCommentSync.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      mockClient.fetchWorkItemComments.mockResolvedValue(mockComments);
+
+      const syncService = service as any;
+      await syncService.performSyncDetailed();
+
+      expect(mockDb.needsCommentSync).toHaveBeenCalledTimes(2);
+      expect(mockDb.needsCommentSync).toHaveBeenCalledWith(1234, 3, expect.any(Date), null);
+      expect(mockDb.needsCommentSync).toHaveBeenCalledWith(5678, 0, expect.any(Date), null);
+      expect(mockClient.fetchWorkItemComments).toHaveBeenCalledTimes(1);
+      expect(mockClient.fetchWorkItemComments).toHaveBeenCalledWith(1234);
+      expect(mockDb.storeWorkItemComments).toHaveBeenCalledTimes(1);
+      expect(mockDb.storeWorkItemComments).toHaveBeenCalledWith(mockComments);
+    });
+
+    it("should handle comment sync failures gracefully", async () => {
+      const mockWorkItemIds = [{ id: 1234 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Item with failed comment sync",
+          state: "Active",
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 2,
+          changedDate: new Date(),
+          rawJson: '{"id": 1234}'
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+      mockDb.needsCommentSync.mockResolvedValue(true);
+      mockClient.fetchWorkItemComments.mockRejectedValue(new Error("Comment fetch failed"));
+
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const syncService = service as any;
+      await syncService.performSyncDetailed();
+
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockDetailedWorkItems);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "⚠️  Failed to sync comments for work item 1234:",
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should track comment sync performance metrics", async () => {
+      const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Item 1",
+          state: "Active",
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 2,
+          changedDate: new Date(),
+          rawJson: '{"id": 1234}'
+        },
+        {
+          id: 5678,
+          title: "Item 2",
+          state: "Done",
+          type: "Task",
+          assignedTo: "john.doe@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 1,
+          changedDate: new Date(),
+          rawJson: '{"id": 5678}'
+        }
+      ];
+
+      const mockCommentsForItem1 = [
+        {
+          id: 1,
+          workItemId: 1234,
+          text: "Comment 1",
+          createdBy: "user@example.com",
+          createdDate: new Date(),
+          modifiedBy: "user@example.com",
+          modifiedDate: new Date()
+        }
+      ];
+
+      const mockCommentsForItem2 = [
+        {
+          id: 2,
+          workItemId: 5678,
+          text: "Comment 2",
+          createdBy: "user@example.com",
+          createdDate: new Date(),
+          modifiedBy: "user@example.com",
+          modifiedDate: new Date()
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+      mockDb.needsCommentSync.mockResolvedValue(true);
+      mockClient.fetchWorkItemComments
+        .mockResolvedValueOnce(mockCommentsForItem1)
+        .mockResolvedValueOnce(mockCommentsForItem2);
+
+      const syncService = service as any;
+      await syncService.performSyncDetailed();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringMatching(/📝 Comment sync: 2 work items checked, 2 had comments synced/)
+      );
+    });
+
+    it("should skip comment sync when work items have no comments", async () => {
+      const mockWorkItemIds = [{ id: 1234 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Item without comments",
+          state: "Active",
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 0,
+          changedDate: new Date(),
+          rawJson: '{"id": 1234}'
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+      mockDb.needsCommentSync.mockResolvedValue(false);
+
+      const syncService = service as any;
+      await syncService.performSyncDetailed();
+
+      expect(mockDb.needsCommentSync).toHaveBeenCalledWith(1234, 0, expect.any(Date), null);
+      expect(mockClient.fetchWorkItemComments).not.toHaveBeenCalled();
+      expect(mockDb.storeWorkItemComments).not.toHaveBeenCalled();
+    });
+
+    it("should use last sync time for comment sync decisions", async () => {
+      const lastSyncTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+      const mockWorkItemIds = [{ id: 1234 }];
+      const mockDetailedWorkItems = [
+        {
+          id: 1234,
+          title: "Item to check",
+          state: "Active",
+          type: "User Story",
+          assignedTo: "nathan.vale@example.com",
+          lastUpdatedAt: new Date(),
+          commentCount: 1,
+          changedDate: new Date(),
+          rawJson: '{"id": 1234}'
+        }
+      ];
+
+      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds);
+      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems);
+      mockDb.getLastSyncTime.mockResolvedValue(lastSyncTime);
+      mockDb.needsCommentSync.mockResolvedValue(false);
+
+      const syncService = service as any;
+      await syncService.performSyncDetailed();
+
+      expect(mockDb.needsCommentSync).toHaveBeenCalledWith(1234, 1, expect.any(Date), lastSyncTime);
     });
   });
 });

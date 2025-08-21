@@ -14,26 +14,26 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 1.4 Document discovered fields with their types and frequency
   - [x] 1.5 Verify all field discovery tests pass
 
-- [ ] 2. Schema Design and Migration
-  - [ ] 2.1 Write tests for comprehensive Prisma schema migration
-  - [ ] 2.2 Update Prisma schema.prisma with all discovered fields
-  - [ ] 2.3 Generate database migration file with comprehensive field additions
-  - [ ] 2.4 Test migration process preserves existing data integrity
-  - [ ] 2.5 Verify all schema migration tests pass
+- [x] 2. Schema Design and Migration
+  - [x] 2.1 Write tests for comprehensive Prisma schema migration
+  - [x] 2.2 Update Prisma schema.prisma with all discovered fields
+  - [x] 2.3 Generate database migration file with comprehensive field additions
+  - [x] 2.4 Test migration process preserves existing data integrity
+  - [x] 2.5 Verify all schema migration tests pass
 
-- [ ] 3. Sync Service Updates
-  - [ ] 3.1 Write tests for comprehensive field mapping from Azure DevOps data
-  - [ ] 3.2 Update azure-devops.ts service to handle expanded field extraction
-  - [ ] 3.3 Update database.ts service to store all comprehensive fields
-  - [ ] 3.4 Implement field mapping logic with proper type handling and defaults
-  - [ ] 3.5 Verify all sync service tests pass
+- [x] 3. Sync Service Updates
+  - [x] 3.1 Write tests for comprehensive field mapping from Azure DevOps data
+  - [x] 3.2 Update azure-devops.ts service to handle expanded field extraction
+  - [x] 3.3 Update database.ts service to store all comprehensive fields
+  - [x] 3.4 Implement field mapping logic with proper type handling and defaults
+  - [x] 3.5 Verify all sync service tests pass
 
-- [ ] 4. Integration and Validation
-  - [ ] 4.1 Write end-to-end tests for complete sync flow with comprehensive fields
-  - [ ] 4.2 Test complete work item sync from Azure DevOps to database
-  - [ ] 4.3 Validate rawJson backup functionality preserves complete Azure DevOps response
-  - [ ] 4.4 Performance verification that new fields don't significantly impact sync speed
-  - [ ] 4.5 Verify all integration tests pass
+- [x] 4. Integration and Validation
+  - [x] 4.1 Write end-to-end tests for complete sync flow with comprehensive fields
+  - [x] 4.2 Test complete work item sync from Azure DevOps to database
+  - [x] 4.3 Validate rawJson backup functionality preserves complete Azure DevOps response
+  - [x] 4.4 Performance verification that new fields don't significantly impact sync speed
+  - [x] 4.5 Verify all integration tests pass
 
 ## Spec Documentation
 

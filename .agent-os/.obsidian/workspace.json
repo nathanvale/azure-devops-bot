@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md",
+                "file": "specs/2025-08-22-comment-storage-sync/tasks.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "database-schema"
+              "title": "tasks"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md",
+                "file": "specs/2025-08-21-comprehensive-schema/tasks.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for database-schema"
+              "title": "Backlinks for tasks"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md",
+                "file": "specs/2025-08-21-comprehensive-schema/tasks.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from database-schema"
+              "title": "Outgoing links from tasks"
             }
           },
           {
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md",
+                "file": "specs/2025-08-21-comprehensive-schema/tasks.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of database-schema"
+              "title": "Outline of tasks"
             }
           }
         ]
@@ -169,19 +169,40 @@
       "bases:Create new base": false
     }
   },
-  "active": "2673b6f6682fa0cd",
+  "active": "19f1fde4da3007f7",
   "lastOpenFiles": [
-    "specs/2025-08-21-comprehensive-schema/tasks.md",
-    "specs/2025-08-21-comprehensive-schema/sub-specs/technical-spec.md",
-    "specs/2025-08-21-comprehensive-schema/spec.md",
+    "specs/2025-08-22-eslint-prettier-setup/tasks.md",
+    "specs/2025-08-22-eslint-prettier-setup/sub-specs/tests.md",
+    "specs/2025-08-22-eslint-prettier-setup/sub-specs/technical-spec.md",
+    "specs/2025-08-22-eslint-prettier-setup/sub-specs",
+    "specs/2025-08-22-eslint-prettier-setup/spec.md",
+    "specs/2025-08-22-eslint-prettier-setup",
     "product/roadmap.md",
+    "specs/2025-08-22-comment-storage-sync/tasks.md",
+    "specs/2025-08-21-comprehensive-schema/tasks.md",
+    "specs/2025-08-22-full-data-sync/tasks.md",
+    "specs/2025-08-22-comment-storage-sync/sub-specs/technical-spec.md",
+    "specs/2025-08-22-comment-storage-sync/spec.md",
+    "specs/2025-08-22-full-data-sync/sub-specs/technical-spec.md",
+    "specs/2025-08-22-full-data-sync/spec.md",
+    "specs/2025-08-22-comment-storage-sync/sub-specs/tests.md",
+    "specs/2025-08-22-comment-storage-sync/sub-specs/api-spec.md",
+    "specs/2025-08-22-comment-storage-sync/sub-specs",
+    "specs/2025-08-22-comment-storage-sync",
+    "specs/2025-08-22-full-data-sync/sub-specs/tests.md.tmp.48382.1755802021657",
+    "specs/2025-08-22-full-data-sync/sub-specs/api-spec.md",
+    "specs/2025-08-22-full-data-sync/sub-specs/tests.md",
+    "specs/2025-08-22-full-data-sync/sub-specs",
+    "specs/2025-08-22-full-data-sync",
+    "product/tech-stack.md",
+    "specs/2025-08-21-comprehensive-schema/spec.md",
     "specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md",
+    "specs/2025-08-21-comprehensive-schema/sub-specs/technical-spec.md",
     "specs/2025-08-21-comprehensive-schema/sub-specs/tests.md",
     "product/decisions.md",
     "specs/2025-08-21-comprehensive-schema/sub-specs",
     "specs/2025-08-21-comprehensive-schema",
     "product/mission.md",
-    "specs",
-    "product/tech-stack.md"
+    "specs"
   ]
 }

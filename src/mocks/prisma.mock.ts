@@ -52,6 +52,19 @@ export const mockPrismaClient = {
     deleteMany: vi.fn(),
     count: vi.fn(),
   },
+  workItemComment: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    createMany: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+    count: vi.fn(),
+  },
   syncMetadata: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -68,6 +81,11 @@ export const mockPrismaClient = {
 // Helper function to reset all mocks
 export const resetPrismaMocks = () => {
   Object.values(mockPrismaClient.workItem).forEach(mock => {
+    if (vi.isMockFunction(mock)) {
+      mock.mockReset()
+    }
+  })
+  Object.values(mockPrismaClient.workItemComment).forEach(mock => {
     if (vi.isMockFunction(mock)) {
       mock.mockReset()
     }

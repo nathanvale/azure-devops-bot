@@ -26,12 +26,19 @@ The following foundational features have been implemented:
 
 ### Must-Have Features
 
-- [ ] **Comprehensive Schema** - Expanded database to capture ALL Azure DevOps fields ``IN PROGRESS``
-- [ ] **Full Data Sync** - Use `az boards work-item show --expand all` for complete metadata `IN PROGRESS`
-- [ ] **Comment Storage** - Sync all work item comments to separate table `MEDIUM`
+- [x] **Comprehensive Schema** - Expanded database to capture ALL Azure DevOps fields
+- [x] **Full Data Sync** - Use `az boards work-item show --expand all` for complete metadata
+- [x] **Comment Storage** - Sync all work item comments to separate table `MEDIUM`
 - [ ] **Always-On Service** - PM2 process management for 24/7 availability `HIGH`
-- [ ] **Simplified MCP Tools** - Reduce to 2 essential tools (get_work_items, force_sync) `MEDIUM`
-
+- [ ] **Simplified MCP Tools** - Reduce to essential tools `MEDIUM`
+- **wit_force_sync_work_items**: Retrieve a list of work items relevant to the authenticated user.
+- **wit_my_work_items**: Retrieve a list of work items relevant to the authenticated user.
+- **wit_get_work_item**: Get a single work item by ID.
+- **wit_get_work_items_batch_by_ids**: Retrieve a list of work items by IDs in batch.
+- **wit_list_work_item_comments**: Retrieve a list of comments for a work item by ID.
+- **wit_get_work_items_for_iteration**: Retrieve a list of work items for a specified iteration.
+- **wit_add_work_item_comment**: Add a comment to a work item by ID.
+- **wit_link_work_item_to_pull_request**: Link a single work item to an existing pull request.
 ### Should-Have Features
 
 - [ ] **Raw JSON Backup** - Store complete Azure DevOps response for data completeness `LOW`

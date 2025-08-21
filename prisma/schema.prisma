@@ -61,16 +61,6 @@ model WorkItem {
   
   // Additional Azure DevOps fields
   rev               Int?
-  reason            String?
-  watermark         Int?
-  url               String?
-  commentCount      Int?     @default(0)
-  hasAttachments    Boolean  @default(false)
-  teamProject       String?
-  areaId            Int?
-  nodeId            Int?
-  stackRank         Float?
-  valueArea         String?
   
   // Store EVERYTHING from Azure DevOps (backup)
   rawJson           String

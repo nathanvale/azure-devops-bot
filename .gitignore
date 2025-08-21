@@ -11,3 +11,5 @@ dist
 prisma/dev.db
 
 .logs
+
+coverage
