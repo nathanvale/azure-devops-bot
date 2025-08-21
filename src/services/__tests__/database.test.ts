@@ -116,7 +116,7 @@ describe('DatabaseService', () => {
         }
       ]
 
-      mockPrismaClient.workItem.upsert.mockRejectedValue(
+      mockPrismaClient.$transaction.mockRejectedValue(
         new Error('Database connection failed')
       )
 
@@ -832,7 +832,7 @@ describe('DatabaseService', () => {
         modifiedDate: null
       }];
 
-      mockPrismaClient.workItemComment.upsert.mockRejectedValue(
+      mockPrismaClient.$transaction.mockRejectedValue(
         new Error('Database constraint violation')
       );
 

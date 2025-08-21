@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "specs/2025-08-22-comment-storage-sync/tasks.md",
+                "file": "specs/2025-08-22-merge-readiness-fixes/tasks.md",
                 "mode": "source",
                 "source": false
               },
@@ -171,6 +171,14 @@
   },
   "active": "19f1fde4da3007f7",
   "lastOpenFiles": [
+    "specs/2025-08-22-merge-readiness-fixes/sub-specs/technical-spec.md",
+    "specs/2025-08-22-merge-readiness-fixes/sub-specs/database-schema.md",
+    "specs/2025-08-22-merge-readiness-fixes/spec.md",
+    "specs/2025-08-22-comment-storage-sync/tasks.md",
+    "specs/2025-08-22-merge-readiness-fixes/tasks.md",
+    "specs/2025-08-22-merge-readiness-fixes/sub-specs/tests.md",
+    "specs/2025-08-22-merge-readiness-fixes/sub-specs",
+    "specs/2025-08-22-merge-readiness-fixes",
     "specs/2025-08-22-eslint-prettier-setup/tasks.md",
     "specs/2025-08-22-eslint-prettier-setup/sub-specs/tests.md",
     "specs/2025-08-22-eslint-prettier-setup/sub-specs/technical-spec.md",
@@ -178,7 +186,6 @@
     "specs/2025-08-22-eslint-prettier-setup/spec.md",
     "specs/2025-08-22-eslint-prettier-setup",
     "product/roadmap.md",
-    "specs/2025-08-22-comment-storage-sync/tasks.md",
     "specs/2025-08-21-comprehensive-schema/tasks.md",
     "specs/2025-08-22-full-data-sync/tasks.md",
     "specs/2025-08-22-comment-storage-sync/sub-specs/technical-spec.md",
@@ -199,10 +206,6 @@
     "specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md",
     "specs/2025-08-21-comprehensive-schema/sub-specs/technical-spec.md",
     "specs/2025-08-21-comprehensive-schema/sub-specs/tests.md",
-    "product/decisions.md",
-    "specs/2025-08-21-comprehensive-schema/sub-specs",
-    "specs/2025-08-21-comprehensive-schema",
-    "product/mission.md",
-    "specs"
+    "specs/2025-08-21-comprehensive-schema/sub-specs"
   ]
 }

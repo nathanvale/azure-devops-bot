@@ -1,5 +1,5 @@
 {
-  "indexed_at": "2025-08-22T06:53:30.547039",
+  "indexed_at": "2025-08-22T09:02:34.044066",
   "root": ".",
   "project_structure": {
     "type": "tree",
@@ -9,20 +9,21 @@
       "\u251c\u2500\u2500 config/",
       "\u2502   \u2514\u2500\u2500 tmuxinator/",
       "\u251c\u2500\u2500 docs/",
-      "\u251c\u2500\u2500 prisma/ (5 files)",
-      "\u2502   \u2514\u2500\u2500 migrations/ (5 files)",
+      "\u251c\u2500\u2500 prisma/ (6 files)",
+      "\u2502   \u2514\u2500\u2500 migrations/ (6 files)",
       "\u2502       \u251c\u2500\u2500 20250708012432_init/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250708083148_add_historical_fields/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250708131651_add_completion_tracking/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250821100247_add_comprehensive_metadata/ (1 files)",
-      "\u2502       \u2514\u2500\u2500 20250821102909_add_comprehensive_metadata/ (1 files)",
-      "\u251c\u2500\u2500 scripts/ (1 files)",
-      "\u251c\u2500\u2500 src/ (26 files)",
+      "\u2502       \u251c\u2500\u2500 20250821102909_add_comprehensive_metadata/ (1 files)",
+      "\u2502       \u2514\u2500\u2500 20250821213538_add_missing_fields/ (1 files)",
+      "\u251c\u2500\u2500 scripts/ (2 files)",
+      "\u251c\u2500\u2500 src/ (22 files)",
       "\u2502   \u251c\u2500\u2500 __tests__/ (2 files)",
       "\u2502   \u251c\u2500\u2500 mocks/ (3 files)",
       "\u2502   \u2502   \u2514\u2500\u2500 handlers/ (1 files)",
-      "\u2502   \u251c\u2500\u2500 services/ (18 files)",
-      "\u2502   \u2502   \u2514\u2500\u2500 __tests__/ (9 files)",
+      "\u2502   \u251c\u2500\u2500 services/ (14 files)",
+      "\u2502   \u2502   \u2514\u2500\u2500 __tests__/ (7 files)",
       "\u2502   \u251c\u2500\u2500 tools/",
       "\u2502   \u2502   \u2514\u2500\u2500 __tests__/",
       "\u2502   \u251c\u2500\u2500 types/ (1 files)",
@@ -240,6 +241,67 @@
       ],
       "architecture_hints": []
     },
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes/tasks.md": {
+      "sections": [
+        "Spec Tasks",
+        "Tasks"
+      ],
+      "architecture_hints": []
+    },
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes/spec.md": {
+      "sections": [
+        "Spec Requirements Document",
+        "Overview",
+        "User Stories",
+        "Developer Confidence",
+        "Clean Architecture Alignment",
+        "Production Readiness",
+        "Spec Scope",
+        "Out of Scope",
+        "Expected Deliverable",
+        "Spec Documentation"
+      ],
+      "architecture_hints": []
+    },
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes/sub-specs/technical-spec.md": {
+      "sections": [
+        "Technical Specification",
+        "Technical Requirements",
+        "Test Suite Fixes",
+        "Dependency Management",
+        "Database Initialization",
+        "Architecture Cleanup",
+        "Performance Optimization",
+        "Error Handling",
+        "Approach Options",
+        "External Dependencies"
+      ],
+      "architecture_hints": []
+    },
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes/sub-specs/database-schema.md": {
+      "sections": [
+        "Database Schema",
+        "Schema Changes",
+        "Missing Fields Analysis",
+        "Migration SQL",
+        "Updated Prisma Schema",
+        "Rationale",
+        "Field Necessity"
+      ],
+      "architecture_hints": []
+    },
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes/sub-specs/tests.md": {
+      "sections": [
+        "Tests Specification",
+        "Test Coverage",
+        "Current Test Failures (13 failing tests)",
+        "Required Test Fixes",
+        "Mocking Requirements",
+        "Performance Tests",
+        "Error Scenario Testing"
+      ],
+      "architecture_hints": []
+    },
     ".agent-os/specs/2025-08-22-comment-storage-sync/sub-specs/api-spec.md": {
       "sections": [
         "API Specification",
@@ -401,22 +463,24 @@
     ".agent-os/specs/2025-08-22-eslint-prettier-setup": "Test files and test utilities",
     ".agent-os/specs/2025-08-22-full-data-sync": "Test files and test utilities",
     ".agent-os/specs/2025-08-22-comment-storage-sync": "Test files and test utilities",
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes": "Test files and test utilities",
     ".agent-os/specs/2025-08-21-comprehensive-schema/sub-specs": "Test specifications",
     ".agent-os/specs/2025-08-22-eslint-prettier-setup/sub-specs": "Test specifications",
     ".agent-os/specs/2025-08-22-full-data-sync/sub-specs": "Test specifications",
-    ".agent-os/specs/2025-08-22-comment-storage-sync/sub-specs": "Test specifications"
+    ".agent-os/specs/2025-08-22-comment-storage-sync/sub-specs": "Test specifications",
+    ".agent-os/specs/2025-08-22-merge-readiness-fixes/sub-specs": "Test specifications"
   },
   "stats": {
-    "total_files": 51,
-    "total_directories": 45,
+    "total_files": 49,
+    "total_directories": 48,
     "fully_parsed": {
-      "typescript": 33
+      "typescript": 30
     },
     "listed_only": {
       "json": 13,
-      "sql": 5
+      "sql": 6
     },
-    "markdown_files": 27
+    "markdown_files": 32
   },
   "files": {
     "package.json": {
@@ -492,6 +556,25 @@
       ],
       "call_graph": {}
     },
+    "scripts/init-database.ts": {
+      "language": "typescript",
+      "parsed": true,
+      "imports": [
+        "child_process",
+        "fs",
+        "path"
+      ],
+      "functions": {
+        "initializeDatabase": "async ()"
+      },
+      "classes": {},
+      "variables": [
+        "dbPath",
+        "schemaPath",
+        "dbExists"
+      ],
+      "call_graph": {}
+    },
     "src/mcp-server.ts": {
       "language": "typescript",
       "parsed": true,
@@ -525,7 +608,7 @@
         "activeItems",
         "inProgressItems",
         "query",
-        "response",
+        "normalizedQuery",
         "concurrency",
         "id",
         "url",
@@ -610,110 +693,6 @@
       "parsed": false,
       "purpose": "Test file"
     },
-    "src/services/semantic-search.ts": {
-      "language": "typescript",
-      "parsed": true,
-      "functions": {},
-      "classes": {
-        "SemanticSearchEngine": {
-          "methods": {
-            "extractConcepts": "(text: string): Concept[]",
-            "recognizeIntent": "(query: string): QueryIntent",
-            "parseSemanticQuery": "(query: string): SemanticQuery",
-            "calculateSimilarity": "(semanticQuery: SemanticQuery, workItem: any): SemanticMatch",
-            "findSimilarWorkItems": "async (query: string, workItems: any[]): Promise<SemanticMatch[]>"
-          }
-        }
-      },
-      "variables": [
-        "normalizedText",
-        "words",
-        "expandedWords",
-        "fuzzyMatch",
-        "primaryMatches",
-        "secondaryMatches",
-        "isFromAbbreviation",
-        "weight",
-        "uniqueConcepts",
-        "normalizedQuery",
-        "concepts",
-        "intent",
-        "confidence",
-        "filters",
-        "workItemText",
-        "workItemConcepts",
-        "factorScores",
-        "weights",
-        "overallScore",
-        "reasons",
-        "semanticQuery",
-        "matches",
-        "threshold",
-        "partialMatch",
-        "commonWords",
-        "seen",
-        "key",
-        "wordCount",
-        "domains",
-        "queryLower",
-        "queryTerms",
-        "itemTerms",
-        "intersection",
-        "queryDomains",
-        "itemDomains",
-        "basicRelevance",
-        "concentrationBonus",
-        "queryConceptsInDomain",
-        "itemConceptsInDomain",
-        "domainRatio",
-        "multiplicityBonus",
-        "qualityBonus",
-        "nonMatchingDomains",
-        "mixingPenalty",
-        "now",
-        "itemDate",
-        "daysDiff",
-        "isCompleted",
-        "sharedConcepts"
-      ],
-      "interfaces": {
-        "Concept": {},
-        "SemanticMatch": {},
-        "SemanticQuery": {}
-      },
-      "enums": {
-        "QueryIntent": {
-          "values": [
-            "FIND_SIMILAR",
-            "work",
-            "like",
-            "this",
-            "similar",
-            "tasks",
-            "SEARCH_CONTENT",
-            "bugs",
-            "about",
-            "auth",
-            "API",
-            "work",
-            "REFERENCE_PAST",
-            "how",
-            "I",
-            "solved",
-            "I",
-            "fixed",
-            "before",
-            "EXPLORE_RELATED",
-            "related",
-            "to",
-            "connected",
-            "with",
-            "GENERAL_SEARCH"
-          ]
-        }
-      },
-      "call_graph": {}
-    },
     "src/services/field-discovery.ts": {
       "language": "typescript",
       "parsed": true,
@@ -757,64 +736,6 @@
       },
       "call_graph": {}
     },
-    "src/services/enhanced-query-engine.ts": {
-      "language": "typescript",
-      "parsed": true,
-      "imports": [
-        "./database.js"
-      ],
-      "functions": {},
-      "classes": {
-        "EnhancedQueryEngine": {
-          "methods": {
-            "constructor": "(db: DatabaseService)",
-            "processQuery": "async (query: string, userEmails?: string[]): Promise<string>",
-            "__init__": "(db: DatabaseService)"
-          }
-        }
-      },
-      "variables": [
-        "filters",
-        "result",
-        "normalizedQuery",
-        "keywords",
-        "dateRange",
-        "technicalKeywords",
-        "quotedMatches",
-        "technicalWords",
-        "now",
-        "start",
-        "lastMonthsMatch",
-        "months",
-        "lastWeeksMatch",
-        "weeks",
-        "end",
-        "yearMatch",
-        "year",
-        "items",
-        "searchText",
-        "dateField",
-        "itemDate",
-        "date",
-        "dateA",
-        "dateB",
-        "summary",
-        "output",
-        "typeCount",
-        "displayItems",
-        "number",
-        "isHistorical",
-        "snippet",
-        "lowerDescription",
-        "lowerKeyword",
-        "index"
-      ],
-      "interfaces": {
-        "QueryFilter": {},
-        "QueryResult": {}
-      },
-      "call_graph": {}
-    },
     "src/services/sync-service.ts": {
       "language": "typescript",
       "parsed": true,
@@ -839,6 +760,7 @@
         }
       },
       "constants": {
+        "CONCURRENCY": "number",
         "SYNC_INTERVAL": "value"
       },
       "variables": [
@@ -852,7 +774,15 @@
         "lastSyncTime",
         "checkedCount",
         "syncedCount",
+        "totalCommentsProcessed",
         "needsSync",
+        "queue",
+        "inProgress",
+        "totalToSync",
+        "completed",
+        "percent",
+        "workItem",
+        "promise",
         "comments",
         "envInterval",
         "defaultInterval",
@@ -874,7 +804,10 @@
         "util",
         "@orchestr8/resilience"
       ],
-      "functions": {},
+      "functions": {
+        "logCircuitBreakerEvent": "(event: string, key: string, details?: any)",
+        "logRetryAttempt": "(attempt: number, maxAttempts: number, delay: number, error: any)"
+      },
       "classes": {
         "AzureDevOpsClient": {
           "methods": {
@@ -892,6 +825,9 @@
         "detailPolicy",
         "commentPolicy",
         "resilience",
+        "logCircuitBreakerEvent",
+        "timestamp",
+        "logRetryAttempt",
         "wiqlCommand",
         "wiqlResult",
         "workItemIds",
@@ -978,8 +914,19 @@
           }
         }
       },
+      "constants": {
+        "BATCH_SIZE": "number"
+      },
       "variables": [
+        "totalBatches",
+        "i",
+        "batch",
+        "batchNumber",
+        "batchStartTime",
         "commonData",
+        "batchDuration",
+        "processed",
+        "percentComplete",
         "lastItem"
       ],
       "call_graph": {}
@@ -1045,8 +992,7 @@
       "language": "typescript",
       "parsed": true,
       "imports": [
-        "./database.js",
-        "./enhanced-query-engine.js"
+        "./database.js"
       ],
       "functions": {},
       "classes": {
@@ -1059,10 +1005,7 @@
         }
       },
       "variables": [
-        "enhancedResult",
         "normalizedQuery",
-        "simpleLegacyQueries",
-        "enhancedIndicators",
         "activeItems",
         "inProgressItems",
         "allCurrentItems",
@@ -1107,50 +1050,6 @@
       "parsed": false,
       "purpose": "Test file"
     },
-    "src/services/__tests__/semantic-search.test.ts": {
-      "language": "typescript",
-      "parsed": true,
-      "purpose": "Test file",
-      "imports": [
-        "vitest",
-        "../semantic-search.js"
-      ],
-      "functions": {
-        "createTestWorkItem": "(overrides = {})"
-      },
-      "classes": {},
-      "variables": [
-        "createTestWorkItem",
-        "concepts",
-        "authConcept",
-        "loginConcept",
-        "authenticationConcept",
-        "authTerms",
-        "query",
-        "semanticQuery",
-        "bugQuery",
-        "storyQuery",
-        "taskQuery",
-        "simpleQuery",
-        "complexQuery",
-        "mockSemanticQuery",
-        "workItem",
-        "match",
-        "recentItem",
-        "oldItem",
-        "recentMatch",
-        "oldMatch",
-        "referenceQuery",
-        "completedItem",
-        "activeItem",
-        "completedMatch",
-        "activeMatch",
-        "workItems",
-        "matches",
-        "topMatch"
-      ],
-      "call_graph": {}
-    },
     "src/services/__tests__/query-engine.test.ts": {
       "language": "typescript",
       "parsed": false,
@@ -1175,54 +1074,6 @@
       "language": "typescript",
       "parsed": false,
       "purpose": "Test file"
-    },
-    "src/services/__tests__/enhanced-query-engine.test.ts": {
-      "language": "typescript",
-      "parsed": true,
-      "purpose": "Test file",
-      "imports": [
-        "vitest",
-        "../enhanced-query-engine.js",
-        "../database.js"
-      ],
-      "functions": {
-        "createTestWorkItem": "(overrides = {})"
-      },
-      "classes": {},
-      "variables": [
-        "createTestWorkItem",
-        "bugItem",
-        "storyItem",
-        "result",
-        "taskItem",
-        "completedItem",
-        "activeItem",
-        "closedItem",
-        "authItem",
-        "unrelatedItem",
-        "dbItem",
-        "otherItem",
-        "apiItem",
-        "lastMonth",
-        "recentItem",
-        "oldItem",
-        "currentYear",
-        "thisYearItem",
-        "lastYearItem",
-        "item2023",
-        "item2024",
-        "historicalItem",
-        "currentItem",
-        "matchingItem",
-        "nonMatchingItems",
-        "partialMatchItems",
-        "item",
-        "items",
-        "itemWithMissingFields",
-        "longQuery",
-        "nonMatchingItem"
-      ],
-      "call_graph": {}
     },
     "src/services/__tests__/schema-migration.test.ts": {
       "language": "typescript",
@@ -1397,6 +1248,10 @@
       "language": "sql",
       "parsed": false
     },
+    "prisma/migrations/20250821213538_add_missing_fields/migration.sql": {
+      "language": "sql",
+      "parsed": false
+    },
     "prisma/migrations/20250708083148_add_historical_fields/migration.sql": {
       "language": "sql",
       "parsed": false
@@ -1419,6 +1274,11 @@
       "src/services/field-discovery.ts",
       "src/services/schema-migration.ts",
       "src/services/azure-devops.ts"
+    ],
+    "scripts/init-database.ts": [
+      "child_process",
+      "fs",
+      "path"
     ],
     "src/mcp-server.ts": [
       "@modelcontextprotocol/sdk/server/index.js",
@@ -1451,12 +1311,6 @@
       "child_process",
       "util"
     ],
-    "src/services/__tests__/semantic-search.test.ts": [
-      "vitest"
-    ],
-    "src/services/__tests__/enhanced-query-engine.test.ts": [
-      "vitest"
-    ],
     "src/mocks/handlers/azure-devops.handlers.ts": [
       "msw"
     ],
@@ -1470,5 +1324,5 @@
       "@modelcontextprotocol/sdk/types.js"
     ]
   },
-  "staleness_check": 1755204810.759725
+  "staleness_check": 1755212554.253709
 }

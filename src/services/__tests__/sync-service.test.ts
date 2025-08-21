@@ -808,7 +808,7 @@ describe("SyncService", () => {
       await syncService.performSyncDetailed();
 
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringMatching(/📝 Comment sync: 2 work items checked, 2 had comments synced/)
+        expect.stringMatching(/📝 Comment sync complete: 2 work items checked, 2 had comments synced \(.* total comments\) in \d+ms/)
       );
     });
 

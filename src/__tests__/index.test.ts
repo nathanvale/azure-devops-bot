@@ -5,6 +5,7 @@ const mockSyncService = vi.hoisted(() => ({
   startBackgroundSync: vi.fn(),
   shouldSync: vi.fn(),
   performSync: vi.fn(),
+  performSyncDetailed: vi.fn(),
   close: vi.fn(),
 }));
 
@@ -72,6 +73,7 @@ describe("AzureDevOpsBot", () => {
     mockSyncService.startBackgroundSync.mockClear();
     mockSyncService.shouldSync.mockClear();
     mockSyncService.performSync.mockClear();
+    mockSyncService.performSyncDetailed.mockClear();
     mockQueryEngine.processQuery.mockClear();
     
     // Create a new bot instance for each test
@@ -244,8 +246,8 @@ describe("AzureDevOpsBot", () => {
       
       await bot.start();
       
-      expect(mockSyncService.performSync).toHaveBeenCalled();
-      expect(consoleSpy.log).toHaveBeenCalledWith('🔄 Syncing work items...');
+      expect(mockSyncService.performSyncDetailed).toHaveBeenCalled();
+      expect(consoleSpy.log).toHaveBeenCalledWith('🔄 Syncing work items with detailed metadata...');
     });
 
     it("should skip sync when shouldSync returns false", async () => {
@@ -254,8 +256,8 @@ describe("AzureDevOpsBot", () => {
       
       await bot.start();
       
-      expect(mockSyncService.performSync).not.toHaveBeenCalled();
-      expect(consoleSpy.log).not.toHaveBeenCalledWith('🔄 Syncing work items...');
+      expect(mockSyncService.performSyncDetailed).not.toHaveBeenCalled();
+      expect(consoleSpy.log).not.toHaveBeenCalledWith('🔄 Syncing work items with detailed metadata...');
     });
 
     it("should use 'summary' as default query when no args provided", async () => {

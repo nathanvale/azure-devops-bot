@@ -204,13 +204,37 @@ export class AzureDevOpsMCPServer {
       throw new Error('Query is required');
     }
 
-    const response = await this.queryEngine.processQuery(query, this.userEmails);
+    // Simple keyword-based filtering to return raw JSON data
+    const normalizedQuery = query.toLowerCase().trim();
+    let items;
+
+    if (normalizedQuery.includes('bug')) {
+      items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails);
+    } else if (normalizedQuery.includes('task')) {
+      items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails);
+    } else if (normalizedQuery.includes('story') || normalizedQuery.includes('user story')) {
+      items = await this.db.getWorkItemsByTypeForUsers('User Story', this.userEmails);
+    } else if (normalizedQuery.includes('active') || normalizedQuery.includes('current')) {
+      const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
+      const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
+      items = [...activeItems, ...inProgressItems];
+    } else if (normalizedQuery.includes('open')) {
+      const newItems = await this.db.getWorkItemsByStateForUsers('New', this.userEmails);
+      const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
+      const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
+      items = [...newItems, ...activeItems, ...inProgressItems];
+    } else if (normalizedQuery.includes('closed') || normalizedQuery.includes('completed')) {
+      items = await this.db.getWorkItemsByStateForUsers('Closed', this.userEmails);
+    } else {
+      // Default: return all work items
+      items = await this.db.getWorkItemsForUsers(this.userEmails);
+    }
     
     return {
       content: [
         {
           type: 'text',
-          text: response
+          text: JSON.stringify(items, null, 2)
         }
       ]
     };

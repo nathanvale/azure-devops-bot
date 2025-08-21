@@ -64,13 +64,18 @@ export class SyncService {
     const lastSyncTime = await this.db.getLastSyncTime();
     let checkedCount = 0;
     let syncedCount = 0;
+    let totalCommentsProcessed = 0;
     const startTime = Date.now();
+    const CONCURRENCY = 5;
 
+    console.log(`📝 Checking ${workItems.length} work items for comment sync...`);
+
+    // Filter work items that need comment sync first
+    const workItemsNeedingSync: any[] = [];
     for (const workItem of workItems) {
+      checkedCount++;
+      
       try {
-        checkedCount++;
-        
-        // Check if this work item needs comment sync
         const needsSync = await this.db.needsCommentSync(
           workItem.id,
           workItem.commentCount || 0,
@@ -79,21 +84,74 @@ export class SyncService {
         );
 
         if (needsSync) {
-          // Fetch and store comments for this work item
-          const comments = await this.client.fetchWorkItemComments(workItem.id);
-          await this.db.storeWorkItemComments(comments);
-          syncedCount++;
+          workItemsNeedingSync.push(workItem);
         }
       } catch (error) {
-        console.warn(`⚠️  Failed to sync comments for work item ${workItem.id}:`, error);
-        // Continue with other work items even if one fails
+        console.warn(`⚠️  Failed to check sync status for work item ${workItem.id}:`, error);
       }
+    }
+
+    if (workItemsNeedingSync.length === 0) {
+      console.log(`📝 Comment sync complete: ${checkedCount} work items checked, 0 needed comment sync`);
+      return;
+    }
+
+    console.log(`📝 Found ${workItemsNeedingSync.length} work items needing comment sync`);
+
+    // Process comment sync with controlled concurrency
+    const queue = [...workItemsNeedingSync];
+    const inProgress = new Set<Promise<void>>();
+    const totalToSync = workItemsNeedingSync.length;
+    let progressReportInterval: NodeJS.Timeout | null = null;
+
+    // Report progress every 5 seconds for long operations
+    if (totalToSync > 10) {
+      progressReportInterval = setInterval(() => {
+        const completed = totalToSync - queue.length - inProgress.size;
+        const percent = Math.round((completed / totalToSync) * 100);
+        console.log(`📝 Comment sync progress: ${completed}/${totalToSync} work items (${percent}%) - ${syncedCount} items had comments`);
+      }, 5000);
+    }
+
+    while (queue.length > 0 || inProgress.size > 0) {
+      // Start new tasks up to concurrency limit
+      while (inProgress.size < CONCURRENCY && queue.length > 0) {
+        const workItem = queue.shift()!;
+        const promise = this.syncSingleWorkItemComments(workItem)
+          .then((commentCount) => {
+            syncedCount++;
+            totalCommentsProcessed += commentCount;
+          })
+          .catch((error) => {
+            console.warn(`⚠️  Failed to sync comments for work item ${workItem.id}:`, error);
+          })
+          .finally(() => {
+            inProgress.delete(promise);
+          });
+        
+        inProgress.add(promise);
+      }
+
+      // Wait for at least one task to complete
+      if (inProgress.size > 0) {
+        await Promise.race(inProgress);
+      }
+    }
+
+    if (progressReportInterval) {
+      clearInterval(progressReportInterval);
     }
 
     const endTime = Date.now();
     const duration = endTime - startTime;
     
-    console.log(`📝 Comment sync: ${checkedCount} work items checked, ${syncedCount} had comments synced in ${duration}ms`);
+    console.log(`📝 Comment sync complete: ${checkedCount} work items checked, ${syncedCount} had comments synced (${totalCommentsProcessed} total comments) in ${duration}ms`);
+  }
+
+  private async syncSingleWorkItemComments(workItem: any): Promise<number> {
+    const comments = await this.client.fetchWorkItemComments(workItem.id);
+    await this.db.storeWorkItemComments(comments);
+    return comments.length;
   }
   
   private getSyncInterval(): number {

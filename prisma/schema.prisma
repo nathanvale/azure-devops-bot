@@ -61,6 +61,8 @@ model WorkItem {
   
   // Additional Azure DevOps fields
   rev               Int?
+  reason            String?
+  watermark         Int?
   
   // Store EVERYTHING from Azure DevOps (backup)
   rawJson           String
