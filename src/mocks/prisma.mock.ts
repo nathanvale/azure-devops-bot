@@ -1,5 +1,6 @@
+import type { PrismaClient } from '@prisma/client'
+
 import { vi } from 'vitest'
-import { PrismaClient } from '@prisma/client'
 
 // Mock work item data
 export const mockWorkItemData = [
@@ -16,7 +17,8 @@ export const mockWorkItemData = [
     iterationPath: 'Customer Services Platform\\Sprint 1',
     priority: 1,
     severity: '2 - High',
-    description: 'As a user, I want to authenticate so that I can access the system',
+    description:
+      'As a user, I want to authenticate so that I can access the system',
     lastSyncDate: new Date(),
   },
   {
@@ -34,7 +36,7 @@ export const mockWorkItemData = [
     severity: null,
     description: 'Setup automated build and deployment pipeline',
     lastSyncDate: new Date(),
-  }
+  },
 ]
 
 // Mock Prisma client instance
@@ -80,17 +82,17 @@ export const mockPrismaClient = {
 
 // Helper function to reset all mocks
 export const resetPrismaMocks = () => {
-  Object.values(mockPrismaClient.workItem).forEach(mock => {
+  Object.values(mockPrismaClient.workItem).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
       mock.mockReset()
     }
   })
-  Object.values(mockPrismaClient.workItemComment).forEach(mock => {
+  Object.values(mockPrismaClient.workItemComment).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
       mock.mockReset()
     }
   })
-  Object.values(mockPrismaClient.syncMetadata).forEach(mock => {
+  Object.values(mockPrismaClient.syncMetadata).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
       mock.mockReset()
     }
@@ -111,8 +113,8 @@ export const setupPrismaDefaults = () => {
   // Default implementations for common operations
   mockPrismaClient.workItem.findMany.mockResolvedValue(mockWorkItemData)
   mockPrismaClient.workItem.findUnique.mockImplementation(({ where }) => {
-    const item = mockWorkItemData.find(item => 
-      item.id === where.id || item.azureId === where.azureId
+    const item = mockWorkItemData.find(
+      (item) => item.id === where.id || item.azureId === where.azureId,
     )
     return Promise.resolve(item || null)
   })
@@ -124,8 +126,8 @@ export const setupPrismaDefaults = () => {
     return Promise.resolve(newItem)
   })
   mockPrismaClient.workItem.update.mockImplementation(({ data, where }) => {
-    const existingItem = mockWorkItemData.find(item => 
-      item.id === where.id || item.azureId === where.azureId
+    const existingItem = mockWorkItemData.find(
+      (item) => item.id === where.id || item.azureId === where.azureId,
     )
     if (!existingItem) {
       throw new Error('Record not found')
@@ -133,21 +135,23 @@ export const setupPrismaDefaults = () => {
     const updatedItem = { ...existingItem, ...data }
     return Promise.resolve(updatedItem)
   })
-  mockPrismaClient.workItem.upsert.mockImplementation(({ create, update, where }) => {
-    const existingItem = mockWorkItemData.find(item => 
-      item.id === where.id || item.azureId === where.azureId
-    )
-    if (existingItem) {
-      const updatedItem = { ...existingItem, ...update }
-      return Promise.resolve(updatedItem)
-    } else {
-      const newItem = {
-        id: Math.floor(Math.random() * 10000),
-        ...create,
+  mockPrismaClient.workItem.upsert.mockImplementation(
+    ({ create, update, where }) => {
+      const existingItem = mockWorkItemData.find(
+        (item) => item.id === where.id || item.azureId === where.azureId,
+      )
+      if (existingItem) {
+        const updatedItem = { ...existingItem, ...update }
+        return Promise.resolve(updatedItem)
+      } else {
+        const newItem = {
+          id: Math.floor(Math.random() * 10000),
+          ...create,
+        }
+        return Promise.resolve(newItem)
       }
-      return Promise.resolve(newItem)
-    }
-  })
+    },
+  )
   mockPrismaClient.$connect.mockResolvedValue(undefined)
   mockPrismaClient.$disconnect.mockResolvedValue(undefined)
   mockPrismaClient.$transaction.mockImplementation(async (operations) => {

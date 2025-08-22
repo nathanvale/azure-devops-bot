@@ -1,25 +1,26 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { Tool } from '@modelcontextprotocol/sdk/types.js'
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-  Tool,
-} from '@modelcontextprotocol/sdk/types.js';
+} from '@modelcontextprotocol/sdk/types.js'
 
-import { SyncService } from './services/sync-service.js';
-import { DatabaseService } from './services/database.js';
-import { QueryEngine } from './services/query-engine.js';
-import { AzureDevOpsClient } from './services/azure-devops.js';
-import { AzureAuth } from './services/auth.js';
+import { AzureAuth } from './services/auth.js'
+import { AzureDevOpsClient } from './services/azure-devops.js'
+import { DatabaseService } from './services/database.js'
+import { QueryEngine } from './services/query-engine.js'
+import { SyncService } from './services/sync-service.js'
 
 export class AzureDevOpsMCPServer {
-  private server: Server;
-  private syncService: SyncService;
-  private db: DatabaseService;
-  private queryEngine: QueryEngine;
-  public userEmails: string[] = [];
+  private server: Server
+  private syncService: SyncService
+  private db: DatabaseService
+  private queryEngine: QueryEngine
+  public userEmails: string[] = []
 
   constructor() {
     this.server = new Server(
@@ -31,36 +32,46 @@ export class AzureDevOpsMCPServer {
         capabilities: {
           tools: {},
         },
-      }
-    );
+      },
+    )
 
-    this.syncService = new SyncService();
-    this.db = new DatabaseService();
-    this.queryEngine = new QueryEngine(this.db);
+    this.syncService = new SyncService()
+    this.db = new DatabaseService()
+    this.queryEngine = new QueryEngine(this.db)
 
-    this.setupHandlers();
+    this.setupHandlers()
   }
 
   private getConfiguredEmails(): string[] {
     // Check for command line arguments first
-    const args = process.argv.slice(2);
-    const emailArg = args.find(arg => arg.startsWith('--emails='));
-    
+    const args = process.argv.slice(2)
+    const emailArg = args.find((arg) => arg.startsWith('--emails='))
+
     if (!emailArg) {
-      console.error('Error: Email addresses must be provided via --emails parameter');
-      console.error('Example: pnpm mcp --emails=user1@domain.com,user2@domain.com');
-      process.exit(1);
+      console.error(
+        'Error: Email addresses must be provided via --emails parameter',
+      )
+      console.error(
+        'Example: pnpm mcp --emails=user1@domain.com,user2@domain.com',
+      )
+      process.exit(1)
     }
-    
-    const emails = emailArg.split('=')[1].split(',').map(email => email.trim()).filter(email => email.length > 0);
-    
+
+    const emails = emailArg
+      .split('=')[1]
+      .split(',')
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0)
+
     if (emails.length === 0) {
-      console.error('Error: At least one valid email address must be provided');
-      console.error('Example: pnpm mcp --emails=user1@domain.com,user2@domain.com');
-      process.exit(1);
+      console.error('Error: At least one valid email address must be provided')
+      console.error(
+        'Example: pnpm mcp --emails=user1@domain.com,user2@domain.com',
+      )
+      process.exit(1)
     }
-    
-    return emails;
+
+    return emails
   }
 
   private setupHandlers() {
@@ -69,17 +80,26 @@ export class AzureDevOpsMCPServer {
         tools: [
           {
             name: 'get_work_items',
-            description: 'Get all work items (stories, bugs, tasks) assigned to you from Azure DevOps',
+            description:
+              'Get all work items (stories, bugs, tasks) assigned to you from Azure DevOps',
             inputSchema: {
               type: 'object',
               properties: {
                 filter: {
                   type: 'string',
-                  description: 'Optional filter: "active", "open", "user-stories", "bugs", "tasks", or "all"',
-                  enum: ['active', 'open', 'user-stories', 'bugs', 'tasks', 'all']
-                }
-              }
-            }
+                  description:
+                    'Optional filter: "active", "open", "user-stories", "bugs", "tasks", or "all"',
+                  enum: [
+                    'active',
+                    'open',
+                    'user-stories',
+                    'bugs',
+                    'tasks',
+                    'all',
+                  ],
+                },
+              },
+            },
           },
           {
             name: 'query_work',
@@ -89,26 +109,28 @@ export class AzureDevOpsMCPServer {
               properties: {
                 query: {
                   type: 'string',
-                  description: 'Natural language query about your work items'
-                }
+                  description: 'Natural language query about your work items',
+                },
               },
-              required: ['query']
-            }
+              required: ['query'],
+            },
           },
           {
             name: 'sync_data',
-            description: 'Manually sync all work items with detailed metadata from Azure DevOps using parallel processing',
+            description:
+              'Manually sync all work items with detailed metadata from Azure DevOps using parallel processing',
             inputSchema: {
               type: 'object',
               properties: {
                 concurrency: {
                   type: 'number',
-                  description: 'Optional concurrency limit for parallel fetching (default: 5)',
+                  description:
+                    'Optional concurrency limit for parallel fetching (default: 5)',
                   minimum: 1,
-                  maximum: 20
-                }
-              }
-            }
+                  maximum: 20,
+                },
+              },
+            },
           },
           {
             name: 'get_work_item_url',
@@ -118,199 +140,248 @@ export class AzureDevOpsMCPServer {
               properties: {
                 id: {
                   type: 'number',
-                  description: 'Work item ID'
-                }
+                  description: 'Work item ID',
+                },
               },
-              required: ['id']
-            }
-          }
-        ] satisfies Tool[]
-      };
-    });
+              required: ['id'],
+            },
+          },
+        ] satisfies Tool[],
+      }
+    })
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
+      const { name, arguments: args } = request.params
 
       try {
         switch (name) {
           case 'get_work_items':
-            return await this.handleGetWorkItems(args);
-          
+            return await this.handleGetWorkItems(args)
+
           case 'query_work':
-            return await this.handleQueryWork(args);
-          
+            return await this.handleQueryWork(args)
+
           case 'sync_data':
-            return await this.handleSyncData(args);
-          
+            return await this.handleSyncData(args)
+
           case 'get_work_item_url':
-            return await this.handleGetWorkItemUrl(args);
-          
+            return await this.handleGetWorkItemUrl(args)
+
           default:
-            throw new Error(`Unknown tool: ${name}`);
+            throw new Error(`Unknown tool: ${name}`)
         }
       } catch (error) {
         return {
           content: [
             {
               type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`
-            }
-          ]
-        };
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        }
       }
-    });
+    })
   }
 
   private async handleGetWorkItems(args: any) {
-    const filter = args?.filter || 'all';
-    let items;
+    const filter = args?.filter || 'all'
+    let items
 
     switch (filter) {
       case 'active':
-        items = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
-        break;
+        items = await this.db.getWorkItemsByStateForUsers(
+          'Active',
+          this.userEmails,
+        )
+        break
       case 'open':
-        const newItems = await this.db.getWorkItemsByStateForUsers('New', this.userEmails);
-        const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
-        const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
-        items = [...newItems, ...activeItems, ...inProgressItems];
-        break;
+        const newItems = await this.db.getWorkItemsByStateForUsers(
+          'New',
+          this.userEmails,
+        )
+        const activeItems = await this.db.getWorkItemsByStateForUsers(
+          'Active',
+          this.userEmails,
+        )
+        const inProgressItems = await this.db.getWorkItemsByStateForUsers(
+          'In Progress',
+          this.userEmails,
+        )
+        items = [...newItems, ...activeItems, ...inProgressItems]
+        break
       case 'user-stories':
-        items = await this.db.getWorkItemsByTypeForUsers('User Story', this.userEmails);
-        break;
+        items = await this.db.getWorkItemsByTypeForUsers(
+          'User Story',
+          this.userEmails,
+        )
+        break
       case 'bugs':
-        items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails);
-        break;
+        items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails)
+        break
       case 'tasks':
-        items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails);
-        break;
+        items = await this.db.getWorkItemsByTypeForUsers(
+          'Task',
+          this.userEmails,
+        )
+        break
       default:
-        items = await this.db.getWorkItemsForUsers(this.userEmails);
+        items = await this.db.getWorkItemsForUsers(this.userEmails)
     }
 
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(items, null, 2)
-        }
-      ]
-    };
+          text: JSON.stringify(items, null, 2),
+        },
+      ],
+    }
   }
 
   private async handleQueryWork(args: any) {
-    const query = args?.query;
+    const query = args?.query
     if (!query) {
-      throw new Error('Query is required');
+      throw new Error('Query is required')
     }
 
     // Simple keyword-based filtering to return raw JSON data
-    const normalizedQuery = query.toLowerCase().trim();
-    let items;
+    const normalizedQuery = query.toLowerCase().trim()
+    let items
 
     if (normalizedQuery.includes('bug')) {
-      items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails);
+      items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails)
     } else if (normalizedQuery.includes('task')) {
-      items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails);
-    } else if (normalizedQuery.includes('story') || normalizedQuery.includes('user story')) {
-      items = await this.db.getWorkItemsByTypeForUsers('User Story', this.userEmails);
-    } else if (normalizedQuery.includes('active') || normalizedQuery.includes('current')) {
-      const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
-      const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
-      items = [...activeItems, ...inProgressItems];
+      items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails)
+    } else if (
+      normalizedQuery.includes('story') ||
+      normalizedQuery.includes('user story')
+    ) {
+      items = await this.db.getWorkItemsByTypeForUsers(
+        'User Story',
+        this.userEmails,
+      )
+    } else if (
+      normalizedQuery.includes('active') ||
+      normalizedQuery.includes('current')
+    ) {
+      const activeItems = await this.db.getWorkItemsByStateForUsers(
+        'Active',
+        this.userEmails,
+      )
+      const inProgressItems = await this.db.getWorkItemsByStateForUsers(
+        'In Progress',
+        this.userEmails,
+      )
+      items = [...activeItems, ...inProgressItems]
     } else if (normalizedQuery.includes('open')) {
-      const newItems = await this.db.getWorkItemsByStateForUsers('New', this.userEmails);
-      const activeItems = await this.db.getWorkItemsByStateForUsers('Active', this.userEmails);
-      const inProgressItems = await this.db.getWorkItemsByStateForUsers('In Progress', this.userEmails);
-      items = [...newItems, ...activeItems, ...inProgressItems];
-    } else if (normalizedQuery.includes('closed') || normalizedQuery.includes('completed')) {
-      items = await this.db.getWorkItemsByStateForUsers('Closed', this.userEmails);
+      const newItems = await this.db.getWorkItemsByStateForUsers(
+        'New',
+        this.userEmails,
+      )
+      const activeItems = await this.db.getWorkItemsByStateForUsers(
+        'Active',
+        this.userEmails,
+      )
+      const inProgressItems = await this.db.getWorkItemsByStateForUsers(
+        'In Progress',
+        this.userEmails,
+      )
+      items = [...newItems, ...activeItems, ...inProgressItems]
+    } else if (
+      normalizedQuery.includes('closed') ||
+      normalizedQuery.includes('completed')
+    ) {
+      items = await this.db.getWorkItemsByStateForUsers(
+        'Closed',
+        this.userEmails,
+      )
     } else {
       // Default: return all work items
-      items = await this.db.getWorkItemsForUsers(this.userEmails);
+      items = await this.db.getWorkItemsForUsers(this.userEmails)
     }
-    
+
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(items, null, 2)
-        }
-      ]
-    };
+          text: JSON.stringify(items, null, 2),
+        },
+      ],
+    }
   }
 
   private async handleSyncData(args: any) {
-    const concurrency = args?.concurrency || 5;
-    await this.syncService.performSyncDetailed(concurrency);
-    
+    const concurrency = args?.concurrency || 5
+    await this.syncService.performSyncDetailed(concurrency)
+
     return {
       content: [
         {
           type: 'text',
-          text: `Successfully synced work items with detailed metadata from Azure DevOps (concurrency: ${concurrency})`
-        }
-      ]
-    };
+          text: `Successfully synced work items with detailed metadata from Azure DevOps (concurrency: ${concurrency})`,
+        },
+      ],
+    }
   }
 
   private async handleGetWorkItemUrl(args: any) {
-    const id = args?.id;
+    const id = args?.id
     if (!id) {
-      throw new Error('Work item ID is required');
+      throw new Error('Work item ID is required')
     }
 
-    const url = `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/${id}`;
-    
+    const url = `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/${id}`
+
     return {
       content: [
         {
           type: 'text',
-          text: url
-        }
-      ]
-    };
+          text: url,
+        },
+      ],
+    }
   }
-
 
   async start() {
     // Configure user emails for Azure DevOps queries
-    this.userEmails = this.getConfiguredEmails();
-    AzureDevOpsClient.setUserEmails(this.userEmails);
-    
-    console.error(`Configured to filter for work items assigned to: ${this.userEmails.join(', ')}`);
+    this.userEmails = this.getConfiguredEmails()
+    AzureDevOpsClient.setUserEmails(this.userEmails)
+
+    console.error(
+      `Configured to filter for work items assigned to: ${this.userEmails.join(', ')}`,
+    )
 
     // Start background sync using detailed sync (shows interval message)
-    await this.syncService.startBackgroundSync(true);
+    await this.syncService.startBackgroundSync(true)
 
     // Perform initial detailed sync if needed
-    const shouldSync = await this.syncService.shouldSync();
+    const shouldSync = await this.syncService.shouldSync()
     if (shouldSync) {
-      console.error('Performing initial detailed sync...');
-      await this.syncService.performSyncDetailed();
+      console.error('Performing initial detailed sync...')
+      await this.syncService.performSyncDetailed()
     }
 
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    const transport = new StdioServerTransport()
+    await this.server.connect(transport)
   }
 
   async stop() {
-    await this.syncService.close();
+    await this.syncService.close()
   }
 }
 
 // Handle graceful shutdown
-const server = new AzureDevOpsMCPServer();
+const server = new AzureDevOpsMCPServer()
 
 process.on('SIGINT', async () => {
-  await server.stop();
-  process.exit(0);
-});
+  await server.stop()
+  process.exit(0)
+})
 
 process.on('SIGTERM', async () => {
-  await server.stop();
-  process.exit(0);
-});
+  await server.stop()
+  process.exit(0)
+})
 
 // Start the server
-server.start().catch(console.error);
+server.start().catch(console.error)

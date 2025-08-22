@@ -1,7 +1,13 @@
+import type {
+  CallToolResult,
+  ListToolsResult,
+} from '@modelcontextprotocol/sdk/types.js'
+import type { ChildProcess } from 'child_process'
+
+import { spawn } from 'child_process'
+
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { spawn, ChildProcess } from 'child_process'
-import { CallToolResult, ListToolsResult } from '@modelcontextprotocol/sdk/types.js'
 
 export class TestMCPClient {
   private client: Client
@@ -9,12 +15,15 @@ export class TestMCPClient {
   private process: ChildProcess | null = null
 
   constructor() {
-    this.client = new Client({
-      name: 'test-client',
-      version: '1.0.0'
-    }, {
-      capabilities: {}
-    })
+    this.client = new Client(
+      {
+        name: 'test-client',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {},
+      },
+    )
   }
 
   async connect(serverPath: string, args: string[] = []): Promise<void> {
@@ -22,7 +31,7 @@ export class TestMCPClient {
       // Spawn the MCP server process
       this.process = spawn('node', [serverPath, ...args], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
       })
 
       if (!this.process || !this.process.stdout || !this.process.stdin) {
@@ -51,11 +60,12 @@ export class TestMCPClient {
       // Create transport
       this.transport = new StdioClientTransport({
         readable: this.process.stdout,
-        writable: this.process.stdin
+        writable: this.process.stdin,
       })
 
       // Connect client
-      this.client.connect(this.transport)
+      this.client
+        .connect(this.transport)
         .then(() => {
           resolve()
         })
@@ -69,18 +79,22 @@ export class TestMCPClient {
     try {
       return await this.client.listTools()
     } catch (error) {
-      throw new Error(`Failed to list tools: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `Failed to list tools: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
   async callTool(name: string, args: any = {}): Promise<CallToolResult> {
     try {
-      return await this.client.callTool({ 
-        name, 
-        arguments: args 
+      return await this.client.callTool({
+        name,
+        arguments: args,
       })
     } catch (error) {
-      throw new Error(`Failed to call tool '${name}': ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `Failed to call tool '${name}': ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
@@ -99,10 +113,10 @@ export class TestMCPClient {
       // Kill the process
       if (this.process && !this.process.killed) {
         this.process.kill('SIGTERM')
-        
+
         // Wait a moment for graceful shutdown
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
         // Force kill if still running
         if (!this.process.killed) {
           this.process.kill('SIGKILL')
@@ -117,7 +131,9 @@ export class TestMCPClient {
   }
 
   isConnected(): boolean {
-    return this.transport !== null && this.process !== null && !this.process.killed
+    return (
+      this.transport !== null && this.process !== null && !this.process.killed
+    )
   }
 
   getProcessId(): number | undefined {
@@ -126,7 +142,10 @@ export class TestMCPClient {
 }
 
 // Helper function to create and connect a test client
-export async function createTestMCPClient(serverPath: string, args: string[] = []): Promise<TestMCPClient> {
+export async function createTestMCPClient(
+  serverPath: string,
+  args: string[] = [],
+): Promise<TestMCPClient> {
   const client = new TestMCPClient()
   await client.connect(serverPath, args)
   return client
@@ -134,22 +153,25 @@ export async function createTestMCPClient(serverPath: string, args: string[] = [
 
 // Helper function for testing tool calls with timeout
 export async function callToolWithTimeout(
-  client: TestMCPClient, 
-  toolName: string, 
-  args: any = {}, 
-  timeoutMs = 10000
+  client: TestMCPClient,
+  toolName: string,
+  args: any = {},
+  timeoutMs = 10000,
 ): Promise<CallToolResult> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error(`Tool call '${toolName}' timed out after ${timeoutMs}ms`))
+      reject(
+        new Error(`Tool call '${toolName}' timed out after ${timeoutMs}ms`),
+      )
     }, timeoutMs)
 
-    client.callTool(toolName, args)
-      .then(result => {
+    client
+      .callTool(toolName, args)
+      .then((result) => {
         clearTimeout(timeout)
         resolve(result)
       })
-      .catch(error => {
+      .catch((error) => {
         clearTimeout(timeout)
         reject(error)
       })
@@ -157,9 +179,12 @@ export async function callToolWithTimeout(
 }
 
 // Helper to wait for process to be ready
-export async function waitForServerReady(client: TestMCPClient, maxWaitMs = 5000): Promise<void> {
+export async function waitForServerReady(
+  client: TestMCPClient,
+  maxWaitMs = 5000,
+): Promise<void> {
   const startTime = Date.now()
-  
+
   while (Date.now() - startTime < maxWaitMs) {
     try {
       if (client.isConnected()) {
@@ -169,9 +194,9 @@ export async function waitForServerReady(client: TestMCPClient, maxWaitMs = 5000
     } catch (error) {
       // Server not ready yet, continue waiting
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 100))
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
   }
-  
+
   throw new Error(`Server did not become ready within ${maxWaitMs}ms`)
 }
