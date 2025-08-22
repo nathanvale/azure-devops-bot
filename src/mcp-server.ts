@@ -9,17 +9,14 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import { AzureAuth } from './services/auth.js'
 import { AzureDevOpsClient } from './services/azure-devops.js'
 import { DatabaseService } from './services/database.js'
-import { QueryEngine } from './services/query-engine.js'
 import { SyncService } from './services/sync-service.js'
 
 export class AzureDevOpsMCPServer {
   private server: Server
   private syncService: SyncService
   private db: DatabaseService
-  private queryEngine: QueryEngine
   public userEmails: string[] = []
 
   constructor() {
@@ -37,7 +34,6 @@ export class AzureDevOpsMCPServer {
 
     this.syncService = new SyncService()
     this.db = new DatabaseService()
-    this.queryEngine = new QueryEngine(this.db)
 
     this.setupHandlers()
   }
@@ -57,8 +53,14 @@ export class AzureDevOpsMCPServer {
       process.exit(1)
     }
 
-    const emails = emailArg
-      .split('=')[1]
+    const emailPart = emailArg.split('=')[1]
+    if (!emailPart) {
+      console.error(
+        '❌ Invalid email format. Expected: --emails=email@domain.com',
+      )
+      process.exit(1)
+    }
+    const emails = emailPart
       .split(',')
       .map((email) => email.trim())
       .filter((email) => email.length > 0)
@@ -79,46 +81,9 @@ export class AzureDevOpsMCPServer {
       return {
         tools: [
           {
-            name: 'get_work_items',
+            name: 'wit_force_sync_work_items',
             description:
-              'Get all work items (stories, bugs, tasks) assigned to you from Azure DevOps',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                filter: {
-                  type: 'string',
-                  description:
-                    'Optional filter: "active", "open", "user-stories", "bugs", "tasks", or "all"',
-                  enum: [
-                    'active',
-                    'open',
-                    'user-stories',
-                    'bugs',
-                    'tasks',
-                    'all',
-                  ],
-                },
-              },
-            },
-          },
-          {
-            name: 'query_work',
-            description: 'Query work items using natural language',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                query: {
-                  type: 'string',
-                  description: 'Natural language query about your work items',
-                },
-              },
-              required: ['query'],
-            },
-          },
-          {
-            name: 'sync_data',
-            description:
-              'Manually sync all work items with detailed metadata from Azure DevOps using parallel processing',
+              'Force sync all work items from Azure DevOps with complete metadata',
             inputSchema: {
               type: 'object',
               properties: {
@@ -133,8 +98,24 @@ export class AzureDevOpsMCPServer {
             },
           },
           {
-            name: 'get_work_item_url',
-            description: 'Get direct Azure DevOps URL for a work item',
+            name: 'wit_my_work_items',
+            description:
+              'Retrieve a list of work items relevant to the authenticated user',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                filter: {
+                  type: 'string',
+                  description:
+                    'Optional filter: "active", "open", "closed", or "all"',
+                  enum: ['active', 'open', 'closed', 'all'],
+                },
+              },
+            },
+          },
+          {
+            name: 'wit_get_work_item',
+            description: 'Get a single work item by ID with complete details',
             inputSchema: {
               type: 'object',
               properties: {
@@ -146,6 +127,87 @@ export class AzureDevOpsMCPServer {
               required: ['id'],
             },
           },
+          {
+            name: 'wit_get_work_items_batch_by_ids',
+            description: 'Retrieve a list of work items by IDs in batch',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                ids: {
+                  type: 'array',
+                  items: { type: 'number' },
+                  description: 'Array of work item IDs',
+                },
+              },
+              required: ['ids'],
+            },
+          },
+          {
+            name: 'wit_list_work_item_comments',
+            description: 'Retrieve a list of comments for a work item by ID',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'number',
+                  description: 'Work item ID',
+                },
+              },
+              required: ['id'],
+            },
+          },
+          {
+            name: 'wit_get_work_items_for_iteration',
+            description:
+              'Retrieve a list of work items for a specified iteration',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                iterationPath: {
+                  type: 'string',
+                  description:
+                    'Iteration path (e.g., "Customer Services Platform\\Sprint 1")',
+                },
+              },
+              required: ['iterationPath'],
+            },
+          },
+          {
+            name: 'wit_add_work_item_comment',
+            description: 'Add a comment to a work item by ID',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'number',
+                  description: 'Work item ID',
+                },
+                comment: {
+                  type: 'string',
+                  description: 'Comment text to add',
+                },
+              },
+              required: ['id', 'comment'],
+            },
+          },
+          {
+            name: 'wit_link_work_item_to_pull_request',
+            description: 'Link a single work item to an existing pull request',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'number',
+                  description: 'Work item ID',
+                },
+                pullRequestUrl: {
+                  type: 'string',
+                  description: 'Full URL to the pull request',
+                },
+              },
+              required: ['id', 'pullRequestUrl'],
+            },
+          },
         ] satisfies Tool[],
       }
     })
@@ -155,17 +217,29 @@ export class AzureDevOpsMCPServer {
 
       try {
         switch (name) {
-          case 'get_work_items':
-            return await this.handleGetWorkItems(args)
+          case 'wit_force_sync_work_items':
+            return await this.handleForceSyncWorkItems(args)
 
-          case 'query_work':
-            return await this.handleQueryWork(args)
+          case 'wit_my_work_items':
+            return await this.handleMyWorkItems(args)
 
-          case 'sync_data':
-            return await this.handleSyncData(args)
+          case 'wit_get_work_item':
+            return await this.handleGetWorkItem(args)
 
-          case 'get_work_item_url':
-            return await this.handleGetWorkItemUrl(args)
+          case 'wit_get_work_items_batch_by_ids':
+            return await this.handleGetWorkItemsBatchByIds(args)
+
+          case 'wit_list_work_item_comments':
+            return await this.handleListWorkItemComments(args)
+
+          case 'wit_get_work_items_for_iteration':
+            return await this.handleGetWorkItemsForIteration(args)
+
+          case 'wit_add_work_item_comment':
+            return await this.handleAddWorkItemComment(args)
+
+          case 'wit_link_work_item_to_pull_request':
+            return await this.handleLinkWorkItemToPullRequest(args)
 
           default:
             throw new Error(`Unknown tool: ${name}`)
@@ -183,7 +257,21 @@ export class AzureDevOpsMCPServer {
     })
   }
 
-  private async handleGetWorkItems(args: any) {
+  private async handleForceSyncWorkItems(args?: { concurrency?: number }) {
+    const concurrency = args?.concurrency || 5
+    await this.syncService.performSyncDetailed(concurrency)
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Successfully synced work items with detailed metadata from Azure DevOps (concurrency: ${concurrency})`,
+        },
+      ],
+    }
+  }
+
+  private async handleMyWorkItems(args?: { filter?: string }) {
     const filter = args?.filter || 'all'
     let items
 
@@ -194,7 +282,7 @@ export class AzureDevOpsMCPServer {
           this.userEmails,
         )
         break
-      case 'open':
+      case 'open': {
         const newItems = await this.db.getWorkItemsByStateForUsers(
           'New',
           this.userEmails,
@@ -209,18 +297,10 @@ export class AzureDevOpsMCPServer {
         )
         items = [...newItems, ...activeItems, ...inProgressItems]
         break
-      case 'user-stories':
-        items = await this.db.getWorkItemsByTypeForUsers(
-          'User Story',
-          this.userEmails,
-        )
-        break
-      case 'bugs':
-        items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails)
-        break
-      case 'tasks':
-        items = await this.db.getWorkItemsByTypeForUsers(
-          'Task',
+      }
+      case 'closed':
+        items = await this.db.getWorkItemsByStateForUsers(
+          'Closed',
           this.userEmails,
         )
         break
@@ -238,67 +318,34 @@ export class AzureDevOpsMCPServer {
     }
   }
 
-  private async handleQueryWork(args: any) {
-    const query = args?.query
-    if (!query) {
-      throw new Error('Query is required')
+  private async handleGetWorkItem(args?: { id?: number }) {
+    const id = args?.id
+    if (!id) {
+      throw new Error('Work item ID is required')
     }
 
-    // Simple keyword-based filtering to return raw JSON data
-    const normalizedQuery = query.toLowerCase().trim()
-    let items
-
-    if (normalizedQuery.includes('bug')) {
-      items = await this.db.getWorkItemsByTypeForUsers('Bug', this.userEmails)
-    } else if (normalizedQuery.includes('task')) {
-      items = await this.db.getWorkItemsByTypeForUsers('Task', this.userEmails)
-    } else if (
-      normalizedQuery.includes('story') ||
-      normalizedQuery.includes('user story')
-    ) {
-      items = await this.db.getWorkItemsByTypeForUsers(
-        'User Story',
-        this.userEmails,
-      )
-    } else if (
-      normalizedQuery.includes('active') ||
-      normalizedQuery.includes('current')
-    ) {
-      const activeItems = await this.db.getWorkItemsByStateForUsers(
-        'Active',
-        this.userEmails,
-      )
-      const inProgressItems = await this.db.getWorkItemsByStateForUsers(
-        'In Progress',
-        this.userEmails,
-      )
-      items = [...activeItems, ...inProgressItems]
-    } else if (normalizedQuery.includes('open')) {
-      const newItems = await this.db.getWorkItemsByStateForUsers(
-        'New',
-        this.userEmails,
-      )
-      const activeItems = await this.db.getWorkItemsByStateForUsers(
-        'Active',
-        this.userEmails,
-      )
-      const inProgressItems = await this.db.getWorkItemsByStateForUsers(
-        'In Progress',
-        this.userEmails,
-      )
-      items = [...newItems, ...activeItems, ...inProgressItems]
-    } else if (
-      normalizedQuery.includes('closed') ||
-      normalizedQuery.includes('completed')
-    ) {
-      items = await this.db.getWorkItemsByStateForUsers(
-        'Closed',
-        this.userEmails,
-      )
-    } else {
-      // Default: return all work items
-      items = await this.db.getWorkItemsForUsers(this.userEmails)
+    const item = await this.db.getWorkItemById(id)
+    if (!item) {
+      throw new Error(`Work item ${id} not found`)
     }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(item, null, 2),
+        },
+      ],
+    }
+  }
+
+  private async handleGetWorkItemsBatchByIds(args?: { ids?: number[] }) {
+    const ids = args?.ids
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      throw new Error('Work item IDs array is required')
+    }
+
+    const items = await this.db.getWorkItemsByIds(ids)
 
     return {
       content: [
@@ -310,33 +357,94 @@ export class AzureDevOpsMCPServer {
     }
   }
 
-  private async handleSyncData(args: any) {
-    const concurrency = args?.concurrency || 5
-    await this.syncService.performSyncDetailed(concurrency)
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Successfully synced work items with detailed metadata from Azure DevOps (concurrency: ${concurrency})`,
-        },
-      ],
-    }
-  }
-
-  private async handleGetWorkItemUrl(args: any) {
+  private async handleListWorkItemComments(args?: { id?: number }) {
     const id = args?.id
     if (!id) {
       throw new Error('Work item ID is required')
     }
 
-    const url = `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/${id}`
+    const comments = await this.db.getWorkItemComments(id)
 
     return {
       content: [
         {
           type: 'text',
-          text: url,
+          text: JSON.stringify(comments, null, 2),
+        },
+      ],
+    }
+  }
+
+  private async handleGetWorkItemsForIteration(args?: {
+    iterationPath?: string
+  }) {
+    const iterationPath = args?.iterationPath
+    if (!iterationPath) {
+      throw new Error('Iteration path is required')
+    }
+
+    const items = await this.db.getWorkItemsByIteration(iterationPath)
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(items, null, 2),
+        },
+      ],
+    }
+  }
+
+  private async handleAddWorkItemComment(args?: {
+    id?: number
+    comment?: string
+  }) {
+    const id = args?.id
+    const comment = args?.comment
+    if (!id) {
+      throw new Error('Work item ID is required')
+    }
+    if (!comment) {
+      throw new Error('Comment text is required')
+    }
+
+    const azureClient = new AzureDevOpsClient()
+    await azureClient.addWorkItemComment(id, comment)
+
+    // Force sync to get the new comment
+    await this.syncService.performSyncDetailed()
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Successfully added comment to work item ${id}`,
+        },
+      ],
+    }
+  }
+
+  private async handleLinkWorkItemToPullRequest(args?: {
+    id?: number
+    pullRequestUrl?: string
+  }) {
+    const id = args?.id
+    const pullRequestUrl = args?.pullRequestUrl
+    if (!id) {
+      throw new Error('Work item ID is required')
+    }
+    if (!pullRequestUrl) {
+      throw new Error('Pull request URL is required')
+    }
+
+    const azureClient = new AzureDevOpsClient()
+    await azureClient.linkWorkItemToPullRequest(id, pullRequestUrl)
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Successfully linked work item ${id} to pull request: ${pullRequestUrl}`,
         },
       ],
     }

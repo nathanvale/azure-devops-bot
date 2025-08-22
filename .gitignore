@@ -16,3 +16,6 @@ coverage/
 
 # Obsidian vault files
 .obsidian/
+
+# Auto-generated project index file
+PROJECT_INDEX.json
