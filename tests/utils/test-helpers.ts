@@ -37,7 +37,7 @@ export interface AzureWorkItem {
     'Microsoft.VSTS.Common.Priority': number
     'Microsoft.VSTS.Common.Severity'?: string
     'System.Description': string
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -219,22 +219,25 @@ export function setupTestEnv(vars: Record<string, string>) {
 }
 
 // Helper to assert JSON structure
-export function expectJsonStructure(actual: any, expected: any): void {
+export function expectJsonStructure(actual: unknown, expected: unknown): void {
   if (typeof expected === 'object' && expected !== null) {
     if (actual === null || typeof actual !== 'object') {
       throw new Error('Expected object but got ' + typeof actual)
     }
 
-    for (const [key, value] of Object.entries(expected)) {
-      if (!(key in actual)) {
+    const actualRecord = actual as Record<string, unknown>
+    const expectedRecord = expected as Record<string, unknown>
+
+    for (const [key, value] of Object.entries(expectedRecord)) {
+      if (!(key in actualRecord)) {
         throw new Error(`Expected property ${key} to exist`)
       }
       if (value !== null && typeof value === 'object') {
-        expectJsonStructure(actual[key], value)
+        expectJsonStructure(actualRecord[key], value)
       } else {
-        if (typeof actual[key] !== typeof value) {
+        if (typeof actualRecord[key] !== typeof value) {
           throw new Error(
-            `Expected ${key} to be ${typeof value} but got ${typeof actual[key]}`,
+            `Expected ${key} to be ${typeof value} but got ${typeof actualRecord[key]}`,
           )
         }
       }

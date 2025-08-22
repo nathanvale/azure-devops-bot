@@ -19,7 +19,7 @@ vi.mock('@orchestr8/resilience', () => ({
   })),
 }))
 
-import { AzureDevOpsClient, WorkItemData } from '../azure-devops'
+import { AzureDevOpsClient } from '../azure-devops'
 
 describe('AzureDevOpsClient', () => {
   let client: AzureDevOpsClient
@@ -28,7 +28,7 @@ describe('AzureDevOpsClient', () => {
     vi.resetAllMocks()
 
     // Configure the resilience mock to call operations directly
-    mockApplyPolicy.mockImplementation(async (operation, policy) => {
+    mockApplyPolicy.mockImplementation(async (operation, _policy) => {
       return await operation()
     })
 
@@ -323,7 +323,7 @@ describe('AzureDevOpsClient', () => {
       await client.fetchWorkItems()
 
       expect(mockExecAsync).toHaveBeenCalledTimes(1)
-      const calledCommand = mockExecAsync.mock.calls[0][0]
+      const calledCommand = mockExecAsync.mock.calls[0]?.[0]
       expect(calledCommand).toContain('az boards query')
       expect(calledCommand).toContain('--wiql')
       expect(calledCommand).toContain('--output json')
@@ -408,7 +408,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      expect(result[0].lastUpdatedAt.toISOString()).toBe(
+      expect(result[0]?.lastUpdatedAt.toISOString()).toBe(
         '2025-01-08T14:30:45.123Z',
       )
     })
@@ -509,7 +509,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should validate emails that exist in organization but have no work items', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: unknown[] = []
       const userResponse = { principalName: 'user@fwc.gov.au' }
 
       mockExecAsync
@@ -526,7 +526,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it("should mark emails as invalid when they don't exist in organization", async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: unknown[] = []
       const emptyUserResponse = '[]'
 
       mockExecAsync
@@ -546,7 +546,7 @@ describe('AzureDevOpsClient', () => {
       const workItemsResponse = [
         { id: 1234, fields: { 'System.Title': 'Test' } },
       ]
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: unknown[] = []
       const emptyUserResponse = '[]'
 
       mockExecAsync
@@ -603,7 +603,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should use correct user validation command', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: unknown[] = []
       const userResponse = { principalName: 'user@fwc.gov.au' }
 
       mockExecAsync
@@ -621,7 +621,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should handle invalid JSON in user response', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: unknown[] = []
 
       mockExecAsync
         .mockResolvedValueOnce({
@@ -636,7 +636,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should handle user response without principalName', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: unknown[] = []
       const userResponse = { displayName: 'User Name' }
 
       mockExecAsync
@@ -737,79 +737,82 @@ describe('AzureDevOpsClient', () => {
 
       expect(result).toHaveLength(1)
       const workItem = result[0]
+      expect(workItem).toBeDefined()
 
       // Basic fields
-      expect(workItem.id).toBe(1234)
-      expect(workItem.title).toBe('Comprehensive Test Story')
-      expect(workItem.state).toBe('Active')
-      expect(workItem.type).toBe('User Story')
-      expect(workItem.assignedTo).toBe('nathan.vale@fwc.gov.au')
-      expect(workItem.description).toBe('Detailed description of the story')
+      expect(workItem!.id).toBe(1234)
+      expect(workItem!.title).toBe('Comprehensive Test Story')
+      expect(workItem!.state).toBe('Active')
+      expect(workItem!.type).toBe('User Story')
+      expect(workItem!.assignedTo).toBe('nathan.vale@fwc.gov.au')
+      expect(workItem!.description).toBe('Detailed description of the story')
 
       // Sprint/Board Info
-      expect(workItem.iterationPath).toBe(
+      expect(workItem!.iterationPath).toBe(
         'Customer Services Platform\\Sprint 23',
       )
-      expect(workItem.areaPath).toBe(
+      expect(workItem!.areaPath).toBe(
         'Customer Services Platform\\Feature Team A',
       )
-      expect(workItem.boardColumn).toBe('In Progress')
-      expect(workItem.boardColumnDone).toBe(false)
+      expect(workItem!.boardColumn).toBe('In Progress')
+      expect(workItem!.boardColumnDone).toBe(false)
 
       // Priority/Tags
-      expect(workItem.priority).toBe(2)
-      expect(workItem.severity).toBe('2 - High')
-      expect(workItem.tags).toBe('bug-fix; high-priority')
+      expect(workItem!.priority).toBe(2)
+      expect(workItem!.severity).toBe('2 - High')
+      expect(workItem!.tags).toBe('bug-fix; high-priority')
 
       // All the dates
-      expect(workItem.createdDate).toEqual(new Date('2025-01-01T08:00:00Z'))
-      expect(workItem.changedDate).toEqual(new Date('2025-01-08T14:30:00Z'))
-      expect(workItem.closedDate).toEqual(new Date('2025-01-10T16:00:00Z'))
-      expect(workItem.resolvedDate).toEqual(new Date('2025-01-09T12:00:00Z'))
-      expect(workItem.activatedDate).toEqual(new Date('2025-01-02T09:00:00Z'))
-      expect(workItem.stateChangeDate).toEqual(new Date('2025-01-08T14:30:00Z'))
-      expect(workItem.lastUpdatedAt).toEqual(new Date('2025-01-08T14:30:00Z'))
+      expect(workItem!.createdDate).toEqual(new Date('2025-01-01T08:00:00Z'))
+      expect(workItem!.changedDate).toEqual(new Date('2025-01-08T14:30:00Z'))
+      expect(workItem!.closedDate).toEqual(new Date('2025-01-10T16:00:00Z'))
+      expect(workItem!.resolvedDate).toEqual(new Date('2025-01-09T12:00:00Z'))
+      expect(workItem!.activatedDate).toEqual(new Date('2025-01-02T09:00:00Z'))
+      expect(workItem!.stateChangeDate).toEqual(
+        new Date('2025-01-08T14:30:00Z'),
+      )
+      expect(workItem!.lastUpdatedAt).toEqual(new Date('2025-01-08T14:30:00Z'))
 
       // People
-      expect(workItem.createdBy).toBe('john.doe@fwc.gov.au')
-      expect(workItem.changedBy).toBe('jane.smith@fwc.gov.au')
-      expect(workItem.closedBy).toBe('bob.wilson@fwc.gov.au')
-      expect(workItem.resolvedBy).toBe('alice.johnson@fwc.gov.au')
+      expect(workItem!.createdBy).toBe('john.doe@fwc.gov.au')
+      expect(workItem!.changedBy).toBe('jane.smith@fwc.gov.au')
+      expect(workItem!.closedBy).toBe('bob.wilson@fwc.gov.au')
+      expect(workItem!.resolvedBy).toBe('alice.johnson@fwc.gov.au')
 
       // Work tracking
-      expect(workItem.storyPoints).toBe(8)
-      expect(workItem.effort).toBe(16)
-      expect(workItem.remainingWork).toBe(4)
-      expect(workItem.completedWork).toBe(12)
-      expect(workItem.originalEstimate).toBe(16)
+      expect(workItem!.storyPoints).toBe(8)
+      expect(workItem!.effort).toBe(16)
+      expect(workItem!.remainingWork).toBe(4)
+      expect(workItem!.completedWork).toBe(12)
+      expect(workItem!.originalEstimate).toBe(16)
 
       // Content
-      expect(workItem.acceptanceCriteria).toBe(
+      expect(workItem!.acceptanceCriteria).toBe(
         'Given when then acceptance criteria',
       )
-      expect(workItem.reproSteps).toBe('Steps to reproduce the issue')
-      expect(workItem.systemInfo).toBe('Windows 11, Chrome 120')
+      expect(workItem!.reproSteps).toBe('Steps to reproduce the issue')
+      expect(workItem!.systemInfo).toBe('Windows 11, Chrome 120')
 
       // Related items
-      expect(workItem.parentId).toBe(5678)
+      expect(workItem!.parentId).toBe(5678)
 
       // Additional fields
-      expect(workItem.rev).toBe(5)
-      expect(workItem.reason).toBe('New')
-      expect(workItem.watermark).toBe(123456)
-      expect(workItem.url).toBe(
+      expect(workItem!.rev).toBe(5)
+      expect(workItem!.reason).toBe('New')
+      expect(workItem!.watermark).toBe(123456)
+      expect(workItem!.url).toBe(
         'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
       )
-      expect(workItem.commentCount).toBe(3)
-      expect(workItem.hasAttachments).toBe(true) // Based on AttachedFile relation in mock data
-      expect(workItem.teamProject).toBe('Customer Services Platform')
-      expect(workItem.areaId).toBe(789)
-      expect(workItem.nodeId).toBe(101112)
-      expect(workItem.stackRank).toBe(1000000.5)
-      expect(workItem.valueArea).toBe('Business')
+      expect(workItem!.commentCount).toBe(3)
+      expect(workItem!.hasAttachments).toBe(true) // Based on AttachedFile relation in mock data
+      expect(workItem!.teamProject).toBe('Customer Services Platform')
+      expect(workItem!.areaId).toBe(789)
+      expect(workItem!.nodeId).toBe(101112)
+      expect(workItem!.stackRank).toBe(1000000.5)
+      expect(workItem!.valueArea).toBe('Business')
 
       // Raw JSON backup
-      expect(workItem.rawJson).toBe(JSON.stringify(mockExpandedResponse[0]))
+      expect(workItem!.rawJson).toBe(JSON.stringify(mockExpandedResponse[0]))
     })
 
     it('should handle missing fields gracefully with proper defaults', async () => {
@@ -835,52 +838,52 @@ describe('AzureDevOpsClient', () => {
       const workItem = result[0]
 
       // Required fields should be present
-      expect(workItem.id).toBe(9999)
-      expect(workItem.title).toBe('Minimal Work Item')
-      expect(workItem.state).toBe('New')
-      expect(workItem.type).toBe('Task')
+      expect(workItem!.id).toBe(9999)
+      expect(workItem!.title).toBe('Minimal Work Item')
+      expect(workItem!.state).toBe('New')
+      expect(workItem!.type).toBe('Task')
 
       // Optional fields should have proper defaults
-      expect(workItem.assignedTo).toBe('Unassigned')
-      expect(workItem.description).toBe('')
-      expect(workItem.iterationPath).toBeUndefined()
-      expect(workItem.areaPath).toBeUndefined()
-      expect(workItem.boardColumn).toBeUndefined()
-      expect(workItem.boardColumnDone).toBe(false)
-      expect(workItem.priority).toBeUndefined()
-      expect(workItem.severity).toBeUndefined()
-      expect(workItem.tags).toBeUndefined()
-      expect(workItem.createdDate).toBeUndefined()
-      expect(workItem.closedDate).toBeUndefined()
-      expect(workItem.resolvedDate).toBeUndefined()
-      expect(workItem.activatedDate).toBeUndefined()
-      expect(workItem.stateChangeDate).toBeUndefined()
-      expect(workItem.createdBy).toBe('Unassigned')
-      expect(workItem.changedBy).toBe('Unassigned')
-      expect(workItem.closedBy).toBe('Unassigned')
-      expect(workItem.resolvedBy).toBe('Unassigned')
-      expect(workItem.storyPoints).toBeUndefined()
-      expect(workItem.effort).toBeUndefined()
-      expect(workItem.remainingWork).toBeUndefined()
-      expect(workItem.completedWork).toBeUndefined()
-      expect(workItem.originalEstimate).toBeUndefined()
-      expect(workItem.acceptanceCriteria).toBeUndefined()
-      expect(workItem.reproSteps).toBeUndefined()
-      expect(workItem.systemInfo).toBeUndefined()
-      expect(workItem.parentId).toBeUndefined()
-      expect(workItem.reason).toBeUndefined()
-      expect(workItem.watermark).toBeUndefined()
-      expect(workItem.url).toBeUndefined()
-      expect(workItem.commentCount).toBe(0)
-      expect(workItem.hasAttachments).toBe(false)
-      expect(workItem.teamProject).toBeUndefined()
-      expect(workItem.areaId).toBeUndefined()
-      expect(workItem.nodeId).toBeUndefined()
-      expect(workItem.stackRank).toBeUndefined()
-      expect(workItem.valueArea).toBeUndefined()
+      expect(workItem!.assignedTo).toBe('Unassigned')
+      expect(workItem!.description).toBe('')
+      expect(workItem!.iterationPath).toBeUndefined()
+      expect(workItem!.areaPath).toBeUndefined()
+      expect(workItem!.boardColumn).toBeUndefined()
+      expect(workItem!.boardColumnDone).toBe(false)
+      expect(workItem!.priority).toBeUndefined()
+      expect(workItem!.severity).toBeUndefined()
+      expect(workItem!.tags).toBeUndefined()
+      expect(workItem!.createdDate).toBeUndefined()
+      expect(workItem!.closedDate).toBeUndefined()
+      expect(workItem!.resolvedDate).toBeUndefined()
+      expect(workItem!.activatedDate).toBeUndefined()
+      expect(workItem!.stateChangeDate).toBeUndefined()
+      expect(workItem!.createdBy).toBe('Unassigned')
+      expect(workItem!.changedBy).toBe('Unassigned')
+      expect(workItem!.closedBy).toBe('Unassigned')
+      expect(workItem!.resolvedBy).toBe('Unassigned')
+      expect(workItem!.storyPoints).toBeUndefined()
+      expect(workItem!.effort).toBeUndefined()
+      expect(workItem!.remainingWork).toBeUndefined()
+      expect(workItem!.completedWork).toBeUndefined()
+      expect(workItem!.originalEstimate).toBeUndefined()
+      expect(workItem!.acceptanceCriteria).toBeUndefined()
+      expect(workItem!.reproSteps).toBeUndefined()
+      expect(workItem!.systemInfo).toBeUndefined()
+      expect(workItem!.parentId).toBeUndefined()
+      expect(workItem!.reason).toBeUndefined()
+      expect(workItem!.watermark).toBeUndefined()
+      expect(workItem!.url).toBeUndefined()
+      expect(workItem!.commentCount).toBe(0)
+      expect(workItem!.hasAttachments).toBe(false)
+      expect(workItem!.teamProject).toBeUndefined()
+      expect(workItem!.areaId).toBeUndefined()
+      expect(workItem!.nodeId).toBeUndefined()
+      expect(workItem!.stackRank).toBeUndefined()
+      expect(workItem!.valueArea).toBeUndefined()
 
       // Raw JSON should still be preserved
-      expect(workItem.rawJson).toBe(JSON.stringify(mockMinimalResponse[0]))
+      expect(workItem!.rawJson).toBe(JSON.stringify(mockMinimalResponse[0]))
     })
 
     it('should handle float values correctly for numeric fields', async () => {
@@ -911,12 +914,12 @@ describe('AzureDevOpsClient', () => {
       expect(result).toHaveLength(1)
       const workItem = result[0]
 
-      expect(workItem.storyPoints).toBe(5.5)
-      expect(workItem.effort).toBe(12.75)
-      expect(workItem.remainingWork).toBe(2.25)
-      expect(workItem.completedWork).toBe(10.5)
-      expect(workItem.originalEstimate).toBe(12.75)
-      expect(workItem.stackRank).toBe(999999.123456)
+      expect(workItem!.storyPoints).toBe(5.5)
+      expect(workItem!.effort).toBe(12.75)
+      expect(workItem!.remainingWork).toBe(2.25)
+      expect(workItem!.completedWork).toBe(10.5)
+      expect(workItem!.originalEstimate).toBe(12.75)
+      expect(workItem!.stackRank).toBe(999999.123456)
     })
 
     it('should handle invalid numeric values by setting them to undefined', async () => {
@@ -945,10 +948,10 @@ describe('AzureDevOpsClient', () => {
       expect(result).toHaveLength(1)
       const workItem = result[0]
 
-      expect(workItem.storyPoints).toBeUndefined()
-      expect(workItem.effort).toBeUndefined()
-      expect(workItem.remainingWork).toBeUndefined()
-      expect(workItem.stackRank).toBeUndefined()
+      expect(workItem!.storyPoints).toBeUndefined()
+      expect(workItem!.effort).toBeUndefined()
+      expect(workItem!.remainingWork).toBeUndefined()
+      expect(workItem!.stackRank).toBeUndefined()
     })
   })
 
@@ -1172,9 +1175,9 @@ describe('AzureDevOpsClient', () => {
 
       // Verify each work item was fetched correctly
       for (let i = 0; i < workItemIds.length; i++) {
-        expect(result[i].id).toBe(workItemIds[i])
-        expect(result[i].title).toBe(`Work Item ${workItemIds[i]}`)
-        expect(result[i].storyPoints).toBe(workItemIds[i])
+        expect(result[i]?.id).toBe(workItemIds[i])
+        expect(result[i]?.title).toBe(`Work Item ${workItemIds[i]}`)
+        expect(result[i]?.storyPoints).toBe(workItemIds[i])
       }
     })
 
@@ -1249,10 +1252,10 @@ describe('AzureDevOpsClient', () => {
 
       // Should return only successful items
       expect(result).toHaveLength(2)
-      expect(result[0].id).toBe(1)
-      expect(result[0].title).toBe('Success Item')
-      expect(result[1].id).toBe(3)
-      expect(result[1].title).toBe('Another Success')
+      expect(result[0]?.id).toBe(1)
+      expect(result[0]?.title).toBe('Success Item')
+      expect(result[1]?.id).toBe(3)
+      expect(result[1]?.title).toBe('Another Success')
 
       expect(mockExecAsync).toHaveBeenCalledTimes(3)
     })
@@ -1302,7 +1305,7 @@ describe('AzureDevOpsClient', () => {
       expect(result).toHaveLength(5)
       // Results should maintain original order
       for (let i = 0; i < workItemIds.length; i++) {
-        expect(result[i].id).toBe(workItemIds[i])
+        expect(result[i]?.id).toBe(workItemIds[i])
       }
     })
 
@@ -1373,7 +1376,7 @@ describe('AzureDevOpsClient', () => {
         let attemptCount = 0
 
         // Mock the resilience adapter to simulate circuit breaker behavior
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           attemptCount++
 
           if (attemptCount <= 3) {
@@ -1391,11 +1394,13 @@ describe('AzureDevOpsClient', () => {
             await client.fetchWorkItems()
           } catch (error) {
             if (i < 3) {
-              expect(error.message).toContain(
+              expect((error as Error).message).toContain(
                 'Azure DevOps service unavailable',
               )
             } else {
-              expect(error.message).toContain('Circuit breaker is open')
+              expect((error as Error).message).toContain(
+                'Circuit breaker is open',
+              )
             }
           }
         }
@@ -1406,7 +1411,7 @@ describe('AzureDevOpsClient', () => {
       it('should allow operations after circuit breaker recovery time', async () => {
         let circuitBreakerOpen = false
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           if (circuitBreakerOpen) {
             // Simulate recovery - circuit breaker allows test call
             circuitBreakerOpen = false
@@ -1466,7 +1471,7 @@ describe('AzureDevOpsClient', () => {
       it('should exhaust retries and propagate final error', async () => {
         let retryCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           retryCount++
           // Always throw the final error regardless of count
           throw new Error('Retry exhausted after 5 attempts')
@@ -1481,7 +1486,7 @@ describe('AzureDevOpsClient', () => {
       it('should not retry on authentication errors', async () => {
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           attemptCount++
           // Simulate that auth errors will eventually be thrown by the resilience wrapper
           throw new Error("Azure CLI unauthorized - please run 'az login'")
@@ -1496,7 +1501,7 @@ describe('AzureDevOpsClient', () => {
       it('should not retry on work item not found errors', async () => {
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           attemptCount++
           // Simulate that not found errors will eventually be thrown by the resilience wrapper
           throw new Error('Work item 99999 not found')
@@ -1511,7 +1516,7 @@ describe('AzureDevOpsClient', () => {
       it('should retry on transient errors with exponential backoff', async () => {
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           attemptCount++
           // Simulate successful retry behavior - just succeed immediately
           return await operation()
@@ -1665,7 +1670,7 @@ describe('AzureDevOpsClient', () => {
                 'work-item-',
               ) || 'unknown',
             attempt: attemptCount,
-            delay: policy.retry?.initialDelay! || 200,
+            delay: policy.retry?.initialDelay ?? 200,
           })
 
           return await operation()
@@ -1737,9 +1742,9 @@ describe('AzureDevOpsClient', () => {
         await client.fetchWorkItems()
 
         expect(performanceMetrics).toHaveLength(1)
-        expect(performanceMetrics[0].operation).toBe('work-item-list')
-        expect(performanceMetrics[0].success).toBe(true)
-        expect(performanceMetrics[0].duration).toBeGreaterThanOrEqual(0)
+        expect(performanceMetrics[0]?.operation).toBe('work-item-list')
+        expect(performanceMetrics[0]?.success).toBe(true)
+        expect(performanceMetrics[0]?.duration).toBeGreaterThanOrEqual(0)
       })
     })
   })
@@ -1921,6 +1926,257 @@ describe('AzureDevOpsClient', () => {
       )
 
       consoleSpy.mockRestore()
+    })
+  })
+
+  describe('addWorkItemComment', () => {
+    it('should successfully add comment to work item', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.addWorkItemComment(1234, 'Test comment')
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'az rest --method POST --uri "https://dev.azure.com/fwcdev/Customer Services Platform/_apis/wit/workItems/1234/comments?api-version=7.0" --body \'{"text":"Test comment"}\' --headers "Content-Type=application/json"',
+        { maxBuffer: 10 * 1024 * 1024 },
+      )
+    })
+
+    it('should validate comment text is not empty', async () => {
+      await expect(client.addWorkItemComment(1234, '')).rejects.toThrow(
+        'Comment text cannot be empty',
+      )
+
+      await expect(client.addWorkItemComment(1234, '   ')).rejects.toThrow(
+        'Comment text cannot be empty',
+      )
+    })
+
+    it('should handle Azure CLI authentication errors', async () => {
+      mockExecAsync.mockRejectedValue(new Error('Azure CLI not authenticated'))
+
+      await expect(
+        client.addWorkItemComment(1234, 'Test comment'),
+      ).rejects.toThrow('Azure CLI not authenticated')
+    })
+
+    it('should handle work item not found errors', async () => {
+      mockExecAsync.mockRejectedValue(new Error('Work item 9999 not found'))
+
+      await expect(
+        client.addWorkItemComment(9999, 'Test comment'),
+      ).rejects.toThrow('Work item 9999 not found')
+    })
+
+    it('should apply resilience policy for network failures', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.addWorkItemComment(1234, 'Test comment')
+
+      expect(mockApplyPolicy).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          timeout: 10000,
+          circuitBreaker: expect.objectContaining({
+            key: 'azure-devops-comments',
+          }),
+          retry: expect.objectContaining({
+            maxAttempts: 3,
+          }),
+        }),
+      )
+    })
+
+    it('should escape special characters in comment text', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.addWorkItemComment(
+        1234,
+        'Comment with "quotes" and \\backslashes',
+      )
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Comment with \\"quotes\\" and \\\\backslashes',
+        ),
+        { maxBuffer: 10 * 1024 * 1024 },
+      )
+    })
+
+    it('should log operation for debugging', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.addWorkItemComment(1234, 'Test comment')
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '💬 Adding comment to work item 1234',
+      )
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle API errors with helpful messages', async () => {
+      mockExecAsync.mockRejectedValue(new Error('API rate limit exceeded'))
+
+      await expect(
+        client.addWorkItemComment(1234, 'Test comment'),
+      ).rejects.toThrow('API rate limit exceeded')
+    })
+  })
+
+  describe('linkWorkItemToPullRequest', () => {
+    it('should successfully link work item to pull request', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.linkWorkItemToPullRequest(
+        1234,
+        'https://github.com/user/repo/pull/123',
+      )
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'az rest --method PATCH --uri "https://dev.azure.com/fwcdev/Customer Services Platform/_apis/wit/workItems/1234?api-version=7.0" --body \'[{"op":"add","path":"/relations/-","value":{"rel":"Hyperlink","url":"https://github.com/user/repo/pull/123","attributes":{"comment":"Pull Request"}}}]\' --headers "Content-Type=application/json-patch+json"',
+        { maxBuffer: 10 * 1024 * 1024 },
+      )
+    })
+
+    it('should validate pull request URL format', async () => {
+      await expect(client.linkWorkItemToPullRequest(1234, '')).rejects.toThrow(
+        'Pull request URL cannot be empty',
+      )
+
+      await expect(
+        client.linkWorkItemToPullRequest(1234, '   '),
+      ).rejects.toThrow('Pull request URL cannot be empty')
+
+      await expect(
+        client.linkWorkItemToPullRequest(1234, 'not-a-url'),
+      ).rejects.toThrow('Invalid pull request URL format')
+    })
+
+    it('should handle Azure CLI authentication errors', async () => {
+      mockExecAsync.mockRejectedValue(new Error('Azure CLI not authenticated'))
+
+      await expect(
+        client.linkWorkItemToPullRequest(
+          1234,
+          'https://github.com/user/repo/pull/123',
+        ),
+      ).rejects.toThrow('Azure CLI not authenticated')
+    })
+
+    it('should handle work item not found errors', async () => {
+      mockExecAsync.mockRejectedValue(new Error('Work item 9999 not found'))
+
+      await expect(
+        client.linkWorkItemToPullRequest(
+          9999,
+          'https://github.com/user/repo/pull/123',
+        ),
+      ).rejects.toThrow('Work item 9999 not found')
+    })
+
+    it('should apply resilience policy for network failures', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.linkWorkItemToPullRequest(
+        1234,
+        'https://github.com/user/repo/pull/123',
+      )
+
+      expect(mockApplyPolicy).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          timeout: 10000,
+          circuitBreaker: expect.objectContaining({
+            key: 'azure-devops-comments',
+          }),
+          retry: expect.objectContaining({
+            maxAttempts: 3,
+          }),
+        }),
+      )
+    })
+
+    it('should escape special characters in pull request URL', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.linkWorkItemToPullRequest(
+        1234,
+        'https://github.com/user/repo/pull/123?param="value"',
+      )
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'https://github.com/user/repo/pull/123?param=\\\\\\"value\\\\\\"',
+        ),
+        { maxBuffer: 10 * 1024 * 1024 },
+      )
+    })
+
+    it('should log operation for debugging', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      await client.linkWorkItemToPullRequest(
+        1234,
+        'https://github.com/user/repo/pull/123',
+      )
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '🔗 Linking work item 1234 to pull request: https://github.com/user/repo/pull/123',
+      )
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle existing link conflicts', async () => {
+      mockExecAsync.mockRejectedValue(new Error('Relation already exists'))
+
+      await expect(
+        client.linkWorkItemToPullRequest(
+          1234,
+          'https://github.com/user/repo/pull/123',
+        ),
+      ).rejects.toThrow('Pull request link already exists for work item 1234')
+    })
+
+    it('should accept various pull request URL formats', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '' })
+
+      // GitHub
+      await expect(
+        client.linkWorkItemToPullRequest(
+          1234,
+          'https://github.com/user/repo/pull/123',
+        ),
+      ).resolves.not.toThrow()
+
+      // Azure DevOps
+      await expect(
+        client.linkWorkItemToPullRequest(
+          1234,
+          'https://dev.azure.com/org/project/_git/repo/pullrequest/456',
+        ),
+      ).resolves.not.toThrow()
+
+      // GitLab
+      await expect(
+        client.linkWorkItemToPullRequest(
+          1234,
+          'https://gitlab.com/user/repo/-/merge_requests/789',
+        ),
+      ).resolves.not.toThrow()
+    })
+
+    it('should handle API errors with helpful messages', async () => {
+      mockExecAsync.mockRejectedValue(new Error('API rate limit exceeded'))
+
+      await expect(
+        client.linkWorkItemToPullRequest(
+          1234,
+          'https://github.com/user/repo/pull/123',
+        ),
+      ).rejects.toThrow('API rate limit exceeded')
     })
   })
 

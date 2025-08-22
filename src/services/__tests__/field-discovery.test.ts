@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+import type {
+  AzureDevOpsWorkItem,
+  AzureDevOpsWorkItemFields,
+} from '../../types/azure-devops-api.js'
+
 // Use vi.hoisted to ensure the mock function is available during module loading
 const mockExecAsync = vi.hoisted(() => vi.fn())
 
@@ -136,10 +141,11 @@ describe('FieldDiscoveryService', () => {
 
   describe('analyzeFields', () => {
     it('should analyze and categorize all fields from work item data', () => {
-      const sampleWorkItem = {
+      const sampleWorkItem: AzureDevOpsWorkItem = {
         id: 1234,
         rev: 15,
         fields: {
+          'System.Id': 1234,
           'System.Title': 'Test Work Item',
           'System.State': 'Active',
           'System.WorkItemType': 'User Story',
@@ -147,6 +153,7 @@ describe('FieldDiscoveryService', () => {
             displayName: 'Nathan Vale',
             uniqueName: 'nathan.vale@example.com',
           },
+          'System.CreatedDate': '2025-08-21T09:00:00Z',
           'System.ChangedDate': '2025-08-21T10:30:00Z',
           'System.CommentCount': 3,
           'System.TeamProject': 'Customer Services Platform',
@@ -155,10 +162,14 @@ describe('FieldDiscoveryService', () => {
           'Microsoft.VSTS.Scheduling.StoryPoints': 5.0,
           'Microsoft.VSTS.Common.ValueArea': 'Business',
           'Custom.BusinessValue': 'High',
-        },
+        } as AzureDevOpsWorkItemFields & { [key: string]: unknown },
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         relations: [],
-        _links: {},
+        _links: {
+          self: {
+            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
+          },
+        },
       }
 
       const result = service.analyzeFields(sampleWorkItem)
@@ -180,12 +191,22 @@ describe('FieldDiscoveryService', () => {
     })
 
     it('should handle work items with minimal fields', () => {
-      const minimalWorkItem = {
+      const minimalWorkItem: AzureDevOpsWorkItem = {
         id: 1234,
+        rev: 1,
         fields: {
+          'System.Id': 1234,
           'System.Title': 'Minimal Item',
           'System.State': 'New',
           'System.WorkItemType': 'Task',
+          'System.CreatedDate': '2025-08-21T09:00:00Z',
+          'System.ChangedDate': '2025-08-21T09:00:00Z',
+        } as AzureDevOpsWorkItemFields & { [key: string]: unknown },
+        url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
+        _links: {
+          self: {
+            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
+          },
         },
       }
 
@@ -199,10 +220,16 @@ describe('FieldDiscoveryService', () => {
     })
 
     it('should detect different field types correctly', () => {
-      const workItem = {
+      const workItem: AzureDevOpsWorkItem = {
         id: 1234,
+        rev: 1,
         fields: {
+          'System.Id': 1234,
           'System.Title': 'String field',
+          'System.CreatedDate': '2025-08-21T09:00:00Z',
+          'System.ChangedDate': '2025-08-21T09:00:00Z',
+          'System.State': 'Active',
+          'System.WorkItemType': 'User Story',
           'System.CommentCount': 5,
           'Microsoft.VSTS.Scheduling.StoryPoints': 3.5,
           'System.BoardColumnDone': true,
@@ -210,6 +237,12 @@ describe('FieldDiscoveryService', () => {
           'System.Tags': null,
           'System.Description': '',
           'Custom.Array': [1, 2, 3],
+        } as AzureDevOpsWorkItemFields & { [key: string]: unknown },
+        url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
+        _links: {
+          self: {
+            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
+          },
         },
       }
 

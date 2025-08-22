@@ -19,7 +19,7 @@ export class AzureAuth {
     try {
       const { stdout } = await this.execAsync('az account show')
       return stdout.trim().length > 0
-    } catch (error) {
+    } catch {
       return false
     }
   }

@@ -1,5 +1,5 @@
 import { AzureAuth } from './auth.js'
-import { AzureDevOpsClient } from './azure-devops.js'
+import { AzureDevOpsClient, type WorkItemData } from './azure-devops.js'
 import { DatabaseService } from './database.js'
 
 export class SyncService {
@@ -34,7 +34,7 @@ export class SyncService {
 
       // Step 1: Discover work item IDs using fast WIQL query
       const workItemIds = await this.client.fetchWorkItems()
-      const idList = workItemIds.map((item: any) => item.id)
+      const idList = workItemIds.map((item: WorkItemData) => item.id)
 
       console.log(`🔍 Discovered ${idList.length} work items for detailed sync`)
 
@@ -66,7 +66,9 @@ export class SyncService {
     }
   }
 
-  private async syncCommentsForWorkItems(workItems: any[]): Promise<void> {
+  private async syncCommentsForWorkItems(
+    workItems: WorkItemData[],
+  ): Promise<void> {
     const lastSyncTime = await this.db.getLastSyncTime()
     let checkedCount = 0
     let syncedCount = 0
@@ -79,7 +81,7 @@ export class SyncService {
     )
 
     // Filter work items that need comment sync first
-    const workItemsNeedingSync: any[] = []
+    const workItemsNeedingSync: WorkItemData[] = []
     for (const workItem of workItems) {
       checkedCount++
 
@@ -87,7 +89,7 @@ export class SyncService {
         const needsSync = await this.db.needsCommentSync(
           workItem.id,
           workItem.commentCount || 0,
-          workItem.changedDate,
+          workItem.changedDate || null,
           lastSyncTime,
         )
 
@@ -170,7 +172,9 @@ export class SyncService {
     )
   }
 
-  private async syncSingleWorkItemComments(workItem: any): Promise<number> {
+  private async syncSingleWorkItemComments(
+    workItem: WorkItemData,
+  ): Promise<number> {
     const comments = await this.client.fetchWorkItemComments(workItem.id)
     await this.db.storeWorkItemComments(comments)
     return comments.length

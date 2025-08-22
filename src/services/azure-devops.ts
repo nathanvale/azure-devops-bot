@@ -6,6 +6,15 @@ import {
   type ResiliencePolicy,
 } from '@orchestr8/resilience'
 
+import type {
+  AzureDevOpsWorkItem,
+  AzureDevOpsWorkItemComment,
+  AzureDevOpsCommentsResponse,
+  AzureDevOpsWiqlResult,
+  AzureDevOpsPerson,
+  AzureDevOpsWorkItemRelation,
+} from '../types/azure-devops-api.js'
+
 const execAsync = promisify(exec)
 
 // Resilience policies for Azure CLI operations
@@ -67,24 +76,15 @@ const commentPolicy: ResiliencePolicy = {
 const resilience = new ProductionResilienceAdapter()
 
 // Add circuit breaker monitoring
-const logCircuitBreakerEvent = (event: string, key: string, details?: any) => {
+const logCircuitBreakerEvent = (
+  event: string,
+  key: string,
+  details?: Record<string, unknown>,
+) => {
   const timestamp = new Date().toISOString()
   console.log(
     `🔥 Circuit Breaker [${timestamp}] - ${event} for key '${key}'`,
     details ? JSON.stringify(details) : '',
-  )
-}
-
-// Log when circuit breaker state changes occur
-const logRetryAttempt = (
-  attempt: number,
-  maxAttempts: number,
-  delay: number,
-  error: any,
-) => {
-  console.warn(
-    `🔄 Retry attempt ${attempt}/${maxAttempts} after ${delay}ms delay. Error:`,
-    error.message,
   )
 }
 
@@ -234,7 +234,9 @@ export class AzureDevOpsClient {
       }
 
       // Extract work item IDs
-      const workItemIds = wiqlResult.map((item: any) => item.id).join(',')
+      const workItemIds = (wiqlResult as AzureDevOpsWiqlResult).workItems
+        .map((item) => item.id)
+        .join(',')
 
       // Fetch detailed work items with --expand all flag using resilience
       const expandCommand = `az boards work-item show --id "${workItemIds}" --expand all --output json`
@@ -261,7 +263,9 @@ export class AzureDevOpsClient {
         ? expandedResult
         : [expandedResult]
 
-      return workItems.map((item: any) => this.mapWorkItemData(item))
+      return workItems.map((item: AzureDevOpsWorkItem) =>
+        this.mapWorkItemData(item),
+      )
     } catch (error) {
       console.error('Failed to fetch work items:', error)
 
@@ -328,8 +332,9 @@ export class AzureDevOpsClient {
         return []
       }
 
-      return commentsResponse.value.map((comment: any) =>
-        this.mapCommentData(comment, workItemId),
+      return (commentsResponse as AzureDevOpsCommentsResponse).value.map(
+        (comment: AzureDevOpsWorkItemComment) =>
+          this.mapCommentData(comment, workItemId),
       )
     } catch (error) {
       console.error(
@@ -462,6 +467,8 @@ export class AzureDevOpsClient {
           const index = currentIndex++
           const workItemId = workItemIds[index]
 
+          if (!workItemId) continue
+
           try {
             const workItem = await this.fetchSingleWorkItem(workItemId)
             results[index] = workItem
@@ -481,8 +488,181 @@ export class AzureDevOpsClient {
     return results.filter((item) => item !== undefined)
   }
 
+  async addWorkItemComment(workItemId: number, comment: string): Promise<void> {
+    // Validate comment text
+    const trimmedComment = comment.trim()
+    if (!trimmedComment) {
+      throw new Error('Comment text cannot be empty')
+    }
+
+    // Escape JSON content for Azure CLI
+    const escapedComment = trimmedComment
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+
+    const command = `az rest --method POST --uri "https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${AzureDevOpsClient.PROJECT}/_apis/wit/workItems/${workItemId}/comments?api-version=7.0" --body '{"text":"${escapedComment}"}' --headers "Content-Type=application/json"`
+
+    console.log(`💬 Adding comment to work item ${workItemId}`)
+
+    try {
+      await resilience.applyPolicy(async () => {
+        try {
+          return await execAsync(command, { maxBuffer: 10 * 1024 * 1024 })
+        } catch (error) {
+          logCircuitBreakerEvent('FAILURE', 'azure-devops-comments', {
+            error: error instanceof Error ? error.message : error,
+            workItemId,
+            operation: 'addComment',
+          })
+          throw error
+        }
+      }, commentPolicy)
+
+      console.log(`✅ Successfully added comment to work item ${workItemId}`)
+    } catch (error) {
+      console.error(`Failed to add comment to work item ${workItemId}:`, error)
+
+      // Provide actionable error messages based on error type
+      if (error instanceof Error) {
+        if (error.message.includes('az: command not found')) {
+          throw new Error(
+            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
+          )
+        } else if (error.message.includes("Please run 'az login'")) {
+          throw new Error(
+            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+          )
+        } else if (
+          error.message.includes('rate limit') ||
+          error.message.includes('429')
+        ) {
+          throw new Error(
+            'Azure DevOps API rate limit exceeded. Please wait a few minutes before trying again.',
+          )
+        } else if (
+          error.message.includes('timeout') ||
+          error.message.includes('ECONNRESET')
+        ) {
+          throw new Error(
+            'Network timeout while adding comment. Please check your internet connection and try again.',
+          )
+        } else if (error.message.includes('not found')) {
+          throw new Error(
+            `Work item ${workItemId} not found. Please verify the work item ID is correct.`,
+          )
+        }
+      }
+
+      throw error
+    }
+  }
+
+  async linkWorkItemToPullRequest(
+    workItemId: number,
+    pullRequestUrl: string,
+  ): Promise<void> {
+    // Validate pull request URL
+    const trimmedUrl = pullRequestUrl.trim()
+    if (!trimmedUrl) {
+      throw new Error('Pull request URL cannot be empty')
+    }
+
+    // Basic URL format validation
+    try {
+      new URL(trimmedUrl)
+    } catch {
+      throw new Error('Invalid pull request URL format')
+    }
+
+    // Escape JSON content for Azure CLI
+    const escapedUrl = trimmedUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+    // JSON patch format for Azure DevOps API
+    const patchBody = JSON.stringify([
+      {
+        op: 'add',
+        path: '/relations/-',
+        value: {
+          rel: 'Hyperlink',
+          url: escapedUrl,
+          attributes: {
+            comment: 'Pull Request',
+          },
+        },
+      },
+    ])
+
+    const command = `az rest --method PATCH --uri "https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${AzureDevOpsClient.PROJECT}/_apis/wit/workItems/${workItemId}?api-version=7.0" --body '${patchBody}' --headers "Content-Type=application/json-patch+json"`
+
+    console.log(
+      `🔗 Linking work item ${workItemId} to pull request: ${trimmedUrl}`,
+    )
+
+    try {
+      await resilience.applyPolicy(async () => {
+        try {
+          return await execAsync(command, { maxBuffer: 10 * 1024 * 1024 })
+        } catch (error) {
+          logCircuitBreakerEvent('FAILURE', 'azure-devops-comments', {
+            error: error instanceof Error ? error.message : error,
+            workItemId,
+            operation: 'linkToPR',
+            pullRequestUrl: trimmedUrl,
+          })
+          throw error
+        }
+      }, commentPolicy)
+
+      console.log(
+        `✅ Successfully linked work item ${workItemId} to pull request`,
+      )
+    } catch (error) {
+      console.error(
+        `Failed to link work item ${workItemId} to pull request:`,
+        error,
+      )
+
+      // Provide actionable error messages based on error type
+      if (error instanceof Error) {
+        if (error.message.includes('az: command not found')) {
+          throw new Error(
+            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
+          )
+        } else if (error.message.includes("Please run 'az login'")) {
+          throw new Error(
+            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+          )
+        } else if (
+          error.message.includes('rate limit') ||
+          error.message.includes('429')
+        ) {
+          throw new Error(
+            'Azure DevOps API rate limit exceeded. Please wait a few minutes before trying again.',
+          )
+        } else if (
+          error.message.includes('timeout') ||
+          error.message.includes('ECONNRESET')
+        ) {
+          throw new Error(
+            'Network timeout while linking to pull request. Please check your internet connection and try again.',
+          )
+        } else if (error.message.includes('not found')) {
+          throw new Error(
+            `Work item ${workItemId} not found. Please verify the work item ID is correct.`,
+          )
+        } else if (error.message.includes('already exists')) {
+          throw new Error(
+            `Pull request link already exists for work item ${workItemId}. You may need to remove the existing link first.`,
+          )
+        }
+      }
+
+      throw error
+    }
+  }
+
   private mapCommentData(
-    comment: any,
+    comment: AzureDevOpsWorkItemComment,
     workItemId: number,
   ): WorkItemCommentData {
     return {
@@ -500,7 +680,7 @@ export class AzureDevOpsClient {
     }
   }
 
-  private mapWorkItemData(item: any): WorkItemData {
+  private mapWorkItemData(item: AzureDevOpsWorkItem): WorkItemData {
     return {
       id: item.id,
       title: item.fields?.['System.Title'] || '',
@@ -523,14 +703,12 @@ export class AzureDevOpsClient {
       // Priority/Tags
       priority: item.fields?.['Microsoft.VSTS.Common.Priority'],
       severity: item.fields?.['Microsoft.VSTS.Common.Severity'],
-      tags: item.fields?.['System.Tags'],
+      tags: item.fields?.['System.Tags'] || undefined,
 
       // All the dates
       createdDate: this.parseDate(item.fields?.['System.CreatedDate']),
       changedDate: this.parseDate(item.fields?.['System.ChangedDate']),
-      closedDate: this.parseDate(
-        item.fields?.['Microsoft.VSTS.Common.ClosedDate'],
-      ),
+      closedDate: this.parseDate(item.fields?.['System.ClosedDate']),
       resolvedDate: this.parseDate(
         item.fields?.['Microsoft.VSTS.Common.ResolvedDate'],
       ),
@@ -601,7 +779,9 @@ export class AzureDevOpsClient {
     return `https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${encodeURIComponent(AzureDevOpsClient.PROJECT)}/_workitems/edit/${id}`
   }
 
-  private extractPersonName(person: any): string {
+  private extractPersonName(
+    person: AzureDevOpsPerson | string | undefined,
+  ): string {
     if (!person) return 'Unassigned'
     if (typeof person === 'string') return person
     return person.uniqueName || person.displayName || 'Unassigned'
@@ -612,13 +792,17 @@ export class AzureDevOpsClient {
     return new Date(dateString)
   }
 
-  private parseFloat(value: any): number | undefined {
+  private parseFloat(
+    value: string | number | undefined | null,
+  ): number | undefined {
     if (value === null || value === undefined) return undefined
-    const parsed = parseFloat(value)
+    const parsed = parseFloat(String(value))
     return isNaN(parsed) ? undefined : parsed
   }
 
-  private extractParentId(relations: any[]): number | undefined {
+  private extractParentId(
+    relations: AzureDevOpsWorkItemRelation[] | undefined,
+  ): number | undefined {
     if (!relations || !Array.isArray(relations)) return undefined
 
     const parentRelation = relations.find(
@@ -627,13 +811,15 @@ export class AzureDevOpsClient {
 
     if (parentRelation && parentRelation.url) {
       const match = parentRelation.url.match(/\/(\d+)$/)
-      return match ? parseInt(match[1], 10) : undefined
+      return match && match[1] ? parseInt(match[1], 10) : undefined
     }
 
     return undefined
   }
 
-  private hasAttachments(relations: any[]): boolean {
+  private hasAttachments(
+    relations: AzureDevOpsWorkItemRelation[] | undefined,
+  ): boolean {
     if (!relations || !Array.isArray(relations)) return false
 
     return relations.some((rel) => rel.rel === 'AttachedFile')
@@ -671,7 +857,7 @@ export class AzureDevOpsClient {
             invalid.push(email)
           }
         }
-      } catch (error) {
+      } catch {
         invalid.push(email)
       }
     }

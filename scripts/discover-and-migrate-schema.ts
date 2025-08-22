@@ -39,8 +39,8 @@ async function main() {
     process.exit(1)
   }
 
-  if (args[0].startsWith('--sample=')) {
-    const sampleCount = parseInt(args[0].split('=')[1])
+  if (args[0]?.startsWith('--sample=')) {
+    const sampleCount = parseInt(args[0].split('=')[1] || '0')
     console.log(
       `📋 Using ${sampleCount} random work items from your project...\n`,
     )
