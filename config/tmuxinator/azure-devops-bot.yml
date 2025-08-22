@@ -9,15 +9,15 @@ windows:
       layout: main-vertical
       panes:
         - claude:
-          - echo "🤖 Claude Code - Azure DevOps Bot Development"
-          - echo "Ready for development assistance..."
+            - echo "🤖 Claude Code - Azure DevOps Bot Development"
+            - echo "Ready for development assistance..."
         - dev:
-          - echo "🚀 Starting development server..."
-          - pnpm dev
+            - echo "🚀 Starting development server..."
+            - pnpm dev
         - prisma:
-          - echo "🗄️ Prisma Database Tools"
-          - echo "Available commands:"
-          - echo "  • pnpm prisma studio    - Open Prisma Studio"
-          - echo "  • pnpm prisma migrate   - Run migrations"
-          - echo "  • pnpm prisma generate  - Generate Prisma client"
-          - echo "  • pnpm prisma db push   - Push schema to database"
+            - echo "🗄️ Prisma Database Tools"
+            - echo "Available commands:"
+            - echo "  • pnpm prisma studio    - Open Prisma Studio"
+            - echo "  • pnpm prisma migrate   - Run migrations"
+            - echo "  • pnpm prisma generate  - Generate Prisma client"
+            - echo "  • pnpm prisma db push   - Push schema to database"

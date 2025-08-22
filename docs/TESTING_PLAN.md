@@ -9,6 +9,7 @@ This testing plan is based on the sophisticated testing architecture from the mn
 ### 1. Vitest Configuration Setup
 
 **`vitest.config.ts`** for both MCP servers:
+
 ```typescript
 export default defineConfig({
   test: {
@@ -80,46 +81,50 @@ src/
 ### 3. MSW Setup for External APIs
 
 **Azure DevOps API Handlers** (`src/mocks/handlers/azure-devops.handlers.ts`):
+
 ```typescript
 import { http, HttpResponse } from 'msw'
 
 export const workItemsHandler = http.get(
   'https://dev.azure.com/:org/:project/_apis/wit/workitems',
-  () => HttpResponse.json({
-    count: 2,
-    value: [
-      {
-        id: 1234,
-        fields: {
-          'System.Title': 'Test User Story',
-          'System.State': 'Active',
-          'System.AssignedTo': { displayName: 'Nathan Vale' }
-        }
-      }
-    ]
-  })
+  () =>
+    HttpResponse.json({
+      count: 2,
+      value: [
+        {
+          id: 1234,
+          fields: {
+            'System.Title': 'Test User Story',
+            'System.State': 'Active',
+            'System.AssignedTo': { displayName: 'Nathan Vale' },
+          },
+        },
+      ],
+    }),
 )
 
 export const createWorkItemHandler = http.post(
   'https://dev.azure.com/:org/:project/_apis/wit/workitems/$:type',
-  () => HttpResponse.json({
-    id: 5678,
-    fields: {
-      'System.Title': 'New Work Item',
-      'System.State': 'New'
-    }
-  })
+  () =>
+    HttpResponse.json({
+      id: 5678,
+      fields: {
+        'System.Title': 'New Work Item',
+        'System.State': 'New',
+      },
+    }),
 )
 
 export const createErrorHandler = (status: number, message: string) =>
   http.get('https://dev.azure.com/*', () =>
-    HttpResponse.json({ message }, { status })
+    HttpResponse.json({ message }, { status }),
   )
 ```
 
 ### 4. Prisma Mock Setup
 
 **Database Mock** (`src/mocks/prisma.mock.ts`):
+
 ```typescript
 import { vi } from 'vitest'
 import { PrismaClient } from '@prisma/client'
@@ -145,6 +150,7 @@ vi.mock('@prisma/client', () => ({
 ### 5. MCP Protocol Testing
 
 **MCP Client Test Utility** (`tests/utils/mcp-client.ts`):
+
 ```typescript
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
@@ -159,16 +165,19 @@ export class TestMCPClient {
     this.process = spawn('node', [serverPath])
     this.transport = new StdioClientTransport({
       readable: this.process.stdout,
-      writable: this.process.stdin
+      writable: this.process.stdin,
     })
-    
-    this.client = new Client({
-      name: 'test-client',
-      version: '1.0.0'
-    }, {
-      capabilities: {}
-    })
-    
+
+    this.client = new Client(
+      {
+        name: 'test-client',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {},
+      },
+    )
+
     await this.client.connect(this.transport)
   }
 
@@ -192,6 +201,7 @@ export class TestMCPClient {
 **Example: Work Item Creation Tool (TDD)**
 
 **Step 1: Write the test first** (`src/tools/__tests__/work-item-tools.test.ts`):
+
 ```typescript
 describe('createWorkItem tool', () => {
   it('should create a new work item with valid data', async () => {
@@ -201,21 +211,22 @@ describe('createWorkItem tool', () => {
       fields: {
         'System.Title': 'Test Story',
         'System.State': 'New',
-        'System.WorkItemType': 'User Story'
-      }
+        'System.WorkItemType': 'User Story',
+      },
     }
-    
+
     server.use(
-      http.post('https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workitems/$User%20Story', 
-        () => HttpResponse.json(mockCreatedItem)
-      )
+      http.post(
+        'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workitems/$User%20Story',
+        () => HttpResponse.json(mockCreatedItem),
+      ),
     )
 
     // Act
     const result = await callTool('create_work_item', {
       title: 'Test Story',
       type: 'User Story',
-      description: 'A test user story'
+      description: 'A test user story',
     })
 
     // Assert
@@ -226,21 +237,24 @@ describe('createWorkItem tool', () => {
   it('should handle API errors gracefully', async () => {
     // Arrange
     server.use(
-      http.post('https://dev.azure.com/*', 
-        () => HttpResponse.json({ message: 'Unauthorized' }, { status: 401 })
-      )
+      http.post('https://dev.azure.com/*', () =>
+        HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+      ),
     )
 
     // Act & Assert
-    await expect(callTool('create_work_item', {
-      title: 'Test Story',
-      type: 'User Story'
-    })).rejects.toThrow('Unauthorized')
+    await expect(
+      callTool('create_work_item', {
+        title: 'Test Story',
+        type: 'User Story',
+      }),
+    ).rejects.toThrow('Unauthorized')
   })
 })
 ```
 
 **Step 2: Implement the tool** (`src/tools/work-item-tools.ts`):
+
 ```typescript
 // Implementation follows after test is written
 export async function createWorkItem(args: CreateWorkItemArgs) {
@@ -251,6 +265,7 @@ export async function createWorkItem(args: CreateWorkItemArgs) {
 ### 7. Integration Testing Strategy
 
 **Full MCP Server Integration Test** (`tests/integration/azure-devops-server.test.ts`):
+
 ```typescript
 describe('Azure DevOps MCP Server Integration', () => {
   let client: TestMCPClient
@@ -266,21 +281,21 @@ describe('Azure DevOps MCP Server Integration', () => {
 
   it('should list all available tools', async () => {
     const tools = await client.listTools()
-    
+
     expect(tools.tools).toHaveLength(4)
-    expect(tools.tools.map(t => t.name)).toEqual([
+    expect(tools.tools.map((t) => t.name)).toEqual([
       'get_work_items',
       'query_work',
       'sync_data',
-      'get_work_item_url'
+      'get_work_item_url',
     ])
   })
 
   it('should execute get_work_items tool successfully', async () => {
     server.use(workItemsHandler)
-    
+
     const result = await client.callTool('get_work_items', { filter: 'active' })
-    
+
     expect(result.content).toHaveLength(1)
     expect(result.content[0].type).toBe('text')
     expect(JSON.parse(result.content[0].text)).toHaveLength(2)
@@ -291,6 +306,7 @@ describe('Azure DevOps MCP Server Integration', () => {
 ### 8. Database Testing Patterns
 
 **Database Service Testing** (`src/services/__tests__/database.test.ts`):
+
 ```typescript
 describe('DatabaseService', () => {
   let service: DatabaseService
@@ -302,9 +318,7 @@ describe('DatabaseService', () => {
 
   it('should fetch work items by state', async () => {
     // Arrange
-    const mockWorkItems = [
-      { id: 1, title: 'Test Item', state: 'Active' }
-    ]
+    const mockWorkItems = [{ id: 1, title: 'Test Item', state: 'Active' }]
     mockPrismaClient.workItem.findMany.mockResolvedValue(mockWorkItems)
 
     // Act
@@ -313,19 +327,20 @@ describe('DatabaseService', () => {
     // Assert
     expect(result).toEqual(mockWorkItems)
     expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
-      where: { state: 'Active' }
+      where: { state: 'Active' },
     })
   })
 
   it('should handle database errors', async () => {
     // Arrange
     mockPrismaClient.workItem.findMany.mockRejectedValue(
-      new Error('Database connection failed')
+      new Error('Database connection failed'),
     )
 
     // Act & Assert
-    await expect(service.getWorkItemsByState('Active'))
-      .rejects.toThrow('Database connection failed')
+    await expect(service.getWorkItemsByState('Active')).rejects.toThrow(
+      'Database connection failed',
+    )
   })
 })
 ```
@@ -333,6 +348,7 @@ describe('DatabaseService', () => {
 ### 9. Test Data Management
 
 **Test Fixtures** (`tests/fixtures/work-items.json`):
+
 ```json
 {
   "activeWorkItems": [
@@ -359,6 +375,7 @@ describe('DatabaseService', () => {
 ```
 
 **Test Data Factory** (`tests/utils/test-helpers.ts`):
+
 ```typescript
 export function createWorkItem(overrides: Partial<WorkItem> = {}): WorkItem {
   return {
@@ -367,22 +384,22 @@ export function createWorkItem(overrides: Partial<WorkItem> = {}): WorkItem {
     state: 'Active',
     type: 'User Story',
     assignedTo: 'Nathan Vale',
-    ...overrides
+    ...overrides,
   }
 }
 
 export function createWorkItemResponse(items: WorkItem[]) {
   return {
     count: items.length,
-    value: items.map(item => ({
+    value: items.map((item) => ({
       id: item.id,
       fields: {
         'System.Title': item.title,
         'System.State': item.state,
         'System.WorkItemType': item.type,
-        'System.AssignedTo': { displayName: item.assignedTo }
-      }
-    }))
+        'System.AssignedTo': { displayName: item.assignedTo },
+      },
+    })),
   }
 }
 ```
@@ -448,18 +465,21 @@ npm run test
 ## Implementation Priority
 
 ### Phase 1: Basic Testing Infrastructure
+
 1. Setup Vitest configuration
 2. Create MSW handlers for Azure DevOps API
 3. Setup Prisma mocking
 4. Create MCP client test utility
 
 ### Phase 2: Core Feature Testing
+
 1. Test existing MCP tools
 2. Add integration tests for current features
 3. Setup test data fixtures
 4. Create test helpers and utilities
 
 ### Phase 3: TDD for New Features
+
 1. Use TDD approach for work item creation
 2. Test-drive Git integration features
 3. Add comprehensive error handling tests
@@ -478,5 +498,5 @@ npm run test
 
 ---
 
-*Last Updated: $(date)*
-*Version: 1.0*
+_Last Updated: $(date)_
+_Version: 1.0_

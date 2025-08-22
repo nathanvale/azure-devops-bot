@@ -12,6 +12,7 @@ The current Prisma schema is missing several fields that are defined in the Type
 ### Missing Fields Analysis
 
 **Currently Missing from Prisma Schema:**
+
 - `reason` (String?) - Why the work item changed state
 - `watermark` (Int?) - Azure DevOps internal versioning
 - `url` (String?) - Direct Azure DevOps API URL
@@ -75,18 +76,18 @@ model WorkItem {
   assignedTo        String
   azureUrl          String
   description       String?
-  
+
   // Sprint/Board Info
   iterationPath     String?
   areaPath          String?
   boardColumn       String?
   boardColumnDone   Boolean  @default(false)
-  
+
   // Priority/Tags
   priority          Int?
   severity          String?
   tags              String?
-  
+
   // All the dates
   createdDate       DateTime?
   changedDate       DateTime?
@@ -94,28 +95,28 @@ model WorkItem {
   resolvedDate      DateTime?
   activatedDate     DateTime?
   stateChangeDate   DateTime?
-  
+
   // People
   createdBy         String?
   changedBy         String?
   closedBy          String?
   resolvedBy        String?
-  
+
   // Work tracking
   storyPoints       Float?
   effort            Float?
   remainingWork     Float?
   completedWork     Float?
   originalEstimate  Float?
-  
+
   // Content
   acceptanceCriteria String?
   reproSteps         String?
   systemInfo         String?
-  
+
   // Related items
   parentId          Int?
-  
+
   // Additional Azure DevOps fields (NEW)
   rev               Int?
   reason            String?    // NEW - State change reason
@@ -128,17 +129,17 @@ model WorkItem {
   nodeId            Int?       // NEW - Node identifier
   stackRank         Float?     // NEW - Backlog ordering
   valueArea         String?    // NEW - Value area classification
-  
+
   // Store EVERYTHING from Azure DevOps
   rawJson           String
-  
+
   // Sync metadata
   lastUpdatedAt     DateTime
   lastSyncedAt      DateTime @default(now())
-  
+
   // Relations
   comments          WorkItemComment[]
-  
+
   // Existing indexes
   @@index([type])
   @@index([state])
@@ -146,13 +147,13 @@ model WorkItem {
   @@index([iterationPath])
   @@index([changedDate])
   @@index([createdDate])
-  
+
   // New indexes for performance
   @@index([commentCount])
   @@index([teamProject])
   @@index([stackRank])
   @@index([valueArea])
-  
+
   @@map("work_items")
 }
 ```
@@ -160,7 +161,9 @@ model WorkItem {
 ## Rationale
 
 ### Field Necessity
+
 Each missing field serves a specific purpose:
+
 - **reason/watermark**: Azure DevOps internal tracking for audit trails
 - **url**: Direct API access for debugging and integration
 - **commentCount**: Optimization for sync decisions (avoid fetching if 0)
@@ -170,13 +173,16 @@ Each missing field serves a specific purpose:
 - **valueArea**: Business vs Technical classification for metrics
 
 ### Index Strategy
+
 New indexes target fields likely to be used in filtering:
+
 - `commentCount` - For sync optimization queries
 - `teamProject` - For multi-project filtering (future)
 - `stackRank` - For ordered queries
 - `valueArea` - For business metrics
 
 ### Performance Impact
+
 - **Storage**: ~200 bytes additional per work item
 - **Query Performance**: New indexes improve specific queries
 - **Migration Time**: ~30 seconds for 10,000 work items
@@ -184,18 +190,21 @@ New indexes target fields likely to be used in filtering:
 ## Data Integrity
 
 ### Migration Safety
+
 1. All new fields are nullable or have defaults
 2. Existing data remains unchanged
 3. Migration is reversible
 4. Indexes created with IF NOT EXISTS
 
 ### Validation Rules
+
 - `commentCount` must be >= 0
 - `stackRank` can be NULL (for items not in backlog)
 - `valueArea` should be 'Business' or 'Architectural' when present
 - `url` should be valid Azure DevOps API URL format when present
 
 ### Rollback Plan
+
 ```sql
 -- Rollback migration if needed
 DROP INDEX IF EXISTS idx_work_items_comment_count;
@@ -218,6 +227,7 @@ ALTER TABLE work_items DROP COLUMN value_area;
 ## Testing Strategy
 
 ### Migration Testing
+
 1. Backup existing data
 2. Apply migration on copy
 3. Verify all existing data intact
@@ -225,6 +235,7 @@ ALTER TABLE work_items DROP COLUMN value_area;
 5. Performance test with indexes
 
 ### Data Validation
+
 1. Ensure TypeScript interface matches Prisma exactly
 2. Test upsert operations with new fields
 3. Verify index usage in query plans

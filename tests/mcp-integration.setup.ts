@@ -1,11 +1,12 @@
 import { beforeAll, afterEach, afterAll, vi } from 'vitest'
-import { server } from '@/mocks/server'
+
 import { resetPrismaMocks, setupPrismaDefaults } from '@/mocks/prisma.mock'
+import { server } from '@/mocks/server'
 
 // Start MSW server before all tests
 beforeAll(() => {
-  server.listen({ 
-    onUnhandledRequest: 'bypass' // Less strict for integration tests
+  server.listen({
+    onUnhandledRequest: 'bypass', // Less strict for integration tests
   })
 })
 
@@ -13,13 +14,13 @@ beforeAll(() => {
 afterEach(() => {
   // Reset MSW handlers to default
   server.resetHandlers()
-  
+
   // Reset all Prisma mocks
   resetPrismaMocks()
-  
+
   // Reset all other mocks
   vi.resetAllMocks()
-  
+
   // Setup default Prisma behavior for next test
   setupPrismaDefaults()
 })
@@ -43,6 +44,8 @@ vi.setConfig({ testTimeout: 30000 })
 // Suppress console output during integration tests unless debugging
 if (!process.env.DEBUG_TESTS) {
   global.consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-  global.consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  global.consoleErrorSpy = vi
+    .spyOn(console, 'error')
+    .mockImplementation(() => {})
   global.consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 }

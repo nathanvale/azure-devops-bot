@@ -15,15 +15,15 @@ model WorkItem {
   title             String
   state             String
   type              String
-  assignedTo        String
-  azureUrl          String
+  assignedTo        String   @map("assigned_to")
+  azureUrl          String   @map("azure_url")  // Will map to url in future migration
   description       String?
   
   // Sprint/Board Info (for your reports)
-  iterationPath     String?  // e.g., "S3-Sprint 15"
-  areaPath          String?  // e.g., "Stage 3 Team"
-  boardColumn       String?  // e.g., "2. Build"
-  boardColumnDone   Boolean  @default(false)
+  iterationPath     String?  @map("iteration_path") // e.g., "S3-Sprint 15"
+  areaPath          String?  @map("area_path") // e.g., "Stage 3 Team"
+  boardColumn       String?  @map("board_column") // e.g., "2. Build"
+  boardColumnDone   Boolean  @default(false) @map("board_column_done")
   
   // Priority/Tags
   priority          Int?
@@ -31,45 +31,55 @@ model WorkItem {
   tags              String?  // JSON array as string
   
   // All the dates
-  createdDate       DateTime?
-  changedDate       DateTime? // For "Days Since Updated" 
-  closedDate        DateTime?
-  resolvedDate      DateTime?
-  activatedDate     DateTime?
-  stateChangeDate   DateTime?
+  createdDate       DateTime? @map("created_date")
+  changedDate       DateTime? @map("changed_date") // For "Days Since Updated" 
+  closedDate        DateTime? @map("closed_date")
+  resolvedDate      DateTime? @map("resolved_date")
+  activatedDate     DateTime? @map("activated_date")
+  stateChangeDate   DateTime? @map("state_change_date")
   
   // People
-  createdBy         String?
-  changedBy         String?
-  closedBy          String?
-  resolvedBy        String?
+  createdBy         String?  @map("created_by")
+  changedBy         String?  @map("changed_by")
+  closedBy          String?  @map("closed_by")
+  resolvedBy        String?  @map("resolved_by")
   
   // Work tracking
-  storyPoints       Float?
+  storyPoints       Float?   @map("story_points")
   effort            Float?
-  remainingWork     Float?
-  completedWork     Float?
-  originalEstimate  Float?
+  remainingWork     Float?   @map("remaining_work")
+  completedWork     Float?   @map("completed_work")
+  originalEstimate  Float?   @map("original_estimate")
   
   // Content
-  acceptanceCriteria String?
-  reproSteps         String?
-  systemInfo         String?
+  acceptanceCriteria String? @map("acceptance_criteria")
+  reproSteps         String? @map("repro_steps")
+  systemInfo         String? @map("system_info")
   
   // Related items
-  parentId          Int?
+  parentId          Int?     @map("parent_id")
   
   // Additional Azure DevOps fields
   rev               Int?
   reason            String?
   watermark         Int?
   
+  // Required fields from review feedback
+  url               String?  // Direct API URL
+  commentCount      Int      @default(0) @map("comment_count")
+  hasAttachments    Boolean  @default(false) @map("has_attachments")
+  teamProject       String?  @map("team_project")
+  areaId            Int?     @map("area_id")
+  nodeId            Int?     @map("node_id")
+  stackRank         Float?   @map("stack_rank")
+  valueArea         String?  @map("value_area")
+  
   // Store EVERYTHING from Azure DevOps (backup)
-  rawJson           String
+  rawJson           String   @map("raw_json")
   
   // Sync metadata
-  lastUpdatedAt     DateTime
-  lastSyncedAt      DateTime @default(now())
+  lastUpdatedAt     DateTime @map("last_updated_at")
+  lastSyncedAt      DateTime @default(now()) @map("last_synced_at")
   
   // Relations
   comments          WorkItemComment[]
@@ -84,13 +94,13 @@ model WorkItem {
 }
 
 model WorkItemComment {
-  id           String   @id // Azure DevOps comment ID
-  workItemId   Int
+  id           Int      @id // Azure DevOps comment ID (changed to Int)
+  workItemId   Int      @map("work_item_id")
   text         String
-  createdBy    String
-  createdDate  DateTime
-  modifiedBy   String?
-  modifiedDate DateTime?
+  createdBy    String   @map("created_by")
+  createdDate  DateTime @map("created_date")
+  modifiedBy   String?  @map("modified_by")
+  modifiedDate DateTime? @map("modified_date")
   
   workItem     WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
   

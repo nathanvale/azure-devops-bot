@@ -33,7 +33,7 @@ As a product manager, I want complete Azure DevOps responses stored locally, so 
 ## Out of Scope
 
 - Work item comments (separate Phase 1 feature)
-- Work item relationships parsing (Phase 3 feature)  
+- Work item relationships parsing (Phase 3 feature)
 - State history tracking (Phase 3 feature)
 - Custom field type detection (Phase 3 feature)
 

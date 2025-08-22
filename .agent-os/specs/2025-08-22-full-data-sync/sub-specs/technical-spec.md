@@ -17,14 +17,17 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Approach Options
 
 **Option A: Sequential Individual Fetches**
+
 - Pros: Simple implementation, easy error handling per item
 - Cons: Very slow for large datasets, high Azure CLI overhead
 
 **Option B: Parallel Individual Fetches with Concurrency Control** (Selected)
+
 - Pros: Significant performance improvement, controllable load, detailed error handling
 - Cons: More complex implementation, need to manage concurrent Azure CLI processes
 
 **Option C: Batch API with Custom WIQL**
+
 - Pros: Fastest possible approach, single API call
 - Cons: Complex WIQL construction, limited to specific fields, doesn't provide --expand all benefits
 
@@ -44,6 +47,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ### Azure CLI Operation Policies
 
 **Work Item List Operations** (discovery phase)
+
 ```typescript
 const listPolicy: ResiliencePolicy = {
   retry: {
@@ -67,6 +71,7 @@ const listPolicy: ResiliencePolicy = {
 ```
 
 **Individual Work Item Fetches** (detailed data)
+
 ```typescript
 const detailPolicy: ResiliencePolicy = {
   retry: {
@@ -77,8 +82,10 @@ const detailPolicy: ResiliencePolicy = {
     jitterStrategy: 'full',
     retryOn: (error) => {
       // Don't retry on authentication or not found errors
-      return !error.message.includes('unauthorized') && 
-             !error.message.includes('not found')
+      return (
+        !error.message.includes('unauthorized') &&
+        !error.message.includes('not found')
+      )
     },
   },
   timeout: {

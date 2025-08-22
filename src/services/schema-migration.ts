@@ -1,139 +1,171 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { readFile, writeFile } from 'fs/promises';
-import path from 'path';
-import { FieldDiscoveryService } from './field-discovery.js';
+import { exec } from 'child_process'
+import { readFile, writeFile } from 'fs/promises'
+import path from 'path'
+import { promisify } from 'util'
 
-const execAsync = promisify(exec);
+import { FieldDiscoveryService } from './field-discovery.js'
+
+const execAsync = promisify(exec)
 
 export interface SchemaValidationResult {
-  isValid: boolean;
-  hasWorkItemModel: boolean;
-  existingFields: string[];
-  missingFields: string[];
-  errors: string[];
+  isValid: boolean
+  hasWorkItemModel: boolean
+  existingFields: string[]
+  missingFields: string[]
+  errors: string[]
 }
 
 export interface MigrationField {
-  name: string;
-  type: string;
-  sqlType: string;
-  defaultValue?: string;
+  name: string
+  type: string
+  sqlType: string
+  defaultValue?: string
 }
 
 export interface MigrationTestResult {
-  success: boolean;
-  migrationApplied: boolean;
-  rollbackSuccessful: boolean;
-  error?: string;
+  success: boolean
+  migrationApplied: boolean
+  rollbackSuccessful: boolean
+  error?: string
 }
 
 export interface DataIntegrityResult {
-  isValid: boolean;
-  recordCount: number;
-  missingRecords: number[];
-  corruptedRecords: number[];
+  isValid: boolean
+  recordCount: number
+  missingRecords: number[]
+  corruptedRecords: number[]
 }
 
 export interface FullMigrationResult {
-  success: boolean;
-  schemaGenerated: boolean;
-  migrationCreated: boolean;
-  migrationTested: boolean;
-  dataIntegrityValid: boolean;
-  error?: string;
+  success: boolean
+  schemaGenerated: boolean
+  migrationCreated: boolean
+  migrationTested: boolean
+  dataIntegrityValid: boolean
+  error?: string
 }
 
 export class SchemaMigrationService {
-  private fieldDiscoveryService: FieldDiscoveryService;
+  private fieldDiscoveryService: FieldDiscoveryService
 
   constructor() {
-    this.fieldDiscoveryService = new FieldDiscoveryService();
+    this.fieldDiscoveryService = new FieldDiscoveryService()
   }
 
   /**
    * Discover fields from actual Azure DevOps work items
    */
-  async discoverFieldsFromAzureDevOps(sampleWorkItemIds: number[]): Promise<Record<string, string>> {
-    console.log(`Discovering fields from ${sampleWorkItemIds.length} sample work items...`);
-    
-    const discoveredFields: Record<string, string> = {};
-    
+  async discoverFieldsFromAzureDevOps(
+    sampleWorkItemIds: number[],
+  ): Promise<Record<string, string>> {
+    console.log(
+      `Discovering fields from ${sampleWorkItemIds.length} sample work items...`,
+    )
+
+    const discoveredFields: Record<string, string> = {}
+
     for (const workItemId of sampleWorkItemIds) {
       try {
-        const workItem = await this.fieldDiscoveryService.fetchWorkItemWithAllFields(workItemId);
-        const analysis = this.fieldDiscoveryService.analyzeFields(workItem);
-        
+        const workItem =
+          await this.fieldDiscoveryService.fetchWorkItemWithAllFields(
+            workItemId,
+          )
+        const analysis = this.fieldDiscoveryService.analyzeFields(workItem)
+
         // Merge field types from this work item
         Object.entries(analysis.fieldTypes).forEach(([field, type]) => {
-          discoveredFields[field] = type as string;
-        });
-        
-        console.log(`Work item ${workItemId}: Discovered ${Object.keys(analysis.fieldTypes).length} fields`);
+          discoveredFields[field] = type as string
+        })
+
+        console.log(
+          `Work item ${workItemId}: Discovered ${Object.keys(analysis.fieldTypes).length} fields`,
+        )
       } catch (error) {
-        console.warn(`Failed to discover fields from work item ${workItemId}:`, error);
+        console.warn(
+          `Failed to discover fields from work item ${workItemId}:`,
+          error,
+        )
       }
     }
-    
-    console.log(`Field discovery complete. Found ${Object.keys(discoveredFields).length} unique fields.`);
-    return discoveredFields;
+
+    console.log(
+      `Field discovery complete. Found ${Object.keys(discoveredFields).length} unique fields.`,
+    )
+    return discoveredFields
   }
 
   /**
    * Validate the current Prisma schema against discovered fields
    */
-  async validateCurrentSchema(schemaContent: string, discoveredFields?: Record<string, string>): Promise<SchemaValidationResult> {
-    const errors: string[] = [];
-    const existingFields: string[] = [];
-    let hasWorkItemModel = false;
+  async validateCurrentSchema(
+    schemaContent: string,
+    discoveredFields?: Record<string, string>,
+  ): Promise<SchemaValidationResult> {
+    const errors: string[] = []
+    const existingFields: string[] = []
+    let hasWorkItemModel = false
 
     // Check if WorkItem model exists
-    const workItemModelMatch = schemaContent.match(/model\s+WorkItem\s*\{([^}]+)\}/s);
+    const workItemModelMatch = schemaContent.match(
+      /model\s+WorkItem\s*\{([^}]+)\}/s,
+    )
     if (workItemModelMatch) {
-      hasWorkItemModel = true;
-      
+      hasWorkItemModel = true
+
       // Extract field names from the model
-      const modelContent = workItemModelMatch[1];
-      const fieldMatches = modelContent.matchAll(/(\w+)\s+\w+/g);
+      const modelContent = workItemModelMatch[1]
+      const fieldMatches = modelContent.matchAll(/(\w+)\s+\w+/g)
       for (const match of fieldMatches) {
         if (match[1] && !match[1].startsWith('@@')) {
-          existingFields.push(match[1]);
+          existingFields.push(match[1])
         }
       }
     } else {
-      errors.push('WorkItem model not found in schema');
+      errors.push('WorkItem model not found in schema')
     }
 
     // Check for missing fields based on discovered fields or fallback to known comprehensive fields
-    let requiredFields: string[];
+    let requiredFields: string[]
     if (discoveredFields) {
       // Map discovered Azure DevOps fields to Prisma field names
-      requiredFields = this.mapAzureFieldsToPrismaFields(discoveredFields);
+      requiredFields = this.mapAzureFieldsToPrismaFields(discoveredFields)
     } else {
       // Fallback to known comprehensive fields
       requiredFields = [
-        'rev', 'reason', 'watermark', 'url', 'commentCount', 'hasAttachments',
-        'teamProject', 'areaId', 'nodeId', 'stackRank', 'valueArea', 'customFields'
-      ];
+        'rev',
+        'reason',
+        'watermark',
+        'url',
+        'commentCount',
+        'hasAttachments',
+        'teamProject',
+        'areaId',
+        'nodeId',
+        'stackRank',
+        'valueArea',
+        'customFields',
+      ]
     }
-    
-    const missingFields = requiredFields.filter(field => 
-      !existingFields.includes(field)
-    );
+
+    const missingFields = requiredFields.filter(
+      (field) => !existingFields.includes(field),
+    )
 
     return {
       isValid: hasWorkItemModel && missingFields.length === 0,
       hasWorkItemModel,
       existingFields,
       missingFields,
-      errors
-    };
+      errors,
+    }
   }
 
   /**
    * Generate comprehensive Prisma schema with all discovered fields
    */
-  generateComprehensiveSchema(discoveredFields: Record<string, string>): string {
+  generateComprehensiveSchema(
+    discoveredFields: Record<string, string>,
+  ): string {
     const coreFields = `  id                Int      @id
   title             String
   state             String
@@ -180,51 +212,70 @@ export class SchemaMigrationService {
   systemInfo         String?
   
   // Related items
-  parentId          Int?`;
+  parentId          Int?`
 
     // Add comprehensive fields based on discovered fields
     let comprehensiveFields = `
   
-  // Additional Azure DevOps fields`;
-    
+  // Additional Azure DevOps fields`
+
     if (this.hasField(discoveredFields, 'System.Rev', 'number')) {
-      comprehensiveFields += `\n  rev               Int?`;
+      comprehensiveFields += `\n  rev               Int?`
     }
     if (this.hasField(discoveredFields, 'System.Reason', 'string')) {
-      comprehensiveFields += `\n  reason            String?`;
+      comprehensiveFields += `\n  reason            String?`
     }
     if (this.hasField(discoveredFields, 'System.Watermark', 'number')) {
-      comprehensiveFields += `\n  watermark         Int?`;
+      comprehensiveFields += `\n  watermark         Int?`
     }
     if (this.hasField(discoveredFields, 'System.CommentCount', 'number')) {
-      comprehensiveFields += `\n  commentCount      Int?     @default(0)`;
+      comprehensiveFields += `\n  commentCount      Int?     @default(0)`
     }
-    if (this.hasField(discoveredFields, 'Microsoft.VSTS.Common.HasAttachments', 'boolean')) {
-      comprehensiveFields += `\n  hasAttachments    Boolean  @default(false)`;
+    if (
+      this.hasField(
+        discoveredFields,
+        'Microsoft.VSTS.Common.HasAttachments',
+        'boolean',
+      )
+    ) {
+      comprehensiveFields += `\n  hasAttachments    Boolean  @default(false)`
     }
     if (this.hasField(discoveredFields, 'System.TeamProject', 'string')) {
-      comprehensiveFields += `\n  teamProject       String?`;
+      comprehensiveFields += `\n  teamProject       String?`
     }
     if (this.hasField(discoveredFields, 'System.AreaId', 'number')) {
-      comprehensiveFields += `\n  areaId            Int?`;
+      comprehensiveFields += `\n  areaId            Int?`
     }
     if (this.hasField(discoveredFields, 'System.IterationId', 'number')) {
-      comprehensiveFields += `\n  nodeId            Int?`;
+      comprehensiveFields += `\n  nodeId            Int?`
     }
-    if (this.hasField(discoveredFields, 'Microsoft.VSTS.Common.StackRank', 'number')) {
-      comprehensiveFields += `\n  stackRank         Float?`;
+    if (
+      this.hasField(
+        discoveredFields,
+        'Microsoft.VSTS.Common.StackRank',
+        'number',
+      )
+    ) {
+      comprehensiveFields += `\n  stackRank         Float?`
     }
-    if (this.hasField(discoveredFields, 'Microsoft.VSTS.Common.ValueArea', 'string')) {
-      comprehensiveFields += `\n  valueArea         String?`;
+    if (
+      this.hasField(
+        discoveredFields,
+        'Microsoft.VSTS.Common.ValueArea',
+        'string',
+      )
+    ) {
+      comprehensiveFields += `\n  valueArea         String?`
     }
 
     // Add custom fields storage for any complex types
-    const hasCustomFields = Object.entries(discoveredFields).some(([field, type]) => 
-      field.startsWith('Custom.') || ['object', 'array'].includes(type)
-    );
-    
+    const hasCustomFields = Object.entries(discoveredFields).some(
+      ([field, type]) =>
+        field.startsWith('Custom.') || ['object', 'array'].includes(type),
+    )
+
     if (hasCustomFields) {
-      comprehensiveFields += `\n  customFields      String?  // JSON storage for custom fields`;
+      comprehensiveFields += `\n  customFields      String?  // JSON storage for custom fields`
     }
 
     const footer = `
@@ -245,7 +296,7 @@ export class SchemaMigrationService {
   @@index([iterationPath])
   @@index([changedDate])
   @@index([createdDate])
-  @@map("work_items")`;
+  @@map("work_items")`
 
     return `// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
@@ -276,7 +327,7 @@ model WorkItemComment {
   
   @@index([workItemId])
   @@map("work_item_comments")
-}`;
+}`
   }
 
   /**
@@ -285,223 +336,255 @@ model WorkItemComment {
   createMigrationFile(newFields: MigrationField[]): string {
     if (newFields.length === 0) {
       return `-- Add comprehensive Azure DevOps fields
--- No new fields to add`;
+-- No new fields to add`
     }
 
-    let migrationSql = `-- Add comprehensive Azure DevOps fields\n`;
+    let migrationSql = `-- Add comprehensive Azure DevOps fields\n`
 
     // Add column statements
-    newFields.forEach(field => {
-      let columnDef = `ALTER TABLE work_items ADD COLUMN ${field.name} ${field.sqlType}`;
+    newFields.forEach((field) => {
+      let columnDef = `ALTER TABLE work_items ADD COLUMN ${field.name} ${field.sqlType}`
       if (field.defaultValue) {
-        columnDef += ` DEFAULT ${field.defaultValue}`;
+        columnDef += ` DEFAULT ${field.defaultValue}`
       }
-      migrationSql += `${columnDef};\n`;
-    });
+      migrationSql += `${columnDef};\n`
+    })
 
-    migrationSql += `\n-- Performance indexes for new commonly-queried fields\n`;
-    
+    migrationSql += `\n-- Performance indexes for new commonly-queried fields\n`
+
     // Add indexes for performance-critical fields
-    const indexableFields = ['rev', 'watermark', 'commentCount', 'hasAttachments', 'teamProject'];
-    newFields.forEach(field => {
+    const indexableFields = [
+      'rev',
+      'watermark',
+      'commentCount',
+      'hasAttachments',
+      'teamProject',
+    ]
+    newFields.forEach((field) => {
       if (indexableFields.includes(field.name)) {
-        migrationSql += `CREATE INDEX idx_work_items_${field.name} ON work_items(${field.name});\n`;
+        migrationSql += `CREATE INDEX idx_work_items_${field.name} ON work_items(${field.name});\n`
       }
-    });
+    })
 
-    return migrationSql;
+    return migrationSql
   }
 
   /**
    * Test migration by applying and rolling back
    */
   async testMigration(migrationSql: string): Promise<MigrationTestResult> {
-    let migrationApplied = false;
-    let rollbackSuccessful = false;
+    let migrationApplied = false
+    let rollbackSuccessful = false
 
     try {
-      console.log('Testing migration by applying and rolling back...');
-      
+      console.log('Testing migration by applying and rolling back...')
+
       // Apply migration
-      const { stdout: applyOutput } = await execAsync('pnpm prisma migrate dev --name test-comprehensive-schema', { 
-        maxBuffer: 10 * 1024 * 1024 
-      });
-      console.log('Migration applied:', applyOutput);
-      migrationApplied = true;
-      
+      const { stdout: applyOutput } = await execAsync(
+        'pnpm prisma migrate dev --name test-comprehensive-schema',
+        {
+          maxBuffer: 10 * 1024 * 1024,
+        },
+      )
+      console.log('Migration applied:', applyOutput)
+      migrationApplied = true
+
       // Test rollback
-      const { stdout: rollbackOutput } = await execAsync('pnpm prisma migrate reset --force', { 
-        maxBuffer: 10 * 1024 * 1024 
-      });
-      console.log('Migration rolled back:', rollbackOutput);
-      rollbackSuccessful = true;
-      
+      const { stdout: rollbackOutput } = await execAsync(
+        'pnpm prisma migrate reset --force',
+        {
+          maxBuffer: 10 * 1024 * 1024,
+        },
+      )
+      console.log('Migration rolled back:', rollbackOutput)
+      rollbackSuccessful = true
+
       return {
         success: true,
         migrationApplied,
-        rollbackSuccessful
-      };
+        rollbackSuccessful,
+      }
     } catch (error) {
-      console.error('Migration test failed:', error);
+      console.error('Migration test failed:', error)
       return {
         success: false,
         migrationApplied,
         rollbackSuccessful,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
     }
   }
 
   /**
    * Validate data integrity after migration
    */
-  validateDataIntegrity(preMigrationData: any[], postMigrationData: any[]): DataIntegrityResult {
-    const missingRecords: number[] = [];
-    const corruptedRecords: number[] = [];
+  validateDataIntegrity(
+    preMigrationData: any[],
+    postMigrationData: any[],
+  ): DataIntegrityResult {
+    const missingRecords: number[] = []
+    const corruptedRecords: number[] = []
 
     // Check for missing records
-    preMigrationData.forEach(preRecord => {
-      const postRecord = postMigrationData.find(post => post.id === preRecord.id);
+    preMigrationData.forEach((preRecord) => {
+      const postRecord = postMigrationData.find(
+        (post) => post.id === preRecord.id,
+      )
       if (!postRecord) {
-        missingRecords.push(preRecord.id);
-        return;
+        missingRecords.push(preRecord.id)
+        return
       }
 
       // Check for corrupted data (core fields should remain intact)
-      const coreFields = ['id', 'title', 'state', 'type', 'rawJson'];
-      const isCorrupted = coreFields.some(field => {
-        return preRecord[field] !== postRecord[field];
-      });
+      const coreFields = ['id', 'title', 'state', 'type', 'rawJson']
+      const isCorrupted = coreFields.some((field) => {
+        return preRecord[field] !== postRecord[field]
+      })
 
       if (isCorrupted) {
-        corruptedRecords.push(preRecord.id);
+        corruptedRecords.push(preRecord.id)
       }
-    });
+    })
 
     return {
       isValid: missingRecords.length === 0 && corruptedRecords.length === 0,
       recordCount: postMigrationData.length,
       missingRecords,
-      corruptedRecords
-    };
+      corruptedRecords,
+    }
   }
 
   /**
    * Map Azure DevOps field names to Prisma field names
    */
-  private mapAzureFieldsToPrismaFields(discoveredFields: Record<string, string>): string[] {
-    const prismaFields: string[] = [];
-    
-    Object.keys(discoveredFields).forEach(azureField => {
-      let prismaFieldName: string;
-      
+  private mapAzureFieldsToPrismaFields(
+    discoveredFields: Record<string, string>,
+  ): string[] {
+    const prismaFields: string[] = []
+
+    Object.keys(discoveredFields).forEach((azureField) => {
+      let prismaFieldName: string
+
       // Map known Azure DevOps fields to Prisma field names
       switch (azureField) {
         case 'System.Rev':
         case 'rev':
-          prismaFieldName = 'rev';
-          break;
+          prismaFieldName = 'rev'
+          break
         case 'System.Reason':
         case 'reason':
-          prismaFieldName = 'reason';
-          break;
+          prismaFieldName = 'reason'
+          break
         case 'System.Watermark':
         case 'watermark':
-          prismaFieldName = 'watermark';
-          break;
+          prismaFieldName = 'watermark'
+          break
         case 'System.CommentCount':
         case 'commentCount':
-          prismaFieldName = 'commentCount';
-          break;
+          prismaFieldName = 'commentCount'
+          break
         case 'System.TeamProject':
         case 'teamProject':
-          prismaFieldName = 'teamProject';
-          break;
+          prismaFieldName = 'teamProject'
+          break
         case 'System.AreaId':
         case 'areaId':
-          prismaFieldName = 'areaId';
-          break;
+          prismaFieldName = 'areaId'
+          break
         case 'System.IterationId':
         case 'nodeId':
-          prismaFieldName = 'nodeId';
-          break;
+          prismaFieldName = 'nodeId'
+          break
         case 'Microsoft.VSTS.Common.StackRank':
         case 'stackRank':
-          prismaFieldName = 'stackRank';
-          break;
+          prismaFieldName = 'stackRank'
+          break
         case 'Microsoft.VSTS.Common.ValueArea':
         case 'valueArea':
-          prismaFieldName = 'valueArea';
-          break;
+          prismaFieldName = 'valueArea'
+          break
         case 'url':
-          prismaFieldName = 'url';
-          break;
+          prismaFieldName = 'url'
+          break
         default:
           // For custom fields or unmapped fields, they go into customFields JSON storage
-          if (azureField.startsWith('Custom.') || azureField.includes('Custom')) {
-            prismaFieldName = 'customFields';
+          if (
+            azureField.startsWith('Custom.') ||
+            azureField.includes('Custom')
+          ) {
+            prismaFieldName = 'customFields'
           } else {
             // Skip unmapped system fields that are already handled elsewhere
-            return;
+            return
           }
       }
-      
+
       if (!prismaFields.includes(prismaFieldName)) {
-        prismaFields.push(prismaFieldName);
+        prismaFields.push(prismaFieldName)
       }
-    });
-    
+    })
+
     // Always include hasAttachments as it's inferred from relations
     if (!prismaFields.includes('hasAttachments')) {
-      prismaFields.push('hasAttachments');
+      prismaFields.push('hasAttachments')
     }
-    
-    return prismaFields;
+
+    return prismaFields
   }
 
   /**
    * Execute full migration workflow with field discovery
    */
-  async fullMigrationWorkflow(sampleWorkItemIds?: number[]): Promise<FullMigrationResult> {
-    let schemaGenerated = false;
-    let migrationCreated = false;
-    let migrationTested = false;
+  async fullMigrationWorkflow(
+    sampleWorkItemIds?: number[],
+  ): Promise<FullMigrationResult> {
+    let schemaGenerated = false
+    let migrationCreated = false
+    let migrationTested = false
 
     try {
-      console.log('Starting full migration workflow...');
-      
+      console.log('Starting full migration workflow...')
+
       // Step 0: Discover fields from Azure DevOps if sample IDs provided
-      let discoveredFields: Record<string, string> = {};
+      let discoveredFields: Record<string, string> = {}
       if (sampleWorkItemIds && sampleWorkItemIds.length > 0) {
-        console.log('Discovering fields from sample Azure DevOps work items...');
-        discoveredFields = await this.discoverFieldsFromAzureDevOps(sampleWorkItemIds);
-        console.log(`Field discovery complete. Found ${Object.keys(discoveredFields).length} unique fields.`);
+        console.log('Discovering fields from sample Azure DevOps work items...')
+        discoveredFields =
+          await this.discoverFieldsFromAzureDevOps(sampleWorkItemIds)
+        console.log(
+          `Field discovery complete. Found ${Object.keys(discoveredFields).length} unique fields.`,
+        )
       } else {
-        console.log('No sample work item IDs provided, using fallback field mapping...');
+        console.log(
+          'No sample work item IDs provided, using fallback field mapping...',
+        )
       }
-      
+
       // Step 1: Generate comprehensive schema
-      console.log('Generating comprehensive schema...');
-      const schema = this.generateComprehensiveSchema(discoveredFields);
-      const schemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
-      await writeFile(schemaPath, schema);
-      
-      schemaGenerated = true;
-      console.log('Schema generated successfully');
+      console.log('Generating comprehensive schema...')
+      const schema = this.generateComprehensiveSchema(discoveredFields)
+      const schemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma')
+      await writeFile(schemaPath, schema)
+
+      schemaGenerated = true
+      console.log('Schema generated successfully')
 
       // Step 2: Create migration
-      console.log('Creating migration...');
-      await execAsync('pnpm prisma migrate dev --name add-comprehensive-fields --create-only', { 
-        maxBuffer: 10 * 1024 * 1024 
-      });
-      migrationCreated = true;
-      console.log('Migration created successfully');
+      console.log('Creating migration...')
+      await execAsync(
+        'pnpm prisma migrate dev --name add-comprehensive-fields --create-only',
+        {
+          maxBuffer: 10 * 1024 * 1024,
+        },
+      )
+      migrationCreated = true
+      console.log('Migration created successfully')
 
       // Step 3: Test migration (apply and rollback)
-      console.log('Testing migration...');
-      const testResult = await this.testMigration('');
-      migrationTested = testResult.success;
-      
+      console.log('Testing migration...')
+      const testResult = await this.testMigration('')
+      migrationTested = testResult.success
+
       if (!migrationTested) {
         return {
           success: false,
@@ -509,37 +592,45 @@ model WorkItemComment {
           migrationCreated,
           migrationTested,
           dataIntegrityValid: false,
-          error: testResult.error
-        };
+          error: testResult.error,
+        }
       }
 
-      console.log('Migration tested successfully');
+      console.log('Migration tested successfully')
 
       return {
         success: true,
         schemaGenerated,
         migrationCreated,
         migrationTested,
-        dataIntegrityValid: true
-      };
+        dataIntegrityValid: true,
+      }
     } catch (error) {
-      console.error('Full migration workflow failed:', error);
+      console.error('Full migration workflow failed:', error)
       return {
         success: false,
         schemaGenerated,
         migrationCreated,
         migrationTested,
         dataIntegrityValid: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
     }
   }
 
   /**
    * Helper method to check if a field exists with the expected type
    */
-  private hasField(discoveredFields: Record<string, string>, fieldName: string, expectedType: string): boolean {
-    return discoveredFields[fieldName] === expectedType || 
-           Object.keys(discoveredFields).some(key => key.includes(fieldName.split('.').pop() || ''));
+  private hasField(
+    discoveredFields: Record<string, string>,
+    fieldName: string,
+    expectedType: string,
+  ): boolean {
+    return (
+      discoveredFields[fieldName] === expectedType ||
+      Object.keys(discoveredFields).some((key) =>
+        key.includes(fieldName.split('.').pop() || ''),
+      )
+    )
   }
 }

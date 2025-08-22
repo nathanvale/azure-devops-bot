@@ -12,9 +12,10 @@ This is the database schema implementation for the spec detailed in @.agent-os/s
 Based on Azure DevOps `--expand all` output, the following fields need to be added to the WorkItem model:
 
 **Work Item Fields:**
+
 - `rev` (Int) - Revision number
 - `reason` (String) - State change reason
-- `watermark` (Int) - Change tracking watermark  
+- `watermark` (Int) - Change tracking watermark
 - `url` (String) - Full REST API URL
 - `commentCount` (Int) - Number of comments
 - `hasAttachments` (Boolean) - Has file attachments
@@ -24,12 +25,14 @@ Based on Azure DevOps `--expand all` output, the following fields need to be add
 - `boardId` (Int) - Board identifier
 
 **Custom Fields Support:**
+
 - `customFields` (String) - JSON storage for any custom fields
 - `microsoftVSTSCommonResolvedReason` (String) - Resolution reason
 - `microsoftVSTSCommonStackRank` (Float) - Stack ranking value
 - `microsoftVSTSCommonValueArea` (String) - Value area classification
 
 **Relations:**
+
 - `relations` (String) - JSON array of work item relationships
 - `hyperlinks` (String) - JSON array of hyperlink relationships
 

@@ -29,7 +29,8 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 
 **Operation:** Insert or update comments in WorkItemComment table
 **Input:** Array of comment data from Azure DevOps
-**Process:** 
+**Process:**
+
 1. Check if comment ID already exists
 2. Compare modification dates for existing comments
 3. Insert new comments or update modified ones
@@ -39,6 +40,7 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 
 **Operation:** Fetch comments for work items through database queries
 **Queries:**
+
 - All comments for specific work item: `WHERE workItemId = ?`
 - Recent comments across all work items: `ORDER BY createdDate DESC LIMIT ?`
 - Comments by author: `WHERE createdBy = ?`
@@ -49,7 +51,8 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 
 **Purpose:** Include comment data when retrieving single work item
 **Response Enhancement:** Add `comments` array to work item JSON response
-**Format:** 
+**Format:**
+
 ```json
 {
   "id": 12345,
@@ -69,7 +72,8 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 ### New wit_list_work_item_comments Tool
 
 **Purpose:** Retrieve comments for specific work item
-**Parameters:** 
+**Parameters:**
+
 - `workItemId` (required): Work item ID
 - `limit` (optional): Maximum number of comments to return
 - `since` (optional): Only return comments after this date

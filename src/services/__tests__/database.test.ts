@@ -7,10 +7,12 @@ vi.mock('@orchestr8/resilience', () => ({
   })),
 }))
 
-import { DatabaseService } from '../database'
 import { mockPrismaClient, resetPrismaMocks } from '@/mocks/prisma.mock'
+
+import type { WorkItemData, WorkItemCommentData } from '../azure-devops'
+
 import { createTestWorkItem } from '../../../tests/utils/test-helpers'
-import { WorkItemData, WorkItemCommentData } from '../azure-devops'
+import { DatabaseService } from '../database'
 
 describe('DatabaseService', () => {
   let service: DatabaseService
@@ -30,8 +32,8 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
-          rawJson: '{"id": 1234}'
-        }
+          rawJson: '{"id": 1234}',
+        },
       ]
 
       const mockUpsertedItem = {
@@ -41,8 +43,9 @@ describe('DatabaseService', () => {
         type: 'User Story',
         assignedTo: 'nathan.vale@example.com',
         lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
-        azureUrl: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
-        lastSyncedAt: expect.any(Date)
+        azureUrl:
+          'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
+        lastSyncedAt: expect.any(Date),
       }
 
       mockPrismaClient.workItem.upsert.mockResolvedValue(mockUpsertedItem)
@@ -58,7 +61,8 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
-          azureUrl: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
+          azureUrl:
+            'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
           lastSyncedAt: expect.any(Date),
         }),
         create: expect.objectContaining({
@@ -68,9 +72,10 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
-          azureUrl: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
+          azureUrl:
+            'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
           lastSyncedAt: expect.any(Date),
-        })
+        }),
       })
     })
 
@@ -83,7 +88,7 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
-          rawJson: '{"id": 1234}'
+          rawJson: '{"id": 1234}',
         },
         {
           id: 5678,
@@ -92,8 +97,8 @@ describe('DatabaseService', () => {
           type: 'Task',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date('2025-01-07T10:00:00Z'),
-          rawJson: '{"id": 5678}'
-        }
+          rawJson: '{"id": 5678}',
+        },
       ]
 
       mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
@@ -112,16 +117,17 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date(),
-          rawJson: '{"id": 1234}'
-        }
+          rawJson: '{"id": 1234}',
+        },
       ]
 
       mockPrismaClient.$transaction.mockRejectedValue(
-        new Error('Database connection failed')
+        new Error('Database connection failed'),
       )
 
-      await expect(service.syncWorkItems(workItems))
-        .rejects.toThrow('Database connection failed')
+      await expect(service.syncWorkItems(workItems)).rejects.toThrow(
+        'Database connection failed',
+      )
     })
 
     it('should generate correct Azure URLs for work items', async () => {
@@ -133,8 +139,8 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@example.com',
           lastUpdatedAt: new Date(),
-          rawJson: '{"id": 9999}'
-        }
+          rawJson: '{"id": 9999}',
+        },
       ]
 
       mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
@@ -144,12 +150,14 @@ describe('DatabaseService', () => {
       expect(mockPrismaClient.workItem.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({
-            azureUrl: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/9999'
+            azureUrl:
+              'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/9999',
           }),
           update: expect.objectContaining({
-            azureUrl: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/9999'
-          })
-        })
+            azureUrl:
+              'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/9999',
+          }),
+        }),
       )
     })
 
@@ -162,18 +170,18 @@ describe('DatabaseService', () => {
         assignedTo: 'nathan.vale@fwc.gov.au',
         lastUpdatedAt: new Date('2025-01-08T14:30:00Z'),
         description: 'Test description',
-        
+
         // Sprint/Board Info
         iterationPath: 'Customer Services Platform\\Sprint 23',
         areaPath: 'Customer Services Platform\\Feature Team A',
         boardColumn: 'In Progress',
         boardColumnDone: false,
-        
+
         // Priority/Tags
         priority: 2,
         severity: '2 - High',
         tags: 'bug-fix; high-priority',
-        
+
         // All the dates
         createdDate: new Date('2025-01-01T08:00:00Z'),
         changedDate: new Date('2025-01-08T14:30:00Z'),
@@ -181,28 +189,28 @@ describe('DatabaseService', () => {
         resolvedDate: new Date('2025-01-09T12:00:00Z'),
         activatedDate: new Date('2025-01-02T09:00:00Z'),
         stateChangeDate: new Date('2025-01-08T14:30:00Z'),
-        
+
         // People
         createdBy: 'john.doe@fwc.gov.au',
         changedBy: 'jane.smith@fwc.gov.au',
         closedBy: 'bob.wilson@fwc.gov.au',
         resolvedBy: 'alice.johnson@fwc.gov.au',
-        
+
         // Work tracking
         storyPoints: 8,
         effort: 16,
         remainingWork: 4,
         completedWork: 12,
         originalEstimate: 16,
-        
+
         // Content
         acceptanceCriteria: 'Given when then acceptance criteria',
         reproSteps: 'Steps to reproduce the issue',
         systemInfo: 'Windows 11, Chrome 120',
-        
+
         // Related items
         parentId: 5678,
-        
+
         // Additional fields
         rev: 5,
         reason: 'New',
@@ -215,9 +223,10 @@ describe('DatabaseService', () => {
         nodeId: 101112,
         stackRank: 1000000.5,
         valueArea: 'Business',
-        
+
         // Raw JSON backup
-        rawJson: '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}'
+        rawJson:
+          '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}',
       }
 
       mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
@@ -233,18 +242,18 @@ describe('DatabaseService', () => {
           type: 'User Story',
           assignedTo: 'nathan.vale@fwc.gov.au',
           description: 'Test description',
-          
+
           // Sprint/Board Info
           iterationPath: 'Customer Services Platform\\Sprint 23',
           areaPath: 'Customer Services Platform\\Feature Team A',
           boardColumn: 'In Progress',
           boardColumnDone: false,
-          
+
           // Priority/Tags
           priority: 2,
           severity: '2 - High',
           tags: 'bug-fix; high-priority',
-          
+
           // Dates
           createdDate: new Date('2025-01-01T08:00:00Z'),
           changedDate: new Date('2025-01-08T14:30:00Z'),
@@ -252,28 +261,28 @@ describe('DatabaseService', () => {
           resolvedDate: new Date('2025-01-09T12:00:00Z'),
           activatedDate: new Date('2025-01-02T09:00:00Z'),
           stateChangeDate: new Date('2025-01-08T14:30:00Z'),
-          
+
           // People
           createdBy: 'john.doe@fwc.gov.au',
           changedBy: 'jane.smith@fwc.gov.au',
           closedBy: 'bob.wilson@fwc.gov.au',
           resolvedBy: 'alice.johnson@fwc.gov.au',
-          
+
           // Work tracking
           storyPoints: 8,
           effort: 16,
           remainingWork: 4,
           completedWork: 12,
           originalEstimate: 16,
-          
+
           // Content
           acceptanceCriteria: 'Given when then acceptance criteria',
           reproSteps: 'Steps to reproduce the issue',
           systemInfo: 'Windows 11, Chrome 120',
-          
+
           // Related items
           parentId: 5678,
-          
+
           // Additional fields
           rev: 5,
           reason: 'New',
@@ -286,19 +295,22 @@ describe('DatabaseService', () => {
           nodeId: 101112,
           stackRank: 1000000.5,
           valueArea: 'Business',
-          
+
           // Raw JSON backup
-          rawJson: '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}',
-          
+          rawJson:
+            '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}',
+
           // Generated fields
-          azureUrl: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/12345',
-          lastSyncedAt: expect.any(Date)
+          azureUrl:
+            'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/12345',
+          lastSyncedAt: expect.any(Date),
         }),
         create: expect.objectContaining({
           id: 12345,
           title: 'Comprehensive Test Item',
-          rawJson: '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}'
-        })
+          rawJson:
+            '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}',
+        }),
       })
     })
 
@@ -312,31 +324,36 @@ describe('DatabaseService', () => {
           'System.WorkItemType': 'Bug',
           'System.AssignedTo': {
             displayName: 'Test User',
-            uniqueName: 'test.user@example.com'
+            uniqueName: 'test.user@example.com',
           },
-          'System.Description': '<div>HTML description with <b>formatting</b></div>',
+          'System.Description':
+            '<div>HTML description with <b>formatting</b></div>',
           'Microsoft.VSTS.Common.Priority': 1,
           'System.Tags': 'critical; production',
           'System.CreatedDate': '2025-01-01T08:00:00Z',
-          'System.ChangedDate': '2025-01-08T14:30:00Z'
+          'System.ChangedDate': '2025-01-08T14:30:00Z',
         },
         relations: [
           {
             rel: 'System.LinkTypes.Hierarchy-Reverse',
             url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/12345',
-            attributes: { name: 'Parent' }
+            attributes: { name: 'Parent' },
           },
           {
             rel: 'AttachedFile',
             url: 'https://dev.azure.com/fwcdev/_apis/wit/attachments/abc123',
-            attributes: { name: 'screenshot.png' }
-          }
+            attributes: { name: 'screenshot.png' },
+          },
         ],
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/54321',
         _links: {
-          self: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/54321' },
-          workItemUpdates: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/54321/updates' }
-        }
+          self: {
+            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/54321',
+          },
+          workItemUpdates: {
+            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/54321/updates',
+          },
+        },
       }
 
       const workItemData: WorkItemData = {
@@ -346,7 +363,7 @@ describe('DatabaseService', () => {
         type: 'Bug',
         assignedTo: 'test.user@example.com',
         lastUpdatedAt: new Date('2025-01-08T14:30:00Z'),
-        rawJson: JSON.stringify(completeAzureResponse)
+        rawJson: JSON.stringify(completeAzureResponse),
       }
 
       mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
@@ -356,25 +373,28 @@ describe('DatabaseService', () => {
       expect(mockPrismaClient.workItem.upsert).toHaveBeenCalledWith({
         where: { id: 54321 },
         update: expect.objectContaining({
-          rawJson: JSON.stringify(completeAzureResponse)
+          rawJson: JSON.stringify(completeAzureResponse),
         }),
         create: expect.objectContaining({
           id: 54321,
-          rawJson: JSON.stringify(completeAzureResponse)
-        })
+          rawJson: JSON.stringify(completeAzureResponse),
+        }),
       })
 
       // Verify that rawJson contains complete original response structure
       const storedRawJson = JSON.stringify(completeAzureResponse)
       const parsedResponse = JSON.parse(storedRawJson)
-      
+
       expect(parsedResponse).toHaveProperty('id', 54321)
       expect(parsedResponse).toHaveProperty('rev', 7)
       expect(parsedResponse).toHaveProperty('fields')
       expect(parsedResponse).toHaveProperty('relations')
       expect(parsedResponse).toHaveProperty('url')
       expect(parsedResponse).toHaveProperty('_links')
-      expect(parsedResponse.fields['System.AssignedTo']).toHaveProperty('displayName', 'Test User')
+      expect(parsedResponse.fields['System.AssignedTo']).toHaveProperty(
+        'displayName',
+        'Test User',
+      )
       expect(parsedResponse.relations).toHaveLength(2)
       expect(parsedResponse._links).toHaveProperty('self')
     })
@@ -391,10 +411,10 @@ describe('DatabaseService', () => {
           'System.Description': undefined,
           'Microsoft.VSTS.Common.Priority': null,
           'System.Tags': '',
-          'Microsoft.VSTS.Scheduling.StoryPoints': undefined
+          'Microsoft.VSTS.Scheduling.StoryPoints': undefined,
         },
         relations: null,
-        url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/99999'
+        url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/99999',
       }
 
       const workItemData: WorkItemData = {
@@ -404,7 +424,7 @@ describe('DatabaseService', () => {
         type: 'Task',
         assignedTo: 'Unassigned',
         lastUpdatedAt: new Date(),
-        rawJson: JSON.stringify(responseWithNulls)
+        rawJson: JSON.stringify(responseWithNulls),
       }
 
       mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
@@ -414,7 +434,7 @@ describe('DatabaseService', () => {
       const storedCall = mockPrismaClient.workItem.upsert.mock.calls[0][0]
       const storedRawJson = storedCall.create.rawJson
       const parsedResponse = JSON.parse(storedRawJson)
-      
+
       expect(parsedResponse.fields['System.AssignedTo']).toBeNull()
       expect(parsedResponse.fields).not.toHaveProperty('System.Description')
       expect(parsedResponse.fields['Microsoft.VSTS.Common.Priority']).toBeNull()
@@ -432,19 +452,20 @@ describe('DatabaseService', () => {
         type: 'Product Backlog Item',
         assignedTo: 'integration.test@fwc.gov.au',
         lastUpdatedAt: new Date('2025-08-21T10:30:00Z'),
-        description: '<div>Rich HTML description with <em>formatting</em> and <a href="#">links</a></div>',
-        
+        description:
+          '<div>Rich HTML description with <em>formatting</em> and <a href="#">links</a></div>',
+
         // Sprint/Board Info - all fields
         iterationPath: 'Customer Services Platform\\Phase 2\\Sprint 25',
         areaPath: 'Customer Services Platform\\Integration Team',
         boardColumn: 'Active (2 - In Progress)',
         boardColumnDone: false,
-        
+
         // Priority/Tags - all variations
         priority: 1,
         severity: '1 - Critical',
         tags: 'integration-test; data-completeness; automated-testing',
-        
+
         // All date fields populated
         createdDate: new Date('2025-07-15T09:00:00Z'),
         changedDate: new Date('2025-08-21T10:30:00Z'),
@@ -452,28 +473,31 @@ describe('DatabaseService', () => {
         resolvedDate: new Date('2025-08-22T15:30:00Z'),
         activatedDate: new Date('2025-07-16T08:30:00Z'),
         stateChangeDate: new Date('2025-08-21T10:30:00Z'),
-        
+
         // All people fields populated
         createdBy: 'project.manager@fwc.gov.au',
         changedBy: 'developer.lead@fwc.gov.au',
         closedBy: 'qa.engineer@fwc.gov.au',
         resolvedBy: 'senior.dev@fwc.gov.au',
-        
+
         // All work tracking fields
         storyPoints: 13,
         effort: 24.5,
         remainingWork: 8.25,
         completedWork: 16.25,
         originalEstimate: 24.5,
-        
+
         // All content fields
-        acceptanceCriteria: 'GIVEN a complete integration test\nWHEN all fields are populated\nTHEN data should be preserved completely',
-        reproSteps: '1. Execute comprehensive test\n2. Verify all fields\n3. Confirm data integrity',
-        systemInfo: 'macOS 14.6, Node.js 20.18.0, Vitest 3.2.4, TypeScript 5.8.4',
-        
+        acceptanceCriteria:
+          'GIVEN a complete integration test\nWHEN all fields are populated\nTHEN data should be preserved completely',
+        reproSteps:
+          '1. Execute comprehensive test\n2. Verify all fields\n3. Confirm data integrity',
+        systemInfo:
+          'macOS 14.6, Node.js 20.18.0, Vitest 3.2.4, TypeScript 5.8.4',
+
         // Related items
         parentId: 77777,
-        
+
         // All additional Azure DevOps fields
         rev: 15,
         reason: 'Implementation',
@@ -486,7 +510,7 @@ describe('DatabaseService', () => {
         nodeId: 3035,
         stackRank: 500000.75,
         valueArea: 'Architectural',
-        
+
         // Complete raw JSON with nested structures
         rawJson: JSON.stringify({
           id: 88888,
@@ -498,24 +522,30 @@ describe('DatabaseService', () => {
             'System.AssignedTo': {
               displayName: 'Integration Tester',
               uniqueName: 'integration.test@fwc.gov.au',
-              id: 'test-user-id-123'
+              id: 'test-user-id-123',
             },
-            'System.Description': '<div>Rich HTML description with <em>formatting</em> and <a href="#">links</a></div>',
-            'System.IterationPath': 'Customer Services Platform\\Phase 2\\Sprint 25',
-            'System.AreaPath': 'Customer Services Platform\\Integration Team'
+            'System.Description':
+              '<div>Rich HTML description with <em>formatting</em> and <a href="#">links</a></div>',
+            'System.IterationPath':
+              'Customer Services Platform\\Phase 2\\Sprint 25',
+            'System.AreaPath': 'Customer Services Platform\\Integration Team',
           },
           relations: [
             {
               rel: 'System.LinkTypes.Hierarchy-Reverse',
               url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/77777',
-              attributes: { name: 'Parent' }
-            }
+              attributes: { name: 'Parent' },
+            },
           ],
           _links: {
-            self: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888' },
-            workItemHistory: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888/history' }
-          }
-        })
+            self: {
+              href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888',
+            },
+            workItemHistory: {
+              href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888/history',
+            },
+          },
+        }),
       }
 
       mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
@@ -536,8 +566,12 @@ describe('DatabaseService', () => {
       expect(createData.description).toContain('Rich HTML description')
 
       // Test sprint/board fields
-      expect(createData.iterationPath).toBe('Customer Services Platform\\Phase 2\\Sprint 25')
-      expect(createData.areaPath).toBe('Customer Services Platform\\Integration Team')
+      expect(createData.iterationPath).toBe(
+        'Customer Services Platform\\Phase 2\\Sprint 25',
+      )
+      expect(createData.areaPath).toBe(
+        'Customer Services Platform\\Integration Team',
+      )
       expect(createData.boardColumn).toBe('Active (2 - In Progress)')
       expect(createData.boardColumnDone).toBe(false)
 
@@ -552,7 +586,9 @@ describe('DatabaseService', () => {
       expect(createData.closedDate).toEqual(new Date('2025-08-22T16:00:00Z'))
       expect(createData.resolvedDate).toEqual(new Date('2025-08-22T15:30:00Z'))
       expect(createData.activatedDate).toEqual(new Date('2025-07-16T08:30:00Z'))
-      expect(createData.stateChangeDate).toEqual(new Date('2025-08-21T10:30:00Z'))
+      expect(createData.stateChangeDate).toEqual(
+        new Date('2025-08-21T10:30:00Z'),
+      )
 
       // Test all people fields
       expect(createData.createdBy).toBe('project.manager@fwc.gov.au')
@@ -568,7 +604,9 @@ describe('DatabaseService', () => {
       expect(createData.originalEstimate).toBe(24.5)
 
       // Test content fields
-      expect(createData.acceptanceCriteria).toContain('GIVEN a complete integration test')
+      expect(createData.acceptanceCriteria).toContain(
+        'GIVEN a complete integration test',
+      )
       expect(createData.reproSteps).toContain('1. Execute comprehensive test')
       expect(createData.systemInfo).toContain('macOS 14.6')
 
@@ -579,7 +617,9 @@ describe('DatabaseService', () => {
       expect(createData.rev).toBe(15)
       expect(createData.reason).toBe('Implementation')
       expect(createData.watermark).toBe(999888777)
-      expect(createData.url).toBe('https://dev.azure.com/fwcdev/_apis/wit/workItems/88888')
+      expect(createData.url).toBe(
+        'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888',
+      )
       expect(createData.commentCount).toBe(7)
       expect(createData.hasAttachments).toBe(true)
       expect(createData.teamProject).toBe('Customer Services Platform')
@@ -592,7 +632,9 @@ describe('DatabaseService', () => {
       const rawJsonData = JSON.parse(createData.rawJson)
       expect(rawJsonData.id).toBe(88888)
       expect(rawJsonData.rev).toBe(15)
-      expect(rawJsonData.fields['System.AssignedTo'].displayName).toBe('Integration Tester')
+      expect(rawJsonData.fields['System.AssignedTo'].displayName).toBe(
+        'Integration Tester',
+      )
       expect(rawJsonData.relations).toHaveLength(1)
       expect(rawJsonData._links).toHaveProperty('self')
 
@@ -603,7 +645,9 @@ describe('DatabaseService', () => {
       expect(updateData.iterationPath).toBe(createData.iterationPath)
 
       // Verify Azure URL generation
-      expect(createData.azureUrl).toBe('https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/88888')
+      expect(createData.azureUrl).toBe(
+        'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/88888',
+      )
 
       // Verify sync metadata
       expect(createData.lastSyncedAt).toEqual(expect.any(Date))
@@ -614,8 +658,14 @@ describe('DatabaseService', () => {
   describe('getAllWorkItems', () => {
     it('should return all work items ordered by last updated date', async () => {
       const mockWorkItems = [
-        createTestWorkItem({ id: 1, lastUpdatedAt: new Date('2025-01-08T10:00:00Z') }),
-        createTestWorkItem({ id: 2, lastUpdatedAt: new Date('2025-01-07T10:00:00Z') })
+        createTestWorkItem({
+          id: 1,
+          lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
+        }),
+        createTestWorkItem({
+          id: 2,
+          lastUpdatedAt: new Date('2025-01-07T10:00:00Z'),
+        }),
       ]
 
       mockPrismaClient.workItem.findMany.mockResolvedValue(mockWorkItems)
@@ -624,7 +674,7 @@ describe('DatabaseService', () => {
 
       expect(result).toEqual(mockWorkItems)
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
-        orderBy: { lastUpdatedAt: 'desc' }
+        orderBy: { lastUpdatedAt: 'desc' },
       })
     })
 
@@ -638,11 +688,12 @@ describe('DatabaseService', () => {
 
     it('should handle database errors', async () => {
       mockPrismaClient.workItem.findMany.mockRejectedValue(
-        new Error('Database query failed')
+        new Error('Database query failed'),
       )
 
-      await expect(service.getAllWorkItems())
-        .rejects.toThrow('Database query failed')
+      await expect(service.getAllWorkItems()).rejects.toThrow(
+        'Database query failed',
+      )
     })
   })
 
@@ -650,7 +701,7 @@ describe('DatabaseService', () => {
     it('should return work items filtered by state', async () => {
       const activeItems = [
         createTestWorkItem({ id: 1, state: 'Active' }),
-        createTestWorkItem({ id: 2, state: 'Active' })
+        createTestWorkItem({ id: 2, state: 'Active' }),
       ]
 
       mockPrismaClient.workItem.findMany.mockResolvedValue(activeItems)
@@ -660,7 +711,7 @@ describe('DatabaseService', () => {
       expect(result).toEqual(activeItems)
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
         where: { state: 'Active' },
-        orderBy: { lastUpdatedAt: 'desc' }
+        orderBy: { lastUpdatedAt: 'desc' },
       })
     })
 
@@ -680,7 +731,7 @@ describe('DatabaseService', () => {
 
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
         where: { state: 'Done' },
-        orderBy: { lastUpdatedAt: 'desc' }
+        orderBy: { lastUpdatedAt: 'desc' },
       })
     })
   })
@@ -689,7 +740,7 @@ describe('DatabaseService', () => {
     it('should return work items filtered by type', async () => {
       const userStories = [
         createTestWorkItem({ id: 1, type: 'User Story' }),
-        createTestWorkItem({ id: 2, type: 'User Story' })
+        createTestWorkItem({ id: 2, type: 'User Story' }),
       ]
 
       mockPrismaClient.workItem.findMany.mockResolvedValue(userStories)
@@ -699,7 +750,7 @@ describe('DatabaseService', () => {
       expect(result).toEqual(userStories)
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
         where: { type: 'User Story' },
-        orderBy: { lastUpdatedAt: 'desc' }
+        orderBy: { lastUpdatedAt: 'desc' },
       })
     })
 
@@ -711,7 +762,7 @@ describe('DatabaseService', () => {
 
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
         where: { type: 'Task' },
-        orderBy: { lastUpdatedAt: 'desc' }
+        orderBy: { lastUpdatedAt: 'desc' },
       })
     })
 
@@ -736,7 +787,7 @@ describe('DatabaseService', () => {
       expect(result).toEqual(lastSyncDate)
       expect(mockPrismaClient.workItem.findFirst).toHaveBeenCalledWith({
         orderBy: { lastSyncedAt: 'desc' },
-        select: { lastSyncedAt: true }
+        select: { lastSyncedAt: true },
       })
     })
 
@@ -749,7 +800,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return null when sync time is not available', async () => {
-      mockPrismaClient.workItem.findFirst.mockResolvedValue({ lastSyncedAt: null })
+      mockPrismaClient.workItem.findFirst.mockResolvedValue({
+        lastSyncedAt: null,
+      })
 
       const result = await service.getLastSyncTime()
 
@@ -758,11 +811,12 @@ describe('DatabaseService', () => {
 
     it('should handle database errors', async () => {
       mockPrismaClient.workItem.findFirst.mockRejectedValue(
-        new Error('Database query failed')
+        new Error('Database query failed'),
       )
 
-      await expect(service.getLastSyncTime())
-        .rejects.toThrow('Database query failed')
+      await expect(service.getLastSyncTime()).rejects.toThrow(
+        'Database query failed',
+      )
     })
   })
 
@@ -776,7 +830,7 @@ describe('DatabaseService', () => {
           createdBy: 'nathan.vale@fwc.gov.au',
           createdDate: new Date('2025-01-08T10:00:00Z'),
           modifiedBy: 'nathan.vale@fwc.gov.au',
-          modifiedDate: new Date('2025-01-08T10:30:00Z')
+          modifiedDate: new Date('2025-01-08T10:30:00Z'),
         },
         {
           id: 'comment-2',
@@ -785,75 +839,83 @@ describe('DatabaseService', () => {
           createdBy: 'jane.smith@fwc.gov.au',
           createdDate: new Date('2025-01-08T14:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
-        }
-      ];
-
-      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any);
-
-      await service.storeWorkItemComments(comments);
-
-      expect(mockPrismaClient.workItemComment.upsert).toHaveBeenCalledTimes(2);
-      expect(mockPrismaClient.workItemComment.upsert).toHaveBeenNthCalledWith(1, {
-        where: { id: 'comment-1' },
-        update: {
-          text: 'First comment on the work item',
-          createdBy: 'nathan.vale@fwc.gov.au',
-          createdDate: new Date('2025-01-08T10:00:00Z'),
-          modifiedBy: 'nathan.vale@fwc.gov.au',
-          modifiedDate: new Date('2025-01-08T10:30:00Z')
+          modifiedDate: null,
         },
-        create: {
-          id: 'comment-1',
-          workItemId: 1234,
-          text: 'First comment on the work item',
-          createdBy: 'nathan.vale@fwc.gov.au',
-          createdDate: new Date('2025-01-08T10:00:00Z'),
-          modifiedBy: 'nathan.vale@fwc.gov.au',
-          modifiedDate: new Date('2025-01-08T10:30:00Z')
-        }
-      });
-    });
+      ]
+
+      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any)
+
+      await service.storeWorkItemComments(comments)
+
+      expect(mockPrismaClient.workItemComment.upsert).toHaveBeenCalledTimes(2)
+      expect(mockPrismaClient.workItemComment.upsert).toHaveBeenNthCalledWith(
+        1,
+        {
+          where: { id: 'comment-1' },
+          update: {
+            text: 'First comment on the work item',
+            createdBy: 'nathan.vale@fwc.gov.au',
+            createdDate: new Date('2025-01-08T10:00:00Z'),
+            modifiedBy: 'nathan.vale@fwc.gov.au',
+            modifiedDate: new Date('2025-01-08T10:30:00Z'),
+          },
+          create: {
+            id: 'comment-1',
+            workItemId: 1234,
+            text: 'First comment on the work item',
+            createdBy: 'nathan.vale@fwc.gov.au',
+            createdDate: new Date('2025-01-08T10:00:00Z'),
+            modifiedBy: 'nathan.vale@fwc.gov.au',
+            modifiedDate: new Date('2025-01-08T10:30:00Z'),
+          },
+        },
+      )
+    })
 
     it('should handle empty comments array', async () => {
-      await service.storeWorkItemComments([]);
+      await service.storeWorkItemComments([])
 
-      expect(mockPrismaClient.workItemComment.upsert).not.toHaveBeenCalled();
-    });
+      expect(mockPrismaClient.workItemComment.upsert).not.toHaveBeenCalled()
+    })
 
     it('should handle database errors during comment storage', async () => {
-      const comments: WorkItemCommentData[] = [{
-        id: 'comment-error',
-        workItemId: 1234,
-        text: 'Test comment',
-        createdBy: 'test@example.com',
-        createdDate: new Date(),
-        modifiedBy: null,
-        modifiedDate: null
-      }];
+      const comments: WorkItemCommentData[] = [
+        {
+          id: 'comment-error',
+          workItemId: 1234,
+          text: 'Test comment',
+          createdBy: 'test@example.com',
+          createdDate: new Date(),
+          modifiedBy: null,
+          modifiedDate: null,
+        },
+      ]
 
       mockPrismaClient.$transaction.mockRejectedValue(
-        new Error('Database constraint violation')
-      );
+        new Error('Database constraint violation'),
+      )
 
-      await expect(service.storeWorkItemComments(comments))
-        .rejects.toThrow('Database constraint violation');
-    });
+      await expect(service.storeWorkItemComments(comments)).rejects.toThrow(
+        'Database constraint violation',
+      )
+    })
 
     it('should handle comments with null modified fields', async () => {
-      const comments: WorkItemCommentData[] = [{
-        id: 'comment-no-modified',
-        workItemId: 5678,
-        text: 'Unmodified comment',
-        createdBy: 'original.author@fwc.gov.au',
-        createdDate: new Date('2025-01-08T09:00:00Z'),
-        modifiedBy: null,
-        modifiedDate: null
-      }];
+      const comments: WorkItemCommentData[] = [
+        {
+          id: 'comment-no-modified',
+          workItemId: 5678,
+          text: 'Unmodified comment',
+          createdBy: 'original.author@fwc.gov.au',
+          createdDate: new Date('2025-01-08T09:00:00Z'),
+          modifiedBy: null,
+          modifiedDate: null,
+        },
+      ]
 
-      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any);
+      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any)
 
-      await service.storeWorkItemComments(comments);
+      await service.storeWorkItemComments(comments)
 
       expect(mockPrismaClient.workItemComment.upsert).toHaveBeenCalledWith({
         where: { id: 'comment-no-modified' },
@@ -862,7 +924,7 @@ describe('DatabaseService', () => {
           createdBy: 'original.author@fwc.gov.au',
           createdDate: new Date('2025-01-08T09:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
+          modifiedDate: null,
         },
         create: {
           id: 'comment-no-modified',
@@ -871,11 +933,11 @@ describe('DatabaseService', () => {
           createdBy: 'original.author@fwc.gov.au',
           createdDate: new Date('2025-01-08T09:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
-        }
-      });
-    });
-  });
+          modifiedDate: null,
+        },
+      })
+    })
+  })
 
   describe('getWorkItemComments', () => {
     it('should retrieve comments for a work item', async () => {
@@ -887,47 +949,48 @@ describe('DatabaseService', () => {
           createdBy: 'user1@fwc.gov.au',
           createdDate: new Date('2025-01-08T10:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
+          modifiedDate: null,
         },
         {
-          id: 'comment-2', 
+          id: 'comment-2',
           workItemId: 1234,
           text: 'Second comment',
           createdBy: 'user2@fwc.gov.au',
           createdDate: new Date('2025-01-08T11:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
-        }
-      ];
+          modifiedDate: null,
+        },
+      ]
 
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments);
+      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments)
 
-      const result = await service.getWorkItemComments(1234);
+      const result = await service.getWorkItemComments(1234)
 
-      expect(result).toEqual(mockComments);
+      expect(result).toEqual(mockComments)
       expect(mockPrismaClient.workItemComment.findMany).toHaveBeenCalledWith({
         where: { workItemId: 1234 },
-        orderBy: { createdDate: 'asc' }
-      });
-    });
+        orderBy: { createdDate: 'asc' },
+      })
+    })
 
     it('should return empty array when no comments exist', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([]);
+      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
 
-      const result = await service.getWorkItemComments(9999);
+      const result = await service.getWorkItemComments(9999)
 
-      expect(result).toEqual([]);
-    });
+      expect(result).toEqual([])
+    })
 
     it('should handle database errors during comment retrieval', async () => {
       mockPrismaClient.workItemComment.findMany.mockRejectedValue(
-        new Error('Database query failed')
-      );
+        new Error('Database query failed'),
+      )
 
-      await expect(service.getWorkItemComments(1234))
-        .rejects.toThrow('Database query failed');
-    });
-  });
+      await expect(service.getWorkItemComments(1234)).rejects.toThrow(
+        'Database query failed',
+      )
+    })
+  })
 
   describe('getRecentComments', () => {
     it('should retrieve recent comments across all work items', async () => {
@@ -939,7 +1002,7 @@ describe('DatabaseService', () => {
           createdBy: 'user1@fwc.gov.au',
           createdDate: new Date('2025-01-08T15:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
+          modifiedDate: null,
         },
         {
           id: 'recent-2',
@@ -948,81 +1011,99 @@ describe('DatabaseService', () => {
           createdBy: 'user2@fwc.gov.au',
           createdDate: new Date('2025-01-08T14:00:00Z'),
           modifiedBy: null,
-          modifiedDate: null
-        }
-      ];
+          modifiedDate: null,
+        },
+      ]
 
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments);
+      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments)
 
-      const result = await service.getRecentComments(10);
+      const result = await service.getRecentComments(10)
 
-      expect(result).toEqual(mockComments);
+      expect(result).toEqual(mockComments)
       expect(mockPrismaClient.workItemComment.findMany).toHaveBeenCalledWith({
         orderBy: { createdDate: 'desc' },
-        take: 10
-      });
-    });
+        take: 10,
+      })
+    })
 
     it('should use default limit when not specified', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([]);
+      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
 
-      await service.getRecentComments();
+      await service.getRecentComments()
 
       expect(mockPrismaClient.workItemComment.findMany).toHaveBeenCalledWith({
         orderBy: { createdDate: 'desc' },
-        take: 50
-      });
-    });
+        take: 50,
+      })
+    })
 
     it('should handle large limit values', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([]);
+      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
 
-      await service.getRecentComments(1000);
+      await service.getRecentComments(1000)
 
       expect(mockPrismaClient.workItemComment.findMany).toHaveBeenCalledWith({
         orderBy: { createdDate: 'desc' },
-        take: 1000
-      });
-    });
-  });
+        take: 1000,
+      })
+    })
+  })
 
   describe('needsCommentSync', () => {
     it('should return true when work item has comments and was recently changed', async () => {
-      const result = await service.needsCommentSync(1234, 5, new Date('2025-01-08T14:00:00Z'));
+      const result = await service.needsCommentSync(
+        1234,
+        5,
+        new Date('2025-01-08T14:00:00Z'),
+      )
 
-      expect(result).toBe(true);
-    });
+      expect(result).toBe(true)
+    })
 
     it('should return false when work item has no comments', async () => {
-      const result = await service.needsCommentSync(1234, 0, new Date('2025-01-08T14:00:00Z'));
+      const result = await service.needsCommentSync(
+        1234,
+        0,
+        new Date('2025-01-08T14:00:00Z'),
+      )
 
-      expect(result).toBe(false);
-    });
+      expect(result).toBe(false)
+    })
 
     it('should return true when last sync time is null', async () => {
-      const result = await service.needsCommentSync(1234, 3, null);
+      const result = await service.needsCommentSync(1234, 3, null)
 
-      expect(result).toBe(true);
-    });
+      expect(result).toBe(true)
+    })
 
     it('should return false when work item has not changed since last sync', async () => {
-      const lastSync = new Date('2025-01-08T15:00:00Z');
-      const changedDate = new Date('2025-01-08T14:00:00Z');
+      const lastSync = new Date('2025-01-08T15:00:00Z')
+      const changedDate = new Date('2025-01-08T14:00:00Z')
 
-      const result = await service.needsCommentSync(1234, 2, changedDate, lastSync);
+      const result = await service.needsCommentSync(
+        1234,
+        2,
+        changedDate,
+        lastSync,
+      )
 
-      expect(result).toBe(false);
-    });
+      expect(result).toBe(false)
+    })
 
     it('should return true when work item changed after last sync', async () => {
-      const lastSync = new Date('2025-01-08T14:00:00Z');
-      const changedDate = new Date('2025-01-08T15:00:00Z');
+      const lastSync = new Date('2025-01-08T14:00:00Z')
+      const changedDate = new Date('2025-01-08T15:00:00Z')
 
-      const result = await service.needsCommentSync(1234, 2, changedDate, lastSync);
+      const result = await service.needsCommentSync(
+        1234,
+        2,
+        changedDate,
+        lastSync,
+      )
 
-      expect(result).toBe(true);
-    });
-  });
+      expect(result).toBe(true)
+    })
+  })
 
   describe('close', () => {
     it('should disconnect from Prisma', async () => {
@@ -1035,7 +1116,7 @@ describe('DatabaseService', () => {
 
     it('should handle disconnect errors gracefully', async () => {
       mockPrismaClient.$disconnect.mockRejectedValue(
-        new Error('Disconnect failed')
+        new Error('Disconnect failed'),
       )
 
       await expect(service.close()).rejects.toThrow('Disconnect failed')
