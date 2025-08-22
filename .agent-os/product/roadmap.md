@@ -30,7 +30,7 @@ The following foundational features have been implemented:
 - [x] **Full Data Sync** - Use `az boards work-item show --expand all` for complete metadata
 - [x] **Comment Storage** - Sync all work item comments to separate table `MEDIUM`
 - [ ] **Always-On Service** - PM2 process management for 24/7 availability `HIGH`
-- [ ] **Simplified MCP Tools** - Reduce to essential tools `MEDIUM`
+- [x] **Simplified MCP Tools** - Reduce to essential tools `MEDIUM`
 - **wit_force_sync_work_items**: Retrieve a list of work items relevant to the authenticated user.
 - **wit_my_work_items**: Retrieve a list of work items relevant to the authenticated user.
 - **wit_get_work_item**: Get a single work item by ID.

@@ -446,6 +446,35 @@
         "Mocking Requirements"
       ],
       "architecture_hints": []
+    },
+    ".agent-os/specs/2025-08-22-simplified-mcp-tools/spec.md": {
+      "sections": [
+        "Spec Requirements Document",
+        "Overview",
+        "User Stories",
+        "Direct Data Access",
+        "Batch Operations",
+        "Work Item Management",
+        "Spec Scope",
+        "Out of Scope",
+        "Expected Deliverable"
+      ],
+      "architecture_hints": []
+    },
+    ".agent-os/specs/2025-08-22-simplified-mcp-tools/sub-specs/technical-spec.md": {
+      "sections": [
+        "Technical Specification",
+        "Technical Requirements",
+        "Approach Options",
+        "MCP Tool Specifications",
+        "wit_force_sync_work_items",
+        "wit_my_work_items",
+        "wit_get_work_item",
+        "wit_get_work_items_batch_by_ids",
+        "wit_list_work_item_comments",
+        "wit_get_work_items_for_iteration"
+      ],
+      "architecture_hints": []
     }
   },
   "directory_purposes": {
@@ -482,7 +511,7 @@
       "json": 5,
       "sql": 7
     },
-    "markdown_files": 32
+    "markdown_files": 35
   },
   "files": {
     "prettier.config.js": {
@@ -573,16 +602,6 @@
     "src/mcp-server.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "@modelcontextprotocol/sdk/server/index.js",
-        "@modelcontextprotocol/sdk/server/stdio.js",
-        "@modelcontextprotocol/sdk/types.js",
-        "./services/auth.js",
-        "./services/azure-devops.js",
-        "./services/database.js",
-        "./services/query-engine.js",
-        "./services/sync-service.js"
-      ],
       "functions": {},
       "classes": {
         "AzureDevOpsMCPServer": {
@@ -594,24 +613,8 @@
           }
         }
       },
-      "variables": [
-        "args",
-        "emailArg",
-        "emails",
-        "filter",
-        "newItems",
-        "activeItems",
-        "inProgressItems",
-        "query",
-        "normalizedQuery",
-        "concurrency",
-        "id",
-        "url",
-        "shouldSync",
-        "transport",
-        "server"
-      ],
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T21:13:00.100838"
     },
     "src/index.ts": {
       "language": "typescript",
@@ -680,6 +683,10 @@
     "src/__tests__/mcp-server.test.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T21:14:16.102432",
       "purpose": "Test file"
     },
     "src/__tests__/index.test.ts": {
