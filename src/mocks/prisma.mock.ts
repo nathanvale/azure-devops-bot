@@ -157,7 +157,12 @@ export const setupPrismaDefaults = () => {
   mockPrismaClient.$transaction.mockImplementation(async (operations) => {
     // For normal operation, execute all operations and return array of results
     if (Array.isArray(operations)) {
-      return await Promise.all(operations)
+      // Use sequential execution to better model transaction fail-fast behavior
+      const results: any[] = []
+      for (const op of operations) {
+        results.push(await op)
+      }
+      return results
     } else {
       // Handle function-based transactions
       return await operations(mockPrismaClient)

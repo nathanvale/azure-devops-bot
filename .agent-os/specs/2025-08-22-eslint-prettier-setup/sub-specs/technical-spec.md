@@ -31,12 +31,12 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 
 ## External Dependencies
 
-- **eslint@^9.30.0** - Core linting engine with flat config support
+- **eslint@^9.33.0** - Core linting engine with flat config support
 - **prettier@3.6.2** - Code formatting engine
-- **@eslint/js@^9.30.0** - JavaScript recommended rules
-- **@typescript-eslint/eslint-plugin@^8.0.0** - TypeScript-specific linting rules
-- **@typescript-eslint/parser@^8.0.0** - TypeScript parser for ESLint
-- **eslint-config-prettier@^10.1.5** - Disables ESLint rules that conflict with Prettier
+- **@eslint/js@^9.33.0** - JavaScript recommended rules
+- **@typescript-eslint/eslint-plugin@^8.40.0** - TypeScript-specific linting rules
+- **@typescript-eslint/parser@^8.40.0** - TypeScript parser for ESLint
+- **eslint-config-prettier@^10.1.8** - Disables ESLint rules that conflict with Prettier
 - **eslint-plugin-perfectionist@^4.15.0** - Import and export sorting
 
 **Justification:** These exact versions match the @orchestr8 configuration and provide a complete linting and formatting solution for TypeScript projects.

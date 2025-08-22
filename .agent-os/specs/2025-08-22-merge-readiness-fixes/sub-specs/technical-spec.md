@@ -181,22 +181,40 @@ async performSyncWithRecovery(): Promise<void> {
 ### Database Initialization
 
 ```typescript
-// Auto-initialize database on startup
+// Auto-initialize database on startup (opt-in)
 async initializeDatabase(): Promise<void> {
-  const dbPath = process.env.DATABASE_URL?.replace('file:', '') || './prisma/dev.db';
+  if (process.env.DB_AUTO_INIT !== 'true') {
+    console.log('DB auto-init disabled. Set DB_AUTO_INIT=true to enable.');
+    return;
+  }
+  
+  const url = process.env.DATABASE_URL ?? '';
+  const isFileProvider = url.startsWith('file:');
+  if (!isFileProvider) {
+    console.warn('DB auto-init skipped: non-file provider detected.');
+    return;
+  }
+  
+  const dbPath = url.replace('file:', '') || './prisma/dev.db';
+  
+  try {
+    if (!fs.existsSync(dbPath)) {
+      console.log('Database not found, initializing...');
+      
+      // Create database directory
+      const dbDir = path.dirname(dbPath);
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
 
-  if (!fs.existsSync(dbPath)) {
-    console.log('Database not found, initializing...');
-
-    // Create database directory
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+      // Use local Prisma binary instead of npx
+      const prismaBin = path.join(process.cwd(), 'node_modules', '.bin', 'prisma');
+      execSync(`${prismaBin} migrate deploy`, { stdio: 'inherit' });
+      console.log('Database initialized successfully');
     }
-
-    // Run migrations
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-    console.log('Database initialized successfully');
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+    throw err;
   }
 }
 ```
