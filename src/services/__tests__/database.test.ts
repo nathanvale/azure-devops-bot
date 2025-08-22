@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
 
 // Mock the @orchestr8/resilience package before any imports
 vi.mock('@orchestr8/resilience', () => ({
@@ -7,7 +8,7 @@ vi.mock('@orchestr8/resilience', () => ({
   })),
 }))
 
-import { mockPrismaClient, resetPrismaMocks } from '@/mocks/prisma.mock'
+import { mockPrismaClient, resetPrismaMocks } from '../../mocks/prisma.mock'
 
 import type { WorkItemData, WorkItemCommentData } from '../azure-devops'
 
@@ -48,7 +49,7 @@ describe('DatabaseService', () => {
         lastSyncedAt: expect.any(Date),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue(mockUpsertedItem)
+      ;(mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue(mockUpsertedItem)
 
       await service.syncWorkItems(workItems)
 
@@ -101,7 +102,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.syncWorkItems(workItems)
 
@@ -121,7 +122,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.$transaction.mockRejectedValue(
+      (mockPrismaClient.$transaction as unknown as MockInstance).mockRejectedValue(
         new Error('Database connection failed'),
       )
 
@@ -143,7 +144,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.syncWorkItems(workItems)
 
@@ -184,7 +185,6 @@ describe('DatabaseService', () => {
 
         // All the dates
         createdDate: new Date('2025-01-01T08:00:00Z'),
-        changedDate: new Date('2025-01-08T14:30:00Z'),
         closedDate: new Date('2025-01-10T16:00:00Z'),
         resolvedDate: new Date('2025-01-09T12:00:00Z'),
         activatedDate: new Date('2025-01-02T09:00:00Z'),
@@ -229,7 +229,7 @@ describe('DatabaseService', () => {
           '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}',
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.syncWorkItems([comprehensiveWorkItem])
 
@@ -256,7 +256,7 @@ describe('DatabaseService', () => {
 
           // Dates
           createdDate: new Date('2025-01-01T08:00:00Z'),
-          changedDate: new Date('2025-01-08T14:30:00Z'),
+          lastUpdatedAt: new Date('2025-01-08T14:30:00Z'),
           closedDate: new Date('2025-01-10T16:00:00Z'),
           resolvedDate: new Date('2025-01-09T12:00:00Z'),
           activatedDate: new Date('2025-01-02T09:00:00Z'),
@@ -366,7 +366,7 @@ describe('DatabaseService', () => {
         rawJson: JSON.stringify(completeAzureResponse),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.syncWorkItems([workItemData])
 
@@ -427,11 +427,11 @@ describe('DatabaseService', () => {
         rawJson: JSON.stringify(responseWithNulls),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.syncWorkItems([workItemData])
 
-      const storedCall = mockPrismaClient.workItem.upsert.mock.calls[0][0]
+      const storedCall = (mockPrismaClient.workItem.upsert as unknown as MockInstance).mock.calls[0][0]
       const storedRawJson = storedCall.create.rawJson
       const parsedResponse = JSON.parse(storedRawJson)
 
@@ -468,7 +468,6 @@ describe('DatabaseService', () => {
 
         // All date fields populated
         createdDate: new Date('2025-07-15T09:00:00Z'),
-        changedDate: new Date('2025-08-21T10:30:00Z'),
         closedDate: new Date('2025-08-22T16:00:00Z'),
         resolvedDate: new Date('2025-08-22T15:30:00Z'),
         activatedDate: new Date('2025-07-16T08:30:00Z'),
@@ -548,12 +547,12 @@ describe('DatabaseService', () => {
         }),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItem.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.syncWorkItems([completeWorkItem])
 
       // Verify that ALL fields are stored correctly
-      const upsertCall = mockPrismaClient.workItem.upsert.mock.calls[0][0]
+      const upsertCall = (mockPrismaClient.workItem.upsert as unknown as MockInstance).mock.calls[0][0]
       const createData = upsertCall.create
       const updateData = upsertCall.update
 
@@ -668,7 +667,7 @@ describe('DatabaseService', () => {
         }),
       ]
 
-      mockPrismaClient.workItem.findMany.mockResolvedValue(mockWorkItems)
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue(mockWorkItems)
 
       const result = await service.getAllWorkItems()
 
@@ -679,7 +678,7 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array when no work items exist', async () => {
-      mockPrismaClient.workItem.findMany.mockResolvedValue([])
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue([])
 
       const result = await service.getAllWorkItems()
 
@@ -687,7 +686,7 @@ describe('DatabaseService', () => {
     })
 
     it('should handle database errors', async () => {
-      mockPrismaClient.workItem.findMany.mockRejectedValue(
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockRejectedValue(
         new Error('Database query failed'),
       )
 
@@ -704,7 +703,7 @@ describe('DatabaseService', () => {
         createTestWorkItem({ id: 2, state: 'Active' }),
       ]
 
-      mockPrismaClient.workItem.findMany.mockResolvedValue(activeItems)
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue(activeItems)
 
       const result = await service.getWorkItemsByState('Active')
 
@@ -716,7 +715,7 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array for non-existent state', async () => {
-      mockPrismaClient.workItem.findMany.mockResolvedValue([])
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue([])
 
       const result = await service.getWorkItemsByState('NonExistentState')
 
@@ -725,7 +724,7 @@ describe('DatabaseService', () => {
 
     it('should handle different states correctly', async () => {
       const doneItems = [createTestWorkItem({ state: 'Done' })]
-      mockPrismaClient.workItem.findMany.mockResolvedValue(doneItems)
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue(doneItems)
 
       const result = await service.getWorkItemsByState('Done')
 
@@ -743,7 +742,7 @@ describe('DatabaseService', () => {
         createTestWorkItem({ id: 2, type: 'User Story' }),
       ]
 
-      mockPrismaClient.workItem.findMany.mockResolvedValue(userStories)
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue(userStories)
 
       const result = await service.getWorkItemsByType('User Story')
 
@@ -756,7 +755,7 @@ describe('DatabaseService', () => {
 
     it('should handle different work item types', async () => {
       const tasks = [createTestWorkItem({ type: 'Task' })]
-      mockPrismaClient.workItem.findMany.mockResolvedValue(tasks)
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue(tasks)
 
       const result = await service.getWorkItemsByType('Task')
 
@@ -767,7 +766,7 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array for non-existent type', async () => {
-      mockPrismaClient.workItem.findMany.mockResolvedValue([])
+      (mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue([])
 
       const result = await service.getWorkItemsByType('NonExistentType')
 
@@ -780,7 +779,7 @@ describe('DatabaseService', () => {
       const lastSyncDate = new Date('2025-01-08T15:30:00Z')
       const mockItem = { lastSyncedAt: lastSyncDate }
 
-      mockPrismaClient.workItem.findFirst.mockResolvedValue(mockItem)
+      (mockPrismaClient.workItem.findFirst as unknown as MockInstance).mockResolvedValue(mockItem)
 
       const result = await service.getLastSyncTime()
 
@@ -792,7 +791,7 @@ describe('DatabaseService', () => {
     })
 
     it('should return null when no work items exist', async () => {
-      mockPrismaClient.workItem.findFirst.mockResolvedValue(null)
+      (mockPrismaClient.workItem.findFirst as unknown as MockInstance).mockResolvedValue(null)
 
       const result = await service.getLastSyncTime()
 
@@ -800,7 +799,7 @@ describe('DatabaseService', () => {
     })
 
     it('should return null when sync time is not available', async () => {
-      mockPrismaClient.workItem.findFirst.mockResolvedValue({
+      (mockPrismaClient.workItem.findFirst as unknown as MockInstance).mockResolvedValue({
         lastSyncedAt: null,
       })
 
@@ -810,7 +809,7 @@ describe('DatabaseService', () => {
     })
 
     it('should handle database errors', async () => {
-      mockPrismaClient.workItem.findFirst.mockRejectedValue(
+      (mockPrismaClient.workItem.findFirst as unknown as MockInstance).mockRejectedValue(
         new Error('Database query failed'),
       )
 
@@ -843,7 +842,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItemComment.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.storeWorkItemComments(comments)
 
@@ -891,7 +890,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.$transaction.mockRejectedValue(
+      (mockPrismaClient.$transaction as unknown as MockInstance).mockRejectedValue(
         new Error('Database constraint violation'),
       )
 
@@ -913,7 +912,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any)
+      (mockPrismaClient.workItemComment.upsert as unknown as MockInstance).mockResolvedValue({} as any)
 
       await service.storeWorkItemComments(comments)
 
@@ -962,7 +961,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments)
+      (mockPrismaClient.workItemComment.findMany as unknown as MockInstance).mockResolvedValue(mockComments)
 
       const result = await service.getWorkItemComments(1234)
 
@@ -974,7 +973,7 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array when no comments exist', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
+      (mockPrismaClient.workItemComment.findMany as unknown as MockInstance).mockResolvedValue([])
 
       const result = await service.getWorkItemComments(9999)
 
@@ -982,7 +981,7 @@ describe('DatabaseService', () => {
     })
 
     it('should handle database errors during comment retrieval', async () => {
-      mockPrismaClient.workItemComment.findMany.mockRejectedValue(
+      (mockPrismaClient.workItemComment.findMany as unknown as MockInstance).mockRejectedValue(
         new Error('Database query failed'),
       )
 
@@ -1015,7 +1014,7 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments)
+      (mockPrismaClient.workItemComment.findMany as unknown as MockInstance).mockResolvedValue(mockComments)
 
       const result = await service.getRecentComments(10)
 
@@ -1027,7 +1026,7 @@ describe('DatabaseService', () => {
     })
 
     it('should use default limit when not specified', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
+      (mockPrismaClient.workItemComment.findMany as unknown as MockInstance).mockResolvedValue([])
 
       await service.getRecentComments()
 
@@ -1038,7 +1037,7 @@ describe('DatabaseService', () => {
     })
 
     it('should handle large limit values', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
+      (mockPrismaClient.workItemComment.findMany as unknown as MockInstance).mockResolvedValue([])
 
       await service.getRecentComments(1000)
 
@@ -1107,7 +1106,7 @@ describe('DatabaseService', () => {
 
   describe('close', () => {
     it('should disconnect from Prisma', async () => {
-      mockPrismaClient.$disconnect.mockResolvedValue(undefined)
+      (mockPrismaClient.$disconnect as unknown as MockInstance).mockResolvedValue(undefined)
 
       await service.close()
 
@@ -1115,7 +1114,7 @@ describe('DatabaseService', () => {
     })
 
     it('should handle disconnect errors gracefully', async () => {
-      mockPrismaClient.$disconnect.mockRejectedValue(
+      (mockPrismaClient.$disconnect as unknown as MockInstance).mockRejectedValue(
         new Error('Disconnect failed'),
       )
 

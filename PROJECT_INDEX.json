@@ -920,6 +920,10 @@
     "src/services/__tests__/database.test.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T15:01:36.326986",
       "purpose": "Test file"
     },
     "src/services/__tests__/sync-service.test.ts": {
