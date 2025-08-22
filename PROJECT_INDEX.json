@@ -1,5 +1,5 @@
 {
-  "indexed_at": "2025-08-22T12:17:21.161227",
+  "indexed_at": "2025-08-22T12:35:56.102700",
   "root": ".",
   "project_structure": {
     "type": "tree",
@@ -1288,5 +1288,5 @@
       "@modelcontextprotocol/sdk/client/stdio.js"
     ]
   },
-  "staleness_check": 1755224241.44438
+  "staleness_check": 1755225356.368969
 }
