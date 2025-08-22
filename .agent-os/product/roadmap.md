@@ -39,6 +39,7 @@ The following foundational features have been implemented:
 - **wit_get_work_items_for_iteration**: Retrieve a list of work items for a specified iteration.
 - **wit_add_work_item_comment**: Add a comment to a work item by ID.
 - **wit_link_work_item_to_pull_request**: Link a single work item to an existing pull request.
+
 ### Should-Have Features
 
 - [ ] **Raw JSON Backup** - Store complete Azure DevOps response for data completeness `LOW`

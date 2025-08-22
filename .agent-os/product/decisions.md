@@ -42,6 +42,7 @@ Local MCP server provides the fastest possible access (SQLite queries), guarante
 ### Consequences
 
 **Positive:**
+
 - Sub-100ms query response times
 - 24/7 availability regardless of network status
 - Complete data ownership and control
@@ -49,6 +50,7 @@ Local MCP server provides the fastest possible access (SQLite queries), guarante
 - Perfect for AI agent consumption
 
 **Negative:**
+
 - Single-machine deployment only
 - Requires local disk space for data storage
 - Manual updates required (no auto-update)
@@ -91,12 +93,14 @@ PM2 is the industry standard for Node.js process management, provides excellent 
 ### Consequences
 
 **Positive:**
+
 - Proven reliability with automatic restart
 - Built-in monitoring and logging
 - Easy to install and configure
 - Great debugging capabilities
 
 **Negative:**
+
 - Additional dependency (PM2)
 - Requires npm global installation
 
@@ -134,11 +138,13 @@ Hybrid approach gives us the best of both worlds - fast queries on indexed struc
 ### Consequences
 
 **Positive:**
+
 - Future-proof against Azure DevOps schema changes
 - Can always access any field that exists
 - Enables gradual migration of fields from JSON to structured
 
 **Negative:**
+
 - Larger database size
 - Some data duplication
 
@@ -176,12 +182,14 @@ AI agents work better with structured data than natural language interfaces. Rem
 ### Consequences
 
 **Positive:**
+
 - Dramatically simpler codebase
 - Fewer dependencies and potential failure points
 - Faster development and easier maintenance
 - More focused on core value proposition
 
 **Negative:**
+
 - No direct human-readable query interface
 - Requires AI agents for report generation
 
@@ -209,10 +217,12 @@ Focus testing efforts on areas that would break core functionality (data corrupt
 ### Consequences
 
 **Positive:**
+
 - Faster development iterations
 - Less test maintenance overhead
 - Focus on high-value test coverage
 
 **Negative:**
+
 - Higher risk of regressions in untested areas
 - Requires more careful manual testing

@@ -17,14 +17,17 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Approach Options
 
 **Option A:** Sync all comments for all work items on every sync cycle
+
 - Pros: Simple implementation, guaranteed data completeness
 - Cons: Very slow, high API usage, unnecessary work
 
 **Option B:** Incremental sync based on work item change detection (Selected)
+
 - Pros: Fast sync cycles, efficient API usage, scalable approach
 - Cons: Requires change tracking logic, slightly more complex
 
 **Option C:** Real-time comment webhooks
+
 - Pros: Instant updates, minimal API usage
 - Cons: Complex webhook setup, not aligned with local-only philosophy
 
@@ -33,6 +36,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## External Dependencies
 
 No new external dependencies required. Implementation uses:
+
 - **Azure CLI** - Already in use for work item fetching
 - **@orchestr8/resilience** - Already configured for Azure CLI resilience policies
 - **Prisma** - Existing ORM with WorkItemComment model already defined
@@ -52,6 +56,7 @@ az rest --method GET --uri "https://dev.azure.com/{organization}/{project}/_apis
 ### Comment Data Mapping
 
 Map Azure DevOps comment JSON to WorkItemComment model:
+
 - `id` → Azure comment ID (string)
 - `workItemId` → Parent work item ID (number)
 - `text` → Comment content (string)

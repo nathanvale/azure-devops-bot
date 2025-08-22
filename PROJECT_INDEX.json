@@ -1,5 +1,5 @@
 {
-  "indexed_at": "2025-08-22T10:21:00.937343",
+  "indexed_at": "2025-08-22T11:19:51.214843",
   "root": ".",
   "project_structure": {
     "type": "tree",
@@ -8,7 +8,7 @@
       ".",
       "\u251c\u2500\u2500 config/",
       "\u2502   \u2514\u2500\u2500 tmuxinator/",
-      "\u251c\u2500\u2500 docs/",
+      "\u251c\u2500\u2500 docs/ (3 files)",
       "\u251c\u2500\u2500 prisma/ (6 files)",
       "\u2502   \u2514\u2500\u2500 migrations/ (6 files)",
       "\u2502       \u251c\u2500\u2500 20250708012432_init/ (1 files)",
@@ -158,11 +158,7 @@
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-21-comprehensive-schema/tasks.md": {
-      "sections": [
-        "Spec Tasks",
-        "Tasks",
-        "Spec Documentation"
-      ],
+      "sections": ["Spec Tasks", "Tasks", "Spec Documentation"],
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-21-comprehensive-schema/spec.md": {
@@ -179,10 +175,7 @@
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-eslint-prettier-setup/tasks.md": {
-      "sections": [
-        "Spec Tasks",
-        "Tasks"
-      ],
+      "sections": ["Spec Tasks", "Tasks"],
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-eslint-prettier-setup/spec.md": {
@@ -200,10 +193,7 @@
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-full-data-sync/tasks.md": {
-      "sections": [
-        "Spec Tasks",
-        "Tasks"
-      ],
+      "sections": ["Spec Tasks", "Tasks"],
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-full-data-sync/spec.md": {
@@ -221,10 +211,7 @@
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-comment-storage-sync/tasks.md": {
-      "sections": [
-        "Spec Tasks",
-        "Tasks"
-      ],
+      "sections": ["Spec Tasks", "Tasks"],
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-comment-storage-sync/spec.md": {
@@ -242,10 +229,7 @@
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-merge-readiness-fixes/tasks.md": {
-      "sections": [
-        "Spec Tasks",
-        "Tasks"
-      ],
+      "sections": ["Spec Tasks", "Tasks"],
       "architecture_hints": []
     },
     ".agent-os/specs/2025-08-22-merge-readiness-fixes/spec.md": {
@@ -472,7 +456,7 @@
   },
   "stats": {
     "total_files": 43,
-    "total_directories": 48,
+    "total_directories": 49,
     "fully_parsed": {
       "javascript": 2,
       "typescript": 30
@@ -553,20 +537,12 @@
     "scripts/init-database.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "fs",
-        "path"
-      ],
+      "imports": ["child_process", "fs", "path"],
       "functions": {
         "initializeDatabase": "async ()"
       },
       "classes": {},
-      "variables": [
-        "dbPath",
-        "schemaPath",
-        "dbExists"
-      ],
+      "variables": ["dbPath", "schemaPath", "dbExists"],
       "call_graph": {}
     },
     "src/mcp-server.ts": {
@@ -647,9 +623,7 @@
     "src/mocks/prisma.mock.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "vitest"
-      ],
+      "imports": ["vitest"],
       "functions": {
         "resetPrismaMocks": "()",
         "setupPrismaDefaults": "()"
@@ -689,10 +663,7 @@
     "src/services/field-discovery.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "util"
-      ],
+      "imports": ["child_process", "util"],
       "functions": {},
       "classes": {
         "FieldDiscoveryService": {
@@ -732,11 +703,7 @@
     "src/services/sync-service.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "./auth.js",
-        "./azure-devops.js",
-        "./database.js"
-      ],
+      "imports": ["./auth.js", "./azure-devops.js", "./database.js"],
       "functions": {},
       "classes": {
         "SyncService": {
@@ -791,11 +758,7 @@
     "src/services/azure-devops.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "util",
-        "@orchestr8/resilience"
-      ],
+      "imports": ["child_process", "util", "@orchestr8/resilience"],
       "functions": {
         "logCircuitBreakerEvent": "(event: string, key: string, details?: any)",
         "logRetryAttempt": "(attempt: number, maxAttempts: number, delay: number, error: any,)"
@@ -848,10 +811,7 @@
     "src/services/database.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "@prisma/client",
-        "./azure-devops.js"
-      ],
+      "imports": ["@prisma/client", "./azure-devops.js"],
       "functions": {},
       "classes": {
         "DatabaseService": {
@@ -860,38 +820,26 @@
             "syncWorkItems": "async (workItems: WorkItemData[]): Promise<void>",
             "getAllWorkItems": {
               "signature": "async ()",
-              "called_by": [
-                "DatabaseService.getWorkItemsForUsers"
-              ]
+              "called_by": ["DatabaseService.getWorkItemsForUsers"]
             },
             "getWorkItemsByState": {
               "signature": "async (state: string)",
-              "called_by": [
-                "DatabaseService.getWorkItemsByStateForUsers"
-              ]
+              "called_by": ["DatabaseService.getWorkItemsByStateForUsers"]
             },
             "getWorkItemsByType": {
               "signature": "async (type: string)",
-              "called_by": [
-                "DatabaseService.getWorkItemsByTypeForUsers"
-              ]
+              "called_by": ["DatabaseService.getWorkItemsByTypeForUsers"]
             },
             "getWorkItemsForUsers": {
-              "calls": [
-                "getAllWorkItems"
-              ],
+              "calls": ["getAllWorkItems"],
               "signature": "async (userEmails: string[])"
             },
             "getWorkItemsByStateForUsers": {
-              "calls": [
-                "getWorkItemsByState"
-              ],
+              "calls": ["getWorkItemsByState"],
               "signature": "async (state: string, userEmails: string[])"
             },
             "getWorkItemsByTypeForUsers": {
-              "calls": [
-                "getWorkItemsByType"
-              ],
+              "calls": ["getWorkItemsByType"],
               "signature": "async (type: string, userEmails: string[])"
             },
             "getLastSyncTime": "async (): Promise<Date | null>",
@@ -1010,10 +958,7 @@
     "src/services/auth.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "util"
-      ],
+      "imports": ["child_process", "util"],
       "functions": {},
       "classes": {
         "AzureAuth": {
@@ -1024,9 +969,7 @@
           }
         }
       },
-      "variables": [
-        "isAuthenticated"
-      ],
+      "variables": ["isAuthenticated"],
       "call_graph": {}
     },
     "src/services/__tests__/auth.test.ts": {
@@ -1067,9 +1010,7 @@
     "src/mocks/handlers/azure-devops.handlers.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "msw"
-      ],
+      "imports": ["msw"],
       "functions": {
         "createUnauthorizedHandler": "()",
         "createNotFoundHandler": "()",
@@ -1124,9 +1065,7 @@
       "language": "typescript",
       "parsed": true,
       "purpose": "Test file",
-      "imports": [
-        "vitest"
-      ],
+      "imports": ["vitest"],
       "functions": {
         "createTestWorkItem": "(overrides: Partial<TestWorkItem> = {},): TestWorkItem",
         "createAzureWorkItem": "(overrides: Partial<AzureWorkItem> = {},): AzureWorkItem",
@@ -1140,13 +1079,9 @@
         "generateRandomString": "(length = 10): string",
         "setupTestEnv": "(vars: Record<string, string>)",
         "expectJsonStructure": {
-          "calls": [
-            "expectJsonStructure"
-          ],
+          "calls": ["expectJsonStructure"],
           "signature": "(actual: any, expected: any): void",
-          "called_by": [
-            "expectJsonStructure"
-          ]
+          "called_by": ["expectJsonStructure"]
         }
       },
       "classes": {},
@@ -1194,11 +1129,7 @@
           }
         }
       },
-      "variables": [
-        "client",
-        "timeout",
-        "startTime"
-      ],
+      "variables": ["client", "timeout", "startTime"],
       "call_graph": {}
     },
     "tests/fixtures/work-items.json": {
@@ -1236,52 +1167,34 @@
       "src/services/field-discovery.ts",
       "src/services/schema-migration.ts"
     ],
-    "scripts/init-database.ts": [
-      "child_process",
-      "fs",
-      "path"
-    ],
+    "scripts/init-database.ts": ["child_process", "fs", "path"],
     "src/mcp-server.ts": [
       "@modelcontextprotocol/sdk/server/index.js",
       "@modelcontextprotocol/sdk/server/stdio.js",
       "@modelcontextprotocol/sdk/types.js"
     ],
-    "src/mocks/prisma.mock.ts": [
-      "vitest"
-    ],
-    "src/services/field-discovery.ts": [
-      "child_process",
-      "util"
-    ],
+    "src/mocks/prisma.mock.ts": ["vitest"],
+    "src/services/field-discovery.ts": ["child_process", "util"],
     "src/services/azure-devops.ts": [
       "child_process",
       "util",
       "@orchestr8/resilience"
     ],
-    "src/services/database.ts": [
-      "@prisma/client"
-    ],
+    "src/services/database.ts": ["@prisma/client"],
     "src/services/schema-migration.ts": [
       "child_process",
       "fs/promises",
       "path",
       "util"
     ],
-    "src/services/auth.ts": [
-      "child_process",
-      "util"
-    ],
-    "src/mocks/handlers/azure-devops.handlers.ts": [
-      "msw"
-    ],
-    "tests/utils/test-helpers.ts": [
-      "vitest"
-    ],
+    "src/services/auth.ts": ["child_process", "util"],
+    "src/mocks/handlers/azure-devops.handlers.ts": ["msw"],
+    "tests/utils/test-helpers.ts": ["vitest"],
     "tests/utils/mcp-client.ts": [
       "child_process",
       "@modelcontextprotocol/sdk/client/index.js",
       "@modelcontextprotocol/sdk/client/stdio.js"
     ]
   },
-  "staleness_check": 1755217261.196868
+  "staleness_check": 1755220791.495102
 }
