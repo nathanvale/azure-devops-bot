@@ -1,7 +1,7 @@
 import { beforeAll, afterEach, afterAll, vi } from 'vitest'
 
-import { resetPrismaMocks, setupPrismaDefaults } from '@/mocks/prisma.mock'
-import { server } from '@/mocks/server'
+import { resetPrismaMocks, setupPrismaDefaults } from '../src/mocks/prisma.mock'
+import { server } from '../src/mocks/server'
 
 // Start MSW server before all tests
 beforeAll(() => {
@@ -39,6 +39,6 @@ vi.stubEnv('AZURE_DEVOPS_ORG', 'fwcdev')
 vi.stubEnv('AZURE_DEVOPS_PROJECT', 'Customer Services Platform')
 
 // Global test utilities
-global.consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-global.consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-global.consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+;(global as any).consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+;(global as any).consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+;(global as any).consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

@@ -16,5 +16,5 @@ export type MockedFunction<T extends (...args: any[]) => any> = T & {
 export const createMockFunction = <
   T extends (...args: any[]) => any,
 >(): MockedFunction<T> => {
-  return vi.fn() as MockedFunction<T>
+  return vi.fn() as unknown as MockedFunction<T>
 }

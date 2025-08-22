@@ -1,5 +1,5 @@
 {
-  "indexed_at": "2025-08-22T12:35:56.102700",
+  "indexed_at": "2025-08-22T14:19:45.752885",
   "root": ".",
   "project_structure": {
     "type": "tree",
@@ -520,11 +520,19 @@
     },
     "tests/mcp-integration.setup.ts": {
       "language": "typescript",
-      "parsed": false
+      "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:41:01.405239"
     },
     "tests/vitest.setup.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:41:17.664633",
       "purpose": "Test file"
     },
     "scripts/discover-and-migrate-schema.ts": {
@@ -541,6 +549,7 @@
       "classes": {},
       "variables": [
         "args",
+        "samplePart",
         "sampleCount",
         "client",
         "workItems",
@@ -597,6 +606,7 @@
       "variables": [
         "args",
         "emailArg",
+        "emailPart",
         "emails",
         "filter",
         "newItems",
@@ -648,25 +658,13 @@
     "src/mocks/prisma.mock.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "vitest"
-      ],
       "functions": {
         "resetPrismaMocks": "()",
         "setupPrismaDefaults": "()"
       },
       "classes": {},
-      "variables": [
-        "mockWorkItemData",
-        "mockPrismaClient",
-        "resetPrismaMocks",
-        "setupPrismaDefaults",
-        "item",
-        "newItem",
-        "existingItem",
-        "updatedItem"
-      ],
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:47:33.093906"
     },
     "src/mocks/server.ts": {
       "language": "typescript",
@@ -675,11 +673,19 @@
     "src/types/test-utils.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:28:46.436755",
       "purpose": "Test file"
     },
     "src/__tests__/mcp-server.test.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:35:19.844932",
       "purpose": "Test file"
     },
     "src/__tests__/index.test.ts": {
@@ -690,10 +696,6 @@
     "src/services/field-discovery.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "util"
-      ],
       "functions": {},
       "classes": {
         "FieldDiscoveryService": {
@@ -705,30 +707,8 @@
           }
         }
       },
-      "variables": [
-        "execAsync",
-        "command",
-        "metadataKeys",
-        "value",
-        "allSystemFields",
-        "allVstsFields",
-        "allCustomFields",
-        "allMetadataFields",
-        "allFieldTypes",
-        "totalUniqueFields",
-        "documentation",
-        "type",
-        "typeDistribution",
-        "failedFetches",
-        "workItem",
-        "analysis",
-        "summarySection",
-        "updatedSummary"
-      ],
-      "interfaces": {
-        "FieldAnalysisResult": {}
-      },
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:44:59.895165"
     },
     "src/services/sync-service.ts": {
       "language": "typescript",
@@ -792,11 +772,6 @@
     "src/services/azure-devops.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "util",
-        "@orchestr8/resilience"
-      ],
       "functions": {
         "logCircuitBreakerEvent": "(event: string, key: string, details?: any)",
         "logRetryAttempt": "(attempt: number, maxAttempts: number, delay: number, error: any,)"
@@ -809,74 +784,21 @@
           }
         }
       },
-      "variables": [
-        "execAsync",
-        "listPolicy",
-        "detailPolicy",
-        "commentPolicy",
-        "resilience",
-        "logCircuitBreakerEvent",
-        "timestamp",
-        "logRetryAttempt",
-        "wiqlCommand",
-        "wiqlResult",
-        "workItemIds",
-        "expandCommand",
-        "expandedResult",
-        "workItems",
-        "command",
-        "commentsResponse",
-        "workItem",
-        "semaphore",
-        "currentIndex",
-        "processBatch",
-        "promises",
-        "index",
-        "workItemId",
-        "parsed",
-        "parentRelation",
-        "match",
-        "result",
-        "userCommand",
-        "userResult"
-      ],
-      "interfaces": {
-        "WorkItemCommentData": {},
-        "WorkItemData": {}
-      },
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:45:39.916384"
     },
     "src/services/database.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "@prisma/client",
-        "./azure-devops.js"
-      ],
       "functions": {},
       "classes": {
         "DatabaseService": {
           "methods": {
             "constructor": "()",
             "syncWorkItems": "async (workItems: WorkItemData[]): Promise<void>",
-            "getAllWorkItems": {
-              "signature": "async ()",
-              "called_by": [
-                "DatabaseService.getWorkItemsForUsers"
-              ]
-            },
-            "getWorkItemsByState": {
-              "signature": "async (state: string)",
-              "called_by": [
-                "DatabaseService.getWorkItemsByStateForUsers"
-              ]
-            },
-            "getWorkItemsByType": {
-              "signature": "async (type: string)",
-              "called_by": [
-                "DatabaseService.getWorkItemsByTypeForUsers"
-              ]
-            },
+            "getAllWorkItems": "async ()",
+            "getWorkItemsByState": "async (state: string)",
+            "getWorkItemsByType": "async (type: string)",
             "getWorkItemsForUsers": {
               "calls": [
                 "getAllWorkItems"
@@ -904,33 +826,12 @@
           }
         }
       },
-      "constants": {
-        "BATCH_SIZE": "value"
-      },
-      "variables": [
-        "totalBatches",
-        "i",
-        "batch",
-        "batchNumber",
-        "batchStartTime",
-        "commonData",
-        "batchDuration",
-        "processed",
-        "percentComplete",
-        "lastItem"
-      ],
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:43:06.880553"
     },
     "src/services/schema-migration.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "fs/promises",
-        "path",
-        "util",
-        "./field-discovery.js"
-      ],
       "functions": {},
       "classes": {
         "SchemaMigrationService": {
@@ -940,41 +841,8 @@
           }
         }
       },
-      "variables": [
-        "execAsync",
-        "workItem",
-        "analysis",
-        "hasWorkItemModel",
-        "workItemModelMatch",
-        "modelContent",
-        "fieldMatches",
-        "missingFields",
-        "coreFields",
-        "comprehensiveFields",
-        "hasCustomFields",
-        "footer",
-        "migrationSql",
-        "columnDef",
-        "indexableFields",
-        "migrationApplied",
-        "rollbackSuccessful",
-        "postRecord",
-        "isCorrupted",
-        "schemaGenerated",
-        "migrationCreated",
-        "migrationTested",
-        "schema",
-        "schemaPath",
-        "testResult"
-      ],
-      "interfaces": {
-        "SchemaValidationResult": {},
-        "MigrationField": {},
-        "MigrationTestResult": {},
-        "DataIntegrityResult": {},
-        "FullMigrationResult": {}
-      },
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:45:16.513513"
     },
     "src/services/query-engine.ts": {
       "language": "typescript",
@@ -1043,6 +911,10 @@
     "src/services/__tests__/azure-devops.test.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:38:55.532532",
       "purpose": "Test file"
     },
     "src/services/__tests__/database.test.ts": {
@@ -1053,6 +925,10 @@
     "src/services/__tests__/sync-service.test.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:33:48.570542",
       "purpose": "Test file"
     },
     "src/services/__tests__/field-discovery.test.ts": {
@@ -1119,6 +995,10 @@
     "tests/integration/azure-devops-server.test.ts": {
       "language": "typescript",
       "parsed": false,
+      "functions": {},
+      "classes": {},
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:40:15.631326",
       "purpose": "Test file"
     },
     "tests/utils/test-helpers.ts": {
@@ -1171,11 +1051,6 @@
     "tests/utils/mcp-client.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "child_process",
-        "@modelcontextprotocol/sdk/client/index.js",
-        "@modelcontextprotocol/sdk/client/stdio.js"
-      ],
       "functions": {
         "createTestMCPClient": "async (serverPath: string, args: string[] = [],): Promise<TestMCPClient>",
         "callToolWithTimeout": "async (client: TestMCPClient, toolName: string, args: any = {}, timeoutMs = 10000,): Promise<CallToolResult>",
@@ -1195,12 +1070,8 @@
           }
         }
       },
-      "variables": [
-        "client",
-        "timeout",
-        "startTime"
-      ],
-      "call_graph": {}
+      "updated_by_hook": true,
+      "updated_at": "2025-08-22T14:47:51.241372"
     },
     "tests/fixtures/work-items.json": {
       "language": "json",
@@ -1288,5 +1159,5 @@
       "@modelcontextprotocol/sdk/client/stdio.js"
     ]
   },
-  "staleness_check": 1755225356.368969
+  "staleness_check": 1755231586.011338
 }

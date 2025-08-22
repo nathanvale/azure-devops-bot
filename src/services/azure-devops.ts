@@ -460,7 +460,7 @@ export class AzureDevOpsClient {
       const promises = semaphore.map(async () => {
         while (currentIndex < workItemIds.length) {
           const index = currentIndex++
-          const workItemId = workItemIds[index]
+          const workItemId = workItemIds[index]!
 
           try {
             const workItem = await this.fetchSingleWorkItem(workItemId)

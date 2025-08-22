@@ -260,7 +260,7 @@ No fields discovered from the analysis.
     // Add failed fetch info to documentation if any failed
     if (failedFetches > 0) {
       const summarySection = documentation.split('## Summary')[1]
-      const updatedSummary = summarySection.replace(
+      const updatedSummary = summarySection?.replace(
         /(\*\*Total Work Items Analyzed:\*\* \d+)/,
         `$1\n**Failed to Fetch:** ${failedFetches}`,
       )

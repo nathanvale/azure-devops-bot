@@ -57,8 +57,12 @@ export class AzureDevOpsMCPServer {
       process.exit(1)
     }
 
-    const emails = emailArg
-      .split('=')[1]
+    const emailPart = emailArg.split('=')[1]
+    if (!emailPart) {
+      console.error('❌ Invalid email format. Expected: --emails=email@domain.com')
+      process.exit(1)
+    }
+    const emails = emailPart
       .split(',')
       .map((email) => email.trim())
       .filter((email) => email.length > 0)

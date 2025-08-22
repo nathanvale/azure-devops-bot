@@ -113,7 +113,7 @@ export class SchemaMigrationService {
       hasWorkItemModel = true
 
       // Extract field names from the model
-      const modelContent = workItemModelMatch[1]
+      const modelContent = workItemModelMatch[1]!
       const fieldMatches = modelContent.matchAll(/(\w+)\s+\w+/g)
       for (const match of fieldMatches) {
         if (match[1] && !match[1].startsWith('@@')) {

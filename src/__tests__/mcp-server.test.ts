@@ -17,9 +17,9 @@ import { AzureDevOpsMCPServer } from '../mcp-server'
 
 describe('AzureDevOpsMCPServer', () => {
   let server: any
-  let mockSyncService: SyncService
-  let mockDb: DatabaseService
-  let mockQueryEngine: QueryEngine
+  let mockSyncService: any
+  let mockDb: any
+  let mockQueryEngine: any
   let mockMCPServer: any
   let originalArgv: string[]
 
@@ -236,21 +236,30 @@ describe('AzureDevOpsMCPServer', () => {
           'Active',
           ['test@example.com', 'test2@example.com'],
         )
-        expect(result.content[0].type).toBe('text')
-        const parsedResult = JSON.parse(result.content[0].text)
+        expect(result.content[0]?.type).toBe('text')
+        const firstContent = result.content[0]
+        expect(firstContent).toBeDefined()
+        if (!firstContent || firstContent.type !== 'text') {
+          throw new Error('Expected text content')
+        }
+        const parsedResult = JSON.parse(firstContent.text)
         expect(parsedResult).toHaveLength(1)
-        expect(parsedResult[0]).toMatchObject({
-          id: mockItems[0].id,
-          azureId: mockItems[0].azureId,
-          title: mockItems[0].title,
-          state: mockItems[0].state,
-          type: mockItems[0].type,
-          assignedTo: mockItems[0].assignedTo,
-          areaPath: mockItems[0].areaPath,
-          iterationPath: mockItems[0].iterationPath,
-          priority: mockItems[0].priority,
-          severity: mockItems[0].severity,
-          description: mockItems[0].description,
+        const firstItem = mockItems[0]
+        const firstResult = parsedResult[0]
+        expect(firstResult).toBeDefined()
+        expect(firstItem).toBeDefined()
+        expect(firstResult).toMatchObject({
+          id: firstItem?.id,
+          azureId: firstItem?.azureId,
+          title: firstItem?.title,
+          state: firstItem?.state,
+          type: firstItem?.type,
+          assignedTo: firstItem?.assignedTo,
+          areaPath: firstItem?.areaPath,
+          iterationPath: firstItem?.iterationPath,
+          priority: firstItem?.priority,
+          severity: firstItem?.severity,
+          description: firstItem?.description,
         })
       })
 
@@ -309,18 +318,19 @@ describe('AzureDevOpsMCPServer', () => {
         )
         const parsedResult = JSON.parse(result.content[0].text)
         expect(parsedResult).toHaveLength(1)
+        const firstUserStory = userStories[0]!
         expect(parsedResult[0]).toMatchObject({
-          id: userStories[0].id,
-          azureId: userStories[0].azureId,
-          title: userStories[0].title,
-          state: userStories[0].state,
-          type: userStories[0].type,
-          assignedTo: userStories[0].assignedTo,
-          areaPath: userStories[0].areaPath,
-          iterationPath: userStories[0].iterationPath,
-          priority: userStories[0].priority,
-          severity: userStories[0].severity,
-          description: userStories[0].description,
+          id: firstUserStory.id,
+          azureId: firstUserStory.azureId,
+          title: firstUserStory.title,
+          state: firstUserStory.state,
+          type: firstUserStory.type,
+          assignedTo: firstUserStory.assignedTo,
+          areaPath: firstUserStory.areaPath,
+          iterationPath: firstUserStory.iterationPath,
+          priority: firstUserStory.priority,
+          severity: firstUserStory.severity,
+          description: firstUserStory.description,
         })
       })
 
@@ -341,18 +351,19 @@ describe('AzureDevOpsMCPServer', () => {
         ])
         const parsedResult = JSON.parse(result.content[0].text)
         expect(parsedResult).toHaveLength(1)
+        const firstItem = allItems[0]!
         expect(parsedResult[0]).toMatchObject({
-          id: allItems[0].id,
-          azureId: allItems[0].azureId,
-          title: allItems[0].title,
-          state: allItems[0].state,
-          type: allItems[0].type,
-          assignedTo: allItems[0].assignedTo,
-          areaPath: allItems[0].areaPath,
-          iterationPath: allItems[0].iterationPath,
-          priority: allItems[0].priority,
-          severity: allItems[0].severity,
-          description: allItems[0].description,
+          id: firstItem.id,
+          azureId: firstItem.azureId,
+          title: firstItem.title,
+          state: firstItem.state,
+          type: firstItem.type,
+          assignedTo: firstItem.assignedTo,
+          areaPath: firstItem.areaPath,
+          iterationPath: firstItem.iterationPath,
+          priority: firstItem.priority,
+          severity: firstItem.severity,
+          description: firstItem.description,
         })
       })
 

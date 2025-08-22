@@ -323,7 +323,7 @@ describe('AzureDevOpsClient', () => {
       await client.fetchWorkItems()
 
       expect(mockExecAsync).toHaveBeenCalledTimes(1)
-      const calledCommand = mockExecAsync.mock.calls[0][0]
+      const calledCommand = mockExecAsync.mock.calls[0]![0]
       expect(calledCommand).toContain('az boards query')
       expect(calledCommand).toContain('--wiql')
       expect(calledCommand).toContain('--output json')
@@ -408,7 +408,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      expect(result[0].lastUpdatedAt.toISOString()).toBe(
+      expect(result[0]!.lastUpdatedAt.toISOString()).toBe(
         '2025-01-08T14:30:45.123Z',
       )
     })
@@ -509,7 +509,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should validate emails that exist in organization but have no work items', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const userResponse = { principalName: 'user@fwc.gov.au' }
 
       mockExecAsync
@@ -526,7 +526,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it("should mark emails as invalid when they don't exist in organization", async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const emptyUserResponse = '[]'
 
       mockExecAsync
@@ -546,7 +546,7 @@ describe('AzureDevOpsClient', () => {
       const workItemsResponse = [
         { id: 1234, fields: { 'System.Title': 'Test' } },
       ]
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const emptyUserResponse = '[]'
 
       mockExecAsync
@@ -603,7 +603,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should use correct user validation command', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const userResponse = { principalName: 'user@fwc.gov.au' }
 
       mockExecAsync
@@ -621,7 +621,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should handle invalid JSON in user response', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
 
       mockExecAsync
         .mockResolvedValueOnce({
@@ -636,7 +636,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should handle user response without principalName', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const userResponse = { displayName: 'User Name' }
 
       mockExecAsync
@@ -736,7 +736,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       // Basic fields
       expect(workItem.id).toBe(1234)
@@ -832,7 +832,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       // Required fields should be present
       expect(workItem.id).toBe(9999)
@@ -909,7 +909,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       expect(workItem.storyPoints).toBe(5.5)
       expect(workItem.effort).toBe(12.75)
@@ -943,7 +943,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       expect(workItem.storyPoints).toBeUndefined()
       expect(workItem.effort).toBeUndefined()
@@ -1172,9 +1172,9 @@ describe('AzureDevOpsClient', () => {
 
       // Verify each work item was fetched correctly
       for (let i = 0; i < workItemIds.length; i++) {
-        expect(result[i].id).toBe(workItemIds[i])
-        expect(result[i].title).toBe(`Work Item ${workItemIds[i]}`)
-        expect(result[i].storyPoints).toBe(workItemIds[i])
+        expect(result[i]!.id).toBe(workItemIds[i])
+        expect(result[i]!.title).toBe(`Work Item ${workItemIds[i]}`)
+        expect(result[i]!.storyPoints).toBe(workItemIds[i])
       }
     })
 
@@ -1249,10 +1249,10 @@ describe('AzureDevOpsClient', () => {
 
       // Should return only successful items
       expect(result).toHaveLength(2)
-      expect(result[0].id).toBe(1)
-      expect(result[0].title).toBe('Success Item')
-      expect(result[1].id).toBe(3)
-      expect(result[1].title).toBe('Another Success')
+      expect(result[0]!.id).toBe(1)
+      expect(result[0]!.title).toBe('Success Item')
+      expect(result[1]!.id).toBe(3)
+      expect(result[1]!.title).toBe('Another Success')
 
       expect(mockExecAsync).toHaveBeenCalledTimes(3)
     })
@@ -1302,7 +1302,7 @@ describe('AzureDevOpsClient', () => {
       expect(result).toHaveLength(5)
       // Results should maintain original order
       for (let i = 0; i < workItemIds.length; i++) {
-        expect(result[i].id).toBe(workItemIds[i])
+        expect(result[i]!.id).toBe(workItemIds[i])
       }
     })
 
@@ -1391,11 +1391,11 @@ describe('AzureDevOpsClient', () => {
             await client.fetchWorkItems()
           } catch (error) {
             if (i < 3) {
-              expect(error.message).toContain(
+              expect((error as Error).message).toContain(
                 'Azure DevOps service unavailable',
               )
             } else {
-              expect(error.message).toContain('Circuit breaker is open')
+              expect((error as Error).message).toContain('Circuit breaker is open')
             }
           }
         }
@@ -1737,9 +1737,9 @@ describe('AzureDevOpsClient', () => {
         await client.fetchWorkItems()
 
         expect(performanceMetrics).toHaveLength(1)
-        expect(performanceMetrics[0].operation).toBe('work-item-list')
-        expect(performanceMetrics[0].success).toBe(true)
-        expect(performanceMetrics[0].duration).toBeGreaterThanOrEqual(0)
+        expect(performanceMetrics[0]!.operation).toBe('work-item-list')
+        expect(performanceMetrics[0]!.success).toBe(true)
+        expect(performanceMetrics[0]!.duration).toBeGreaterThanOrEqual(0)
       })
     })
   })
