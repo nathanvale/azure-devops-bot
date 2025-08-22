@@ -18,10 +18,12 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Approach Options
 
 **Option A: Copy @orchestr8 configuration exactly**
+
 - Pros: Proven configuration, consistent with existing codebase, includes perfectionist
 - Cons: May include rules not needed for this smaller project
 
 **Option B: Minimal ESLint setup with Prettier** (Selected)
+
 - Pros: Matches @orchestr8 exactly, includes import sorting, comprehensive TypeScript rules
 - Cons: None - this is the established pattern
 
@@ -29,12 +31,12 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 
 ## External Dependencies
 
-- **eslint@^9.30.0** - Core linting engine with flat config support
+- **eslint@^9.33.0** - Core linting engine with flat config support
 - **prettier@3.6.2** - Code formatting engine
-- **@eslint/js@^9.30.0** - JavaScript recommended rules
-- **@typescript-eslint/eslint-plugin@^8.0.0** - TypeScript-specific linting rules
-- **@typescript-eslint/parser@^8.0.0** - TypeScript parser for ESLint
-- **eslint-config-prettier@^10.1.5** - Disables ESLint rules that conflict with Prettier
+- **@eslint/js@^9.33.0** - JavaScript recommended rules
+- **@typescript-eslint/eslint-plugin@^8.40.0** - TypeScript-specific linting rules
+- **@typescript-eslint/parser@^8.40.0** - TypeScript parser for ESLint
+- **eslint-config-prettier@^10.1.8** - Disables ESLint rules that conflict with Prettier
 - **eslint-plugin-perfectionist@^4.15.0** - Import and export sorting
 
 **Justification:** These exact versions match the @orchestr8 configuration and provide a complete linting and formatting solution for TypeScript projects.
@@ -42,6 +44,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Configuration Details
 
 ### ESLint Configuration (eslint.config.js)
+
 - Uses ESM export with flat config array
 - Applies recommended JavaScript rules as baseline
 - Configures TypeScript parser with project service for type-aware linting
@@ -51,6 +54,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 - Configures file ignores for build artifacts and dependencies
 
 ### Prettier Configuration (prettier.config.js)
+
 - No semicolons (semi: false) - matches @orchestr8 style
 - Single quotes (singleQuote: true) for strings
 - Trailing commas (trailingComma: 'all') for cleaner diffs
@@ -59,6 +63,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 - LF line endings for Unix compatibility
 
 ### VS Code Integration (.vscode/settings.json)
+
 - Format on save enabled with Prettier as default formatter
 - ESLint auto-fix on save for import sorting and minor issues
 - Flat config flag enabled for ESLint v9 compatibility

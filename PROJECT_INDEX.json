@@ -1,5 +1,5 @@
 {
-  "indexed_at": "2025-08-22T09:02:34.044066",
+  "indexed_at": "2025-08-22T12:35:56.102700",
   "root": ".",
   "project_structure": {
     "type": "tree",
@@ -8,15 +8,16 @@
       ".",
       "\u251c\u2500\u2500 config/",
       "\u2502   \u2514\u2500\u2500 tmuxinator/",
-      "\u251c\u2500\u2500 docs/",
-      "\u251c\u2500\u2500 prisma/ (6 files)",
-      "\u2502   \u2514\u2500\u2500 migrations/ (6 files)",
+      "\u251c\u2500\u2500 docs/ (4 files)",
+      "\u251c\u2500\u2500 prisma/ (7 files)",
+      "\u2502   \u2514\u2500\u2500 migrations/ (7 files)",
       "\u2502       \u251c\u2500\u2500 20250708012432_init/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250708083148_add_historical_fields/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250708131651_add_completion_tracking/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250821100247_add_comprehensive_metadata/ (1 files)",
       "\u2502       \u251c\u2500\u2500 20250821102909_add_comprehensive_metadata/ (1 files)",
-      "\u2502       \u2514\u2500\u2500 20250821213538_add_missing_fields/ (1 files)",
+      "\u2502       \u251c\u2500\u2500 20250821213538_add_missing_fields/ (1 files)",
+      "\u2502       \u2514\u2500\u2500 20250822021023_fix_schema_and_add_missing_fields/ (1 files)",
       "\u251c\u2500\u2500 scripts/ (2 files)",
       "\u251c\u2500\u2500 src/ (22 files)",
       "\u2502   \u251c\u2500\u2500 __tests__/ (2 files)",
@@ -328,7 +329,7 @@
         "List all comments for a work item",
         "Alternative approach if relation command doesn't work",
         "Comment Data Mapping",
-        "Sync Strategy"
+        "Data Minimization Note"
       ],
       "architecture_hints": []
     },
@@ -357,7 +358,7 @@
         "Modified Methods in `azure-devops.ts`",
         "Data Processing Pipeline",
         "Step 1: Work Item ID Collection",
-        "Step 2: Parallel Detailed Fetching  ",
+        "Step 2: Parallel Detailed Fetching",
         "Step 3: Data Transformation"
       ],
       "architecture_hints": []
@@ -471,24 +472,35 @@
     ".agent-os/specs/2025-08-22-merge-readiness-fixes/sub-specs": "Test specifications"
   },
   "stats": {
-    "total_files": 49,
-    "total_directories": 48,
+    "total_files": 44,
+    "total_directories": 50,
     "fully_parsed": {
+      "javascript": 2,
       "typescript": 30
     },
     "listed_only": {
-      "json": 13,
-      "sql": 6
+      "json": 5,
+      "sql": 7
     },
     "markdown_files": 32
   },
   "files": {
+    "prettier.config.js": {
+      "language": "javascript",
+      "parsed": false,
+      "purpose": "Configuration"
+    },
     "package.json": {
       "language": "json",
       "parsed": false
     },
     "tsconfig.json": {
       "language": "json",
+      "parsed": false,
+      "purpose": "Configuration"
+    },
+    "eslint.config.js": {
+      "language": "javascript",
       "parsed": false,
       "purpose": "Configuration"
     },
@@ -515,30 +527,13 @@
       "parsed": false,
       "purpose": "Test file"
     },
-    ".obsidian/workspace.json": {
-      "language": "json",
-      "parsed": false
-    },
-    ".obsidian/app.json": {
-      "language": "json",
-      "parsed": false,
-      "purpose": "Application entry point"
-    },
-    ".obsidian/core-plugins.json": {
-      "language": "json",
-      "parsed": false
-    },
-    ".obsidian/appearance.json": {
-      "language": "json",
-      "parsed": false
-    },
     "scripts/discover-and-migrate-schema.ts": {
       "language": "typescript",
       "parsed": true,
       "imports": [
+        "../src/services/azure-devops",
         "../src/services/field-discovery",
-        "../src/services/schema-migration",
-        "../src/services/azure-devops"
+        "../src/services/schema-migration"
       ],
       "functions": {
         "main": "async ()"
@@ -582,11 +577,11 @@
         "@modelcontextprotocol/sdk/server/index.js",
         "@modelcontextprotocol/sdk/server/stdio.js",
         "@modelcontextprotocol/sdk/types.js",
-        "./services/sync-service.js",
+        "./services/auth.js",
+        "./services/azure-devops.js",
         "./services/database.js",
         "./services/query-engine.js",
-        "./services/azure-devops.js",
-        "./services/auth.js"
+        "./services/sync-service.js"
       ],
       "functions": {},
       "classes": {
@@ -623,10 +618,10 @@
       "parsed": true,
       "purpose": "Application entry point",
       "imports": [
-        "./services/sync-service.js",
+        "./services/azure-devops.js",
         "./services/database.js",
         "./services/query-engine.js",
-        "./services/azure-devops.js"
+        "./services/sync-service.js"
       ],
       "functions": {},
       "classes": {
@@ -654,8 +649,7 @@
       "language": "typescript",
       "parsed": true,
       "imports": [
-        "vitest",
-        "@prisma/client"
+        "vitest"
       ],
       "functions": {
         "resetPrismaMocks": "()",
@@ -760,8 +754,7 @@
         }
       },
       "constants": {
-        "CONCURRENCY": "number",
-        "SYNC_INTERVAL": "value"
+        "CONCURRENCY": "value"
       },
       "variables": [
         "workItems",
@@ -806,16 +799,13 @@
       ],
       "functions": {
         "logCircuitBreakerEvent": "(event: string, key: string, details?: any)",
-        "logRetryAttempt": "(attempt: number, maxAttempts: number, delay: number, error: any)"
+        "logRetryAttempt": "(attempt: number, maxAttempts: number, delay: number, error: any,)"
       },
       "classes": {
         "AzureDevOpsClient": {
           "methods": {
             "fetchWorkItems": "async (): Promise<WorkItemData[]>",
-            "fetchWorkItemComments": "async (workItemId: number): Promise<WorkItemCommentData[]>",
-            "fetchSingleWorkItem": "async (id: number): Promise<WorkItemData>",
-            "fetchWorkItemsDetailed": "async (workItemIds: number[], concurrencyLimit: number = 5): Promise<WorkItemData[]>",
-            "validateUserEmails": "async (emails: string[]): Promise<"
+            "fetchSingleWorkItem": "async (id: number): Promise<WorkItemData>"
           }
         }
       },
@@ -915,7 +905,7 @@
         }
       },
       "constants": {
-        "BATCH_SIZE": "number"
+        "BATCH_SIZE": "value"
       },
       "variables": [
         "totalBatches",
@@ -936,9 +926,9 @@
       "parsed": true,
       "imports": [
         "child_process",
-        "util",
         "fs/promises",
         "path",
+        "util",
         "./field-discovery.js"
       ],
       "functions": {},
@@ -946,8 +936,6 @@
         "SchemaMigrationService": {
           "methods": {
             "constructor": "()",
-            "discoverFieldsFromAzureDevOps": "async (sampleWorkItemIds: number[]): Promise<Record<string, string>>",
-            "validateCurrentSchema": "async (schemaContent: string, discoveredFields?: Record<string, string>): Promise<SchemaValidationResult>",
             "__init__": "()"
           }
         }
@@ -991,9 +979,6 @@
     "src/services/query-engine.ts": {
       "language": "typescript",
       "parsed": true,
-      "imports": [
-        "./database.js"
-      ],
       "functions": {},
       "classes": {
         "QueryEngine": {
@@ -1131,23 +1116,6 @@
       ],
       "call_graph": {}
     },
-    ".agent-os/.obsidian/workspace.json": {
-      "language": "json",
-      "parsed": false
-    },
-    ".agent-os/.obsidian/app.json": {
-      "language": "json",
-      "parsed": false,
-      "purpose": "Application entry point"
-    },
-    ".agent-os/.obsidian/core-plugins.json": {
-      "language": "json",
-      "parsed": false
-    },
-    ".agent-os/.obsidian/appearance.json": {
-      "language": "json",
-      "parsed": false
-    },
     "tests/integration/azure-devops-server.test.ts": {
       "language": "typescript",
       "parsed": false,
@@ -1161,8 +1129,8 @@
         "vitest"
       ],
       "functions": {
-        "createTestWorkItem": "(overrides: Partial<TestWorkItem> = {}): TestWorkItem",
-        "createAzureWorkItem": "(overrides: Partial<AzureWorkItem> = {}): AzureWorkItem",
+        "createTestWorkItem": "(overrides: Partial<TestWorkItem> = {},): TestWorkItem",
+        "createAzureWorkItem": "(overrides: Partial<AzureWorkItem> = {},): AzureWorkItem",
         "createWorkItemsResponse": "(workItems: AzureWorkItem[])",
         "createWiqlResponse": "(workItems: AzureWorkItem[])",
         "createMCPResponse": "(text: string, isError = false)",
@@ -1171,12 +1139,7 @@
         "setupMockTimers": "()",
         "captureLogs": "()",
         "generateRandomString": "(length = 10): string",
-        "setupTestEnv": {
-          "calls": [
-            "forEach"
-          ],
-          "signature": "(vars: Record<string, string>)"
-        },
+        "setupTestEnv": "(vars: Record<string, string>)",
         "expectJsonStructure": {
           "calls": [
             "expectJsonStructure"
@@ -1209,15 +1172,14 @@
       "language": "typescript",
       "parsed": true,
       "imports": [
-        "@modelcontextprotocol/sdk/client/index.js",
-        "@modelcontextprotocol/sdk/client/stdio.js",
         "child_process",
-        "@modelcontextprotocol/sdk/types.js"
+        "@modelcontextprotocol/sdk/client/index.js",
+        "@modelcontextprotocol/sdk/client/stdio.js"
       ],
       "functions": {
-        "createTestMCPClient": "async (serverPath: string, args: string[] = []): Promise<TestMCPClient>",
-        "callToolWithTimeout": "async (client: TestMCPClient, toolName: string, args: any = {}, timeoutMs = 10000): Promise<CallToolResult>",
-        "waitForServerReady": "async (client: TestMCPClient, maxWaitMs = 5000): Promise<void>"
+        "createTestMCPClient": "async (serverPath: string, args: string[] = [],): Promise<TestMCPClient>",
+        "callToolWithTimeout": "async (client: TestMCPClient, toolName: string, args: any = {}, timeoutMs = 10000,): Promise<CallToolResult>",
+        "waitForServerReady": "async (client: TestMCPClient, maxWaitMs = 5000,): Promise<void>"
       },
       "classes": {
         "TestMCPClient": {
@@ -1264,6 +1226,10 @@
       "language": "sql",
       "parsed": false
     },
+    "prisma/migrations/20250822021023_fix_schema_and_add_missing_fields/migration.sql": {
+      "language": "sql",
+      "parsed": false
+    },
     "prisma/migrations/20250708131651_add_completion_tracking/migration.sql": {
       "language": "sql",
       "parsed": false
@@ -1271,9 +1237,9 @@
   },
   "dependency_graph": {
     "scripts/discover-and-migrate-schema.ts": [
+      "src/services/azure-devops.ts",
       "src/services/field-discovery.ts",
-      "src/services/schema-migration.ts",
-      "src/services/azure-devops.ts"
+      "src/services/schema-migration.ts"
     ],
     "scripts/init-database.ts": [
       "child_process",
@@ -1286,8 +1252,7 @@
       "@modelcontextprotocol/sdk/types.js"
     ],
     "src/mocks/prisma.mock.ts": [
-      "vitest",
-      "@prisma/client"
+      "vitest"
     ],
     "src/services/field-discovery.ts": [
       "child_process",
@@ -1303,9 +1268,9 @@
     ],
     "src/services/schema-migration.ts": [
       "child_process",
-      "util",
       "fs/promises",
-      "path"
+      "path",
+      "util"
     ],
     "src/services/auth.ts": [
       "child_process",
@@ -1318,11 +1283,10 @@
       "vitest"
     ],
     "tests/utils/mcp-client.ts": [
-      "@modelcontextprotocol/sdk/client/index.js",
-      "@modelcontextprotocol/sdk/client/stdio.js",
       "child_process",
-      "@modelcontextprotocol/sdk/types.js"
+      "@modelcontextprotocol/sdk/client/index.js",
+      "@modelcontextprotocol/sdk/client/stdio.js"
     ]
   },
-  "staleness_check": 1755212554.253709
+  "staleness_check": 1755225356.368969
 }

@@ -12,4 +12,7 @@ prisma/dev.db
 
 .logs
 
-coverage
+coverage/
+
+# Obsidian vault files
+.obsidian/

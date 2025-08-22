@@ -18,6 +18,7 @@ Azure DevOps Bot is a local MCP server that continuously syncs ALL Azure DevOps 
 ### User Personas
 
 **Kenny (Development Team Lead)** (30-45 years old)
+
 - **Role:** Senior Developer / Team Lead
 - **Context:** Manages sprint planning and team coordination for Customer Services Platform project
 - **Pain Points:** Azure DevOps web UI is slow, difficult to get comprehensive views, no way to quickly generate detailed reports

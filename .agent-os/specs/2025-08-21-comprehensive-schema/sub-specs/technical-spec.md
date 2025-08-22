@@ -17,10 +17,12 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Approach Options
 
 **Option A:** Manual Field Addition
+
 - Pros: Precise control over field types and naming, optimal database design
 - Cons: Requires extensive research of Azure DevOps fields, time-consuming, may miss fields
 
 **Option B:** Dynamic Schema Generation (Selected)
+
 - Pros: Automatically discovers all fields, future-proof, less manual work
 - Cons: Less control over field types, potential naming conflicts
 
@@ -34,17 +36,20 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Implementation Strategy
 
 ### Phase 1: Field Discovery
+
 1. Fetch sample work items with `az boards work-item show --expand all`
 2. Analyze JSON structure to identify all possible fields
 3. Map field types (string, number, boolean, date) based on sample data
 
 ### Phase 2: Schema Design
+
 1. Create comprehensive Prisma schema with all discovered fields
 2. Use optional fields with appropriate defaults to handle missing data
 3. Maintain existing field names for backward compatibility
 4. Add new indexes for commonly queried fields
 
 ### Phase 3: Migration and Sync Update
+
 1. Generate Prisma migration file
 2. Update database service to handle new fields
 3. Modify sync service to populate all fields from expanded Azure DevOps data
@@ -53,6 +58,6 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Risk Mitigation
 
 - **Field Type Conflicts**: Use String for unknown types, refine later
-- **Migration Failures**: Test migration on copy of production database first  
+- **Migration Failures**: Test migration on copy of production database first
 - **Performance Impact**: Add indexes incrementally based on usage patterns
 - **Data Loss**: rawJson field provides complete backup if field mapping fails

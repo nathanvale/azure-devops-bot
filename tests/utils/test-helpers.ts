@@ -42,9 +42,11 @@ export interface AzureWorkItem {
 }
 
 // Factory function to create test work items
-export function createTestWorkItem(overrides: Partial<TestWorkItem> = {}): TestWorkItem {
+export function createTestWorkItem(
+  overrides: Partial<TestWorkItem> = {},
+): TestWorkItem {
   const baseId = Math.floor(Math.random() * 10000) + 1000
-  
+
   return {
     id: baseId,
     azureId: baseId,
@@ -60,14 +62,16 @@ export function createTestWorkItem(overrides: Partial<TestWorkItem> = {}): TestW
     severity: null,
     description: 'A test work item for unit testing',
     lastSyncDate: new Date(),
-    ...overrides
+    ...overrides,
   }
 }
 
 // Factory function to create Azure DevOps work item format
-export function createAzureWorkItem(overrides: Partial<AzureWorkItem> = {}): AzureWorkItem {
+export function createAzureWorkItem(
+  overrides: Partial<AzureWorkItem> = {},
+): AzureWorkItem {
   const baseId = Math.floor(Math.random() * 10000) + 1000
-  
+
   return {
     id: baseId,
     rev: 1,
@@ -78,16 +82,16 @@ export function createAzureWorkItem(overrides: Partial<AzureWorkItem> = {}): Azu
       'System.WorkItemType': 'User Story',
       'System.AssignedTo': {
         displayName: 'Nathan Vale',
-        uniqueName: 'nathan.vale@example.com'
+        uniqueName: 'nathan.vale@example.com',
       },
       'System.CreatedDate': '2025-01-01T10:00:00Z',
       'System.ChangedDate': '2025-01-08T10:00:00Z',
       'System.AreaPath': 'Customer Services Platform',
       'System.IterationPath': 'Customer Services Platform\\Sprint 1',
       'Microsoft.VSTS.Common.Priority': 2,
-      'System.Description': 'A test work item for unit testing'
+      'System.Description': 'A test work item for unit testing',
     },
-    ...overrides
+    ...overrides,
   }
 }
 
@@ -95,7 +99,7 @@ export function createAzureWorkItem(overrides: Partial<AzureWorkItem> = {}): Azu
 export function createWorkItemsResponse(workItems: AzureWorkItem[]) {
   return {
     count: workItems.length,
-    value: workItems
+    value: workItems,
   }
 }
 
@@ -103,10 +107,10 @@ export function createWorkItemsResponse(workItems: AzureWorkItem[]) {
 export function createWiqlResponse(workItems: AzureWorkItem[]) {
   return {
     queryType: 'flat',
-    workItems: workItems.map(item => ({
+    workItems: workItems.map((item) => ({
       id: item.id,
-      url: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${item.id}`
-    }))
+      url: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${item.id}`,
+    })),
   }
 }
 
@@ -116,9 +120,9 @@ export function createMCPResponse(text: string, isError = false) {
     content: [
       {
         type: 'text' as const,
-        text: isError ? `Error: ${text}` : text
-      }
-    ]
+        text: isError ? `Error: ${text}` : text,
+      },
+    ],
   }
 }
 
@@ -126,23 +130,23 @@ export function createMCPResponse(text: string, isError = false) {
 export async function waitFor(
   condition: () => boolean | Promise<boolean>,
   timeoutMs = 5000,
-  intervalMs = 100
+  intervalMs = 100,
 ): Promise<void> {
   const startTime = Date.now()
-  
+
   while (Date.now() - startTime < timeoutMs) {
     if (await condition()) {
       return
     }
-    await new Promise(resolve => setTimeout(resolve, intervalMs))
+    await new Promise((resolve) => setTimeout(resolve, intervalMs))
   }
-  
+
   throw new Error(`Condition not met within ${timeoutMs}ms`)
 }
 
 // Helper to create a delay promise
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // Mock timer helpers
@@ -150,7 +154,7 @@ export function setupMockTimers() {
   vi.useFakeTimers()
   return {
     advance: (ms: number) => vi.advanceTimersByTime(ms),
-    reset: () => vi.useRealTimers()
+    reset: () => vi.useRealTimers(),
   }
 }
 
@@ -159,19 +163,19 @@ export function captureLogs() {
   const logs: string[] = []
   const errors: string[] = []
   const warns: string[] = []
-  
+
   const logSpy = vi.spyOn(console, 'log').mockImplementation((message) => {
     logs.push(String(message))
   })
-  
+
   const errorSpy = vi.spyOn(console, 'error').mockImplementation((message) => {
     errors.push(String(message))
   })
-  
+
   const warnSpy = vi.spyOn(console, 'warn').mockImplementation((message) => {
     warns.push(String(message))
   })
-  
+
   return {
     logs,
     errors,
@@ -180,7 +184,7 @@ export function captureLogs() {
       logSpy.mockRestore()
       errorSpy.mockRestore()
       warnSpy.mockRestore()
-    }
+    },
   }
 }
 
@@ -197,14 +201,14 @@ export function generateRandomString(length = 10): string {
 // Helper to create test environment variables
 export function setupTestEnv(vars: Record<string, string>) {
   const originalEnv = { ...process.env }
-  
+
   Object.entries(vars).forEach(([key, value]) => {
     vi.stubEnv(key, value)
   })
-  
+
   return () => {
     // Restore original environment
-    Object.keys(vars).forEach(key => {
+    Object.keys(vars).forEach((key) => {
       if (originalEnv[key] !== undefined) {
         process.env[key] = originalEnv[key]
       } else {
@@ -220,7 +224,7 @@ export function expectJsonStructure(actual: any, expected: any): void {
     if (actual === null || typeof actual !== 'object') {
       throw new Error('Expected object but got ' + typeof actual)
     }
-    
+
     for (const [key, value] of Object.entries(expected)) {
       if (!(key in actual)) {
         throw new Error(`Expected property ${key} to exist`)
@@ -229,7 +233,9 @@ export function expectJsonStructure(actual: any, expected: any): void {
         expectJsonStructure(actual[key], value)
       } else {
         if (typeof actual[key] !== typeof value) {
-          throw new Error(`Expected ${key} to be ${typeof value} but got ${typeof actual[key]}`)
+          throw new Error(
+            `Expected ${key} to be ${typeof value} but got ${typeof actual[key]}`,
+          )
         }
       }
     }

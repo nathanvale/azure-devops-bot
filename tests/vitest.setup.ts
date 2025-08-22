@@ -1,11 +1,12 @@
 import { beforeAll, afterEach, afterAll, vi } from 'vitest'
-import { server } from '@/mocks/server'
+
 import { resetPrismaMocks, setupPrismaDefaults } from '@/mocks/prisma.mock'
+import { server } from '@/mocks/server'
 
 // Start MSW server before all tests
 beforeAll(() => {
-  server.listen({ 
-    onUnhandledRequest: 'error'
+  server.listen({
+    onUnhandledRequest: 'error',
   })
 })
 
@@ -13,13 +14,13 @@ beforeAll(() => {
 afterEach(() => {
   // Reset MSW handlers to default
   server.resetHandlers()
-  
+
   // Reset all Prisma mocks
   resetPrismaMocks()
-  
+
   // Reset all other mocks
   vi.resetAllMocks()
-  
+
   // Setup default Prisma behavior for next test
   setupPrismaDefaults()
 })

@@ -43,11 +43,13 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 ## Data Processing Pipeline
 
 ### Step 1: Work Item ID Collection
+
 - Continue using current `az boards work-item list` for ID discovery
 - Wrapped with resilience adapter using list policy (3 retries, 10s timeout)
 - Extract IDs for detailed fetching
 
-### Step 2: Parallel Detailed Fetching  
+### Step 2: Parallel Detailed Fetching
+
 - Process IDs in batches with configurable concurrency
 - Each `az boards work-item show --expand all` wrapped with resilience adapter
 - Resilience patterns handle Azure CLI failures, timeouts, and Azure DevOps outages
@@ -55,12 +57,14 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 - Individual failures logged but don't block other fetches
 
 ### Step 3: Data Transformation
+
 - Parse complete JSON response from Azure CLI
 - Map all available fields to database schema
 - Store raw JSON response in `rawJson` field
 - Populate all structured fields with parsed data
 
 ### Step 4: Database Storage
+
 - Update existing records or insert new ones
 - Maintain referential integrity
 - Update sync timestamps
@@ -68,11 +72,13 @@ This is the API specification for the spec detailed in @.agent-os/specs/2025-08-
 ## Error Handling with Resilience
 
 ### Circuit Breaker States
+
 - **Closed**: Normal operation, requests pass through
 - **Open**: Fast failure during Azure DevOps outages, requests fail immediately
 - **Half-Open**: Single probe request to test service recovery
 
 ### Error Classification
+
 - **Retryable**: Network timeouts, temporary CLI failures, rate limiting
 - **Non-Retryable**: Authentication errors, work item not found, malformed responses
 - **Circuit Breaking**: Sustained failure patterns that indicate service degradation

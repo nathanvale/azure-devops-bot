@@ -5,12 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Core Commands
+
 - `pnpm dev` - Run CLI version (requires `AZURE_DEVOPS_USER_EMAILS` env var)
 - `pnpm mcp --emails=user@domain.com` - Run MCP server mode
 - `pnpm build` - TypeScript compilation
 - `pnpm start` - Run compiled version
 
 ### Testing
+
 - `pnpm test` - Run all unit tests (vitest)
 - `pnpm test:watch` - Run tests in watch mode
 - `pnpm test:coverage` - Run tests with coverage report
@@ -19,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm test:ci` - Run tests in CI mode (single run with coverage)
 
 ### Database
+
 - `pnpm db:reset` - Reset database (deletes data and re-runs migrations)
 - `pnpm prisma migrate deploy` - Run database migrations
 
@@ -53,6 +56,7 @@ This is an **Azure DevOps MCP (Model Context Protocol) server** that provides na
 ### Database Schema
 
 Single `WorkItem` model with indexes on:
+
 - `type` (Bug, User Story, Task, etc.)
 - `state` (Active, Closed, etc.)
 - `assignedTo` (email addresses)
@@ -61,11 +65,13 @@ Single `WorkItem` model with indexes on:
 ## Configuration
 
 ### Environment Variables
+
 - `AZURE_DEVOPS_USER_EMAILS` - Required for CLI mode (comma-separated emails)
 - `DATABASE_URL` - SQLite database path (default: `file:./dev.db`)
 - `AZURE_DEVOPS_SYNC_INTERVAL_MINUTES` - Sync interval (default: 5)
 
 ### Azure DevOps Configuration
+
 - **Organization**: `fwcdev` (hardcoded)
 - **Project**: `Customer Services Platform` (hardcoded)
 - **Authentication**: Azure CLI (`az login`)
@@ -80,21 +86,25 @@ Single `WorkItem` model with indexes on:
 ## Development Notes
 
 ### Key Patterns
+
 - Services use dependency injection
 - All async operations use proper error handling
 - Database operations use Prisma with proper transactions
 - MCP tools return structured JSON responses
 
 ### Email Configuration
+
 - **MCP Mode**: `--emails=user1@domain.com,user2@domain.com`
 - **CLI Mode**: `AZURE_DEVOPS_USER_EMAILS=user1@domain.com,user2@domain.com`
 
 ### Error Handling
+
 - Authentication errors guide users to run `az login`
 - Email validation occurs on startup
 - Database migrations run automatically
 
 ### File Structure
+
 - `src/index.ts` - CLI entry point
 - `src/mcp-server.ts` - MCP server entry point
 - `src/services/` - Core business logic
@@ -105,18 +115,21 @@ Single `WorkItem` model with indexes on:
 ## Agent OS Documentation
 
 ### Product Context
+
 - **Mission & Vision:** @.agent-os/product/mission.md
 - **Technical Architecture:** @.agent-os/product/tech-stack.md
 - **Development Roadmap:** @.agent-os/product/roadmap.md
 - **Decision History:** @.agent-os/product/decisions.md
 
 ### Development Standards
+
 - **Code Style:** @~/.agent-os/standards/code-style.md
 - **Best Practices:** @~/.agent-os/standards/best-practices.md
 
 ### Current Development Phase
 
 **Phase 1: Always-On Data Mirror** - Transform into comprehensive, always-available data mirror
+
 - Comprehensive metadata schema ✅ (completed)
 - Full data sync with `--expand all` (in progress)
 - PM2 always-on service (pending)
@@ -134,7 +147,7 @@ When working on this codebase:
 ### Key Decisions
 
 - **Local-Only**: No network dependencies, SQLite storage only
-- **Always-On**: PM2 process management for 24/7 availability  
+- **Always-On**: PM2 process management for 24/7 availability
 - **Complete Data**: Store ALL Azure DevOps fields + raw JSON backup
 - **AI-Optimized**: Structured JSON output for agent consumption
 - **No NLP**: Remove semantic search, let other agents handle natural language

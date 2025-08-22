@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { SyncService } from '../services/sync-service'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+
+import { createTestWorkItem } from '../../tests/utils/test-helpers'
 import { DatabaseService } from '../services/database'
 import { QueryEngine } from '../services/query-engine'
-import { createTestWorkItem } from '../../tests/utils/test-helpers'
+import { SyncService } from '../services/sync-service'
 import { MockedFunction } from '../types/test-utils'
 
 // Mock all dependencies
@@ -28,8 +29,12 @@ describe('AzureDevOpsMCPServer', () => {
 
     // Mock process.argv to include email parameter
     originalArgv = process.argv
-    process.argv = ['node', 'script.js', '--emails=test@example.com,test2@example.com']
-    
+    process.argv = [
+      'node',
+      'script.js',
+      '--emails=test@example.com,test2@example.com',
+    ]
+
     // Mock process.exit to prevent test termination
     vi.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit called')
@@ -39,7 +44,7 @@ describe('AzureDevOpsMCPServer', () => {
     mockMCPServer = {
       setRequestHandler: vi.fn(),
       connect: vi.fn(),
-      close: vi.fn()
+      close: vi.fn(),
     }
     vi.mocked(Server).mockImplementation(() => mockMCPServer)
 
@@ -68,7 +73,9 @@ describe('AzureDevOpsMCPServer', () => {
     mockDb.getWorkItemsByStateForUsers = vi.fn().mockResolvedValue([])
     mockDb.getWorkItemsByTypeForUsers = vi.fn().mockResolvedValue([])
 
-    mockQueryEngine.processQuery = vi.fn().mockResolvedValue('Mock query response')
+    mockQueryEngine.processQuery = vi
+      .fn()
+      .mockResolvedValue('Mock query response')
   })
 
   afterEach(() => {
@@ -88,7 +95,7 @@ describe('AzureDevOpsMCPServer', () => {
           capabilities: {
             tools: {},
           },
-        }
+        },
       )
     })
 
@@ -111,13 +118,13 @@ describe('AzureDevOpsMCPServer', () => {
         // Check if this is a Zod schema with the correct structure
         return schema && schema._def && schema._def.typeName === 'ZodObject'
       })
-      
+
       expect(listToolsCall).toBeDefined()
     })
 
     it('should register CallToolRequestSchema handler', () => {
       const calls = mockMCPServer.setRequestHandler.mock.calls
-      
+
       expect(calls).toHaveLength(2)
       expect(calls[0]).toBeDefined()
       expect(calls[1]).toBeDefined()
@@ -137,7 +144,7 @@ describe('AzureDevOpsMCPServer', () => {
       const result = await listToolsHandler()
 
       expect(result.tools).toHaveLength(4)
-      
+
       const toolNames = result.tools.map((tool: any) => tool.name)
       expect(toolNames).toContain('get_work_items')
       expect(toolNames).toContain('query_work')
@@ -162,14 +169,23 @@ describe('AzureDevOpsMCPServer', () => {
 
       expect(tool.description).toContain('Get all work items')
       expect(tool.inputSchema.properties).toHaveProperty('filter')
-      expect(tool.inputSchema.properties.filter.enum).toEqual(['active', 'open', 'user-stories', 'bugs', 'tasks', 'all'])
+      expect(tool.inputSchema.properties.filter.enum).toEqual([
+        'active',
+        'open',
+        'user-stories',
+        'bugs',
+        'tasks',
+        'all',
+      ])
     })
 
     it('should define query_work tool correctly', async () => {
       const result = await listToolsHandler()
       const tool = result.tools.find((t: any) => t.name === 'query_work')
 
-      expect(tool.description).toContain('Query work items using natural language')
+      expect(tool.description).toContain(
+        'Query work items using natural language',
+      )
       expect(tool.inputSchema.properties).toHaveProperty('query')
       expect(tool.inputSchema.required).toContain('query')
     })
@@ -178,7 +194,9 @@ describe('AzureDevOpsMCPServer', () => {
       const result = await listToolsHandler()
       const tool = result.tools.find((t: any) => t.name === 'sync_data')
 
-      expect(tool.description).toContain('Manually sync all work items with detailed metadata')
+      expect(tool.description).toContain(
+        'Manually sync all work items with detailed metadata',
+      )
       expect(tool.inputSchema.properties).toHaveProperty('concurrency')
     })
 
@@ -198,7 +216,7 @@ describe('AzureDevOpsMCPServer', () => {
 
     beforeEach(() => {
       const calls = mockMCPServer.setRequestHandler.mock.calls
-      // The second call should be the CallToolRequestSchema handler  
+      // The second call should be the CallToolRequestSchema handler
       callToolHandler = calls[1][1]
     })
 
@@ -210,11 +228,14 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: { filter: 'active' }
-          }
+            arguments: { filter: 'active' },
+          },
         })
 
-        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('Active', ['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith(
+          'Active',
+          ['test@example.com', 'test2@example.com'],
+        )
         expect(result.content[0].type).toBe('text')
         const parsedResult = JSON.parse(result.content[0].text)
         expect(parsedResult).toHaveLength(1)
@@ -229,7 +250,7 @@ describe('AzureDevOpsMCPServer', () => {
           iterationPath: mockItems[0].iterationPath,
           priority: mockItems[0].priority,
           severity: mockItems[0].severity,
-          description: mockItems[0].description
+          description: mockItems[0].description,
         })
       })
 
@@ -238,23 +259,34 @@ describe('AzureDevOpsMCPServer', () => {
         const activeItems = [createTestWorkItem({ state: 'Active' })]
         const inProgressItems = [createTestWorkItem({ state: 'In Progress' })]
 
-        mockDb.getWorkItemsByStateForUsers.mockImplementation((state: string, emails: string[]) => {
-          if (state === 'New') return Promise.resolve(newItems)
-          if (state === 'Active') return Promise.resolve(activeItems)
-          if (state === 'In Progress') return Promise.resolve(inProgressItems)
-          return Promise.resolve([])
-        })
+        mockDb.getWorkItemsByStateForUsers.mockImplementation(
+          (state: string, emails: string[]) => {
+            if (state === 'New') return Promise.resolve(newItems)
+            if (state === 'Active') return Promise.resolve(activeItems)
+            if (state === 'In Progress') return Promise.resolve(inProgressItems)
+            return Promise.resolve([])
+          },
+        )
 
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: { filter: 'open' }
-          }
+            arguments: { filter: 'open' },
+          },
         })
 
-        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('New', ['test@example.com', 'test2@example.com'])
-        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('Active', ['test@example.com', 'test2@example.com'])
-        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('In Progress', ['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('New', [
+          'test@example.com',
+          'test2@example.com',
+        ])
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith(
+          'Active',
+          ['test@example.com', 'test2@example.com'],
+        )
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith(
+          'In Progress',
+          ['test@example.com', 'test2@example.com'],
+        )
 
         const returnedItems = JSON.parse(result.content[0].text)
         expect(returnedItems).toHaveLength(3)
@@ -267,11 +299,14 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: { filter: 'user-stories' }
-          }
+            arguments: { filter: 'user-stories' },
+          },
         })
 
-        expect(mockDb.getWorkItemsByTypeForUsers).toHaveBeenCalledWith('User Story', ['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsByTypeForUsers).toHaveBeenCalledWith(
+          'User Story',
+          ['test@example.com', 'test2@example.com'],
+        )
         const parsedResult = JSON.parse(result.content[0].text)
         expect(parsedResult).toHaveLength(1)
         expect(parsedResult[0]).toMatchObject({
@@ -285,7 +320,7 @@ describe('AzureDevOpsMCPServer', () => {
           iterationPath: userStories[0].iterationPath,
           priority: userStories[0].priority,
           severity: userStories[0].severity,
-          description: userStories[0].description
+          description: userStories[0].description,
         })
       })
 
@@ -296,11 +331,14 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: { filter: 'all' }
-          }
+            arguments: { filter: 'all' },
+          },
         })
 
-        expect(mockDb.getWorkItemsForUsers).toHaveBeenCalledWith(['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsForUsers).toHaveBeenCalledWith([
+          'test@example.com',
+          'test2@example.com',
+        ])
         const parsedResult = JSON.parse(result.content[0].text)
         expect(parsedResult).toHaveLength(1)
         expect(parsedResult[0]).toMatchObject({
@@ -314,7 +352,7 @@ describe('AzureDevOpsMCPServer', () => {
           iterationPath: allItems[0].iterationPath,
           priority: allItems[0].priority,
           severity: allItems[0].severity,
-          description: allItems[0].description
+          description: allItems[0].description,
         })
       })
 
@@ -325,11 +363,14 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: { filter: 'bugs' }
-          }
+            arguments: { filter: 'bugs' },
+          },
         })
 
-        expect(mockDb.getWorkItemsByTypeForUsers).toHaveBeenCalledWith('Bug', ['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsByTypeForUsers).toHaveBeenCalledWith('Bug', [
+          'test@example.com',
+          'test2@example.com',
+        ])
         expect(result.content[0].text).toBe(JSON.stringify(bugs, null, 2))
       })
 
@@ -340,11 +381,14 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: { filter: 'tasks' }
-          }
+            arguments: { filter: 'tasks' },
+          },
         })
 
-        expect(mockDb.getWorkItemsByTypeForUsers).toHaveBeenCalledWith('Task', ['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsByTypeForUsers).toHaveBeenCalledWith('Task', [
+          'test@example.com',
+          'test2@example.com',
+        ])
         expect(result.content[0].text).toBe(JSON.stringify(tasks, null, 2))
       })
 
@@ -355,44 +399,59 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
-        expect(mockDb.getWorkItemsForUsers).toHaveBeenCalledWith(['test@example.com', 'test2@example.com'])
+        expect(mockDb.getWorkItemsForUsers).toHaveBeenCalledWith([
+          'test@example.com',
+          'test2@example.com',
+        ])
       })
     })
 
     describe('query_work tool', () => {
       it('should process natural language queries', async () => {
         const activeItems = [{ id: 1, title: 'Active Item', state: 'Active' }]
-        const inProgressItems = [{ id: 2, title: 'In Progress Item', state: 'In Progress' }]
+        const inProgressItems = [
+          { id: 2, title: 'In Progress Item', state: 'In Progress' },
+        ]
         const expectedItems = [...activeItems, ...inProgressItems]
-        
-        mockDb.getWorkItemsByStateForUsers.mockImplementation((state: string) => {
-          if (state === 'Active') return Promise.resolve(activeItems)
-          if (state === 'In Progress') return Promise.resolve(inProgressItems)
-          return Promise.resolve([])
-        })
+
+        mockDb.getWorkItemsByStateForUsers.mockImplementation(
+          (state: string) => {
+            if (state === 'Active') return Promise.resolve(activeItems)
+            if (state === 'In Progress') return Promise.resolve(inProgressItems)
+            return Promise.resolve([])
+          },
+        )
 
         const result = await callToolHandler({
           params: {
             name: 'query_work',
-            arguments: { query: 'show me my active work' }
-          }
+            arguments: { query: 'show me my active work' },
+          },
         })
 
-        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('Active', ['test@example.com', 'test2@example.com'])
-        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith('In Progress', ['test@example.com', 'test2@example.com'])
-        expect(result.content[0].text).toBe(JSON.stringify(expectedItems, null, 2))
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith(
+          'Active',
+          ['test@example.com', 'test2@example.com'],
+        )
+        expect(mockDb.getWorkItemsByStateForUsers).toHaveBeenCalledWith(
+          'In Progress',
+          ['test@example.com', 'test2@example.com'],
+        )
+        expect(result.content[0].text).toBe(
+          JSON.stringify(expectedItems, null, 2),
+        )
       })
 
       it('should handle missing query argument', async () => {
         const result = await callToolHandler({
           params: {
             name: 'query_work',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
         expect(result.content[0].text).toContain('Error')
@@ -400,13 +459,15 @@ describe('AzureDevOpsMCPServer', () => {
       })
 
       it('should handle database errors', async () => {
-        mockDb.getWorkItemsForUsers.mockRejectedValue(new Error('Database failed'))
+        mockDb.getWorkItemsForUsers.mockRejectedValue(
+          new Error('Database failed'),
+        )
 
         const result = await callToolHandler({
           params: {
             name: 'query_work',
-            arguments: { query: 'test query' }
-          }
+            arguments: { query: 'test query' },
+          },
         })
 
         expect(result.content[0].text).toContain('Error')
@@ -421,22 +482,26 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'sync_data',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
         expect(mockSyncService.performSyncDetailed).toHaveBeenCalledTimes(1)
-        expect(result.content[0].text).toBe('Successfully synced work items with detailed metadata from Azure DevOps (concurrency: 5)')
+        expect(result.content[0].text).toBe(
+          'Successfully synced work items with detailed metadata from Azure DevOps (concurrency: 5)',
+        )
       })
 
       it('should handle sync errors', async () => {
-        mockSyncService.performSyncDetailed.mockRejectedValue(new Error('Sync failed'))
+        mockSyncService.performSyncDetailed.mockRejectedValue(
+          new Error('Sync failed'),
+        )
 
         const result = await callToolHandler({
           params: {
             name: 'sync_data',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
         expect(result.content[0].text).toContain('Error')
@@ -449,19 +514,21 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_item_url',
-            arguments: { id: 1234 }
-          }
+            arguments: { id: 1234 },
+          },
         })
 
-        expect(result.content[0].text).toBe('https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234')
+        expect(result.content[0].text).toBe(
+          'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
+        )
       })
 
       it('should handle missing id argument', async () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_item_url',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
         expect(result.content[0].text).toContain('Error')
@@ -472,8 +539,8 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'get_work_item_url',
-            arguments: { id: 5678 }
-          }
+            arguments: { id: 5678 },
+          },
         })
 
         expect(result.content[0].text).toContain('5678')
@@ -485,8 +552,8 @@ describe('AzureDevOpsMCPServer', () => {
         const result = await callToolHandler({
           params: {
             name: 'unknown_tool',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
         expect(result.content[0].text).toContain('Error')
@@ -494,13 +561,15 @@ describe('AzureDevOpsMCPServer', () => {
       })
 
       it('should wrap all errors in proper response format', async () => {
-        mockDb.getWorkItemsForUsers.mockRejectedValue(new Error('Database error'))
+        mockDb.getWorkItemsForUsers.mockRejectedValue(
+          new Error('Database error'),
+        )
 
         const result = await callToolHandler({
           params: {
             name: 'get_work_items',
-            arguments: {}
-          }
+            arguments: {},
+          },
         })
 
         expect(result.content).toHaveLength(1)

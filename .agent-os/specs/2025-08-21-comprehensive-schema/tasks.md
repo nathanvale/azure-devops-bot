@@ -38,5 +38,5 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
 ## Spec Documentation
 
 - Technical Specification: @.agent-os/specs/2025-08-21-comprehensive-schema/sub-specs/technical-spec.md
-- Database Schema: @.agent-os/specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md  
+- Database Schema: @.agent-os/specs/2025-08-21-comprehensive-schema/sub-specs/database-schema.md
 - Tests Specification: @.agent-os/specs/2025-08-21-comprehensive-schema/sub-specs/tests.md
