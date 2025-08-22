@@ -1,6 +1,6 @@
 import { exec } from 'child_process'
-import { readFile, writeFile } from 'fs/promises'
-import path from 'path'
+import { writeFile } from 'fs/promises'
+import * as path from 'path'
 import { promisify } from 'util'
 
 import { FieldDiscoveryService } from './field-discovery.js'
@@ -114,8 +114,9 @@ export class SchemaMigrationService {
 
       // Extract field names from the model
       const modelContent = workItemModelMatch[1]!
-      const fieldMatches = modelContent.matchAll(/(\w+)\s+\w+/g)
-      for (const match of fieldMatches) {
+      const fieldRegex = /(\w+)\s+\w+/g
+      let match
+      while ((match = fieldRegex.exec(modelContent)) !== null) {
         if (match[1] && !match[1].startsWith('@@')) {
           existingFields.push(match[1])
         }
@@ -372,7 +373,7 @@ model WorkItemComment {
   /**
    * Test migration by applying and rolling back
    */
-  async testMigration(migrationSql: string): Promise<MigrationTestResult> {
+  async testMigration(_migrationSql: string): Promise<MigrationTestResult> {
     let migrationApplied = false
     let rollbackSuccessful = false
 
@@ -419,7 +420,9 @@ model WorkItemComment {
    * Validate data integrity after migration
    */
   validateDataIntegrity(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     preMigrationData: any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     postMigrationData: any[],
   ): DataIntegrityResult {
     const missingRecords: number[] = []

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 import type { DatabaseService } from '../database'
 
-import { createTestWorkItem } from '../../../tests/utils/test-helpers'
+import { createPrismaWorkItem } from '../../../tests/utils/test-helpers'
 import { QueryEngine } from '../query-engine'
 
 // Mock the DatabaseService
@@ -23,14 +23,19 @@ describe('QueryEngine', () => {
       getAllWorkItems,
       getWorkItemsForUsers: vi
         .fn()
-        .mockImplementation((emails) => getAllWorkItems()),
+        .mockImplementation((_emails) => getAllWorkItems()),
       getWorkItemsByStateForUsers: vi
         .fn()
-        .mockImplementation((state, emails) => getWorkItemsByState(state)),
+        .mockImplementation((state, _emails) => getWorkItemsByState(state)),
       getWorkItemsByTypeForUsers: vi
         .fn()
-        .mockImplementation((type, emails) => getWorkItemsByType(type)),
+        .mockImplementation((type, _emails) => getWorkItemsByType(type)),
     } as any
+
+    // Make the mock functions accessible for assertions
+    mockDb.getAllWorkItems = getAllWorkItems
+    mockDb.getWorkItemsByState = getWorkItemsByState
+    mockDb.getWorkItemsByType = getWorkItemsByType
 
     queryEngine = new QueryEngine(mockDb)
   })
@@ -39,17 +44,17 @@ describe('QueryEngine', () => {
     describe('current work queries', () => {
       it('should process "today" queries', async () => {
         const activeItems = [
-          createTestWorkItem({ state: 'Active', title: 'Active Item' }),
+          createPrismaWorkItem({ state: 'Active', title: 'Active Item' }),
         ]
         const inProgressItems = [
-          createTestWorkItem({
+          createPrismaWorkItem({
             state: 'In Progress',
             title: 'In Progress Item',
           }),
         ]
 
-        mockDb.getWorkItemsByStateForUsers.mockImplementation(
-          (state: string, emails: string[]) => {
+        ;(mockDb.getWorkItemsByStateForUsers as any).mockImplementation(
+          (state: string, _emails: string[]) => {
             if (state === 'Active') return Promise.resolve(activeItems)
             if (state === 'In Progress') return Promise.resolve(inProgressItems)
             return Promise.resolve([])
@@ -74,8 +79,8 @@ describe('QueryEngine', () => {
       })
 
       it('should process "working" queries', async () => {
-        const activeItems = [createTestWorkItem({ state: 'Active' })]
-        mockDb.getWorkItemsByState.mockResolvedValue(activeItems)
+        const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+        ;(mockDb.getWorkItemsByState as any).mockResolvedValue(activeItems)
 
         const result = await queryEngine.processQuery('what am I working on?')
 
@@ -83,8 +88,8 @@ describe('QueryEngine', () => {
       })
 
       it('should process "current" queries', async () => {
-        const activeItems = [createTestWorkItem({ state: 'Active' })]
-        mockDb.getWorkItemsByState.mockResolvedValue(activeItems)
+        const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+        ;(mockDb.getWorkItemsByState as any).mockResolvedValue(activeItems)
 
         const result = await queryEngine.processQuery(
           'show me my current tasks',
@@ -94,7 +99,7 @@ describe('QueryEngine', () => {
       })
 
       it('should handle empty current work', async () => {
-        mockDb.getWorkItemsByState.mockResolvedValue([])
+        ;(mockDb.getWorkItemsByState as any).mockResolvedValue([])
 
         const result = await queryEngine.processQuery(
           'what am I working on today?',
@@ -107,24 +112,26 @@ describe('QueryEngine', () => {
     describe('open work queries', () => {
       it('should process "open" queries', async () => {
         const newItems = [
-          createTestWorkItem({ state: 'New', title: 'New Item' }),
+          createPrismaWorkItem({ state: 'New', title: 'New Item' }),
         ]
         const activeItems = [
-          createTestWorkItem({ state: 'Active', title: 'Active Item' }),
+          createPrismaWorkItem({ state: 'Active', title: 'Active Item' }),
         ]
         const inProgressItems = [
-          createTestWorkItem({
+          createPrismaWorkItem({
             state: 'In Progress',
             title: 'In Progress Item',
           }),
         ]
 
-        mockDb.getWorkItemsByState.mockImplementation((state: string) => {
-          if (state === 'New') return Promise.resolve(newItems)
-          if (state === 'Active') return Promise.resolve(activeItems)
-          if (state === 'In Progress') return Promise.resolve(inProgressItems)
-          return Promise.resolve([])
-        })
+        ;(mockDb.getWorkItemsByState as any).mockImplementation(
+          (state: string) => {
+            if (state === 'New') return Promise.resolve(newItems)
+            if (state === 'Active') return Promise.resolve(activeItems)
+            if (state === 'In Progress') return Promise.resolve(inProgressItems)
+            return Promise.resolve([])
+          },
+        )
 
         const result = await queryEngine.processQuery('show me open work items')
 
@@ -138,8 +145,8 @@ describe('QueryEngine', () => {
       })
 
       it('should process "active" queries', async () => {
-        const activeItems = [createTestWorkItem({ state: 'Active' })]
-        mockDb.getWorkItemsByState.mockResolvedValue(activeItems)
+        const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+        ;(mockDb.getWorkItemsByState as any).mockResolvedValue(activeItems)
 
         const result = await queryEngine.processQuery('show me active items')
 
@@ -147,7 +154,7 @@ describe('QueryEngine', () => {
       })
 
       it('should handle empty open work', async () => {
-        mockDb.getWorkItemsByState.mockResolvedValue([])
+        ;(mockDb.getWorkItemsByState as any).mockResolvedValue([])
 
         const result = await queryEngine.processQuery('show me open work')
 
@@ -158,11 +165,11 @@ describe('QueryEngine', () => {
     describe('user story queries', () => {
       it('should process "user story" queries', async () => {
         const userStories = [
-          createTestWorkItem({ type: 'User Story', title: 'User Story 1' }),
-          createTestWorkItem({ type: 'User Story', title: 'User Story 2' }),
+          createPrismaWorkItem({ type: 'User Story', title: 'User Story 1' }),
+          createPrismaWorkItem({ type: 'User Story', title: 'User Story 2' }),
         ]
 
-        mockDb.getWorkItemsByType.mockResolvedValue(userStories)
+        ;(mockDb.getWorkItemsByType as any).mockResolvedValue(userStories)
 
         const result = await queryEngine.processQuery('show me user stories')
 
@@ -173,8 +180,8 @@ describe('QueryEngine', () => {
       })
 
       it('should process "stories" queries', async () => {
-        const userStories = [createTestWorkItem({ type: 'User Story' })]
-        mockDb.getWorkItemsByType.mockResolvedValue(userStories)
+        const userStories = [createPrismaWorkItem({ type: 'User Story' })]
+        ;(mockDb.getWorkItemsByType as any).mockResolvedValue(userStories)
 
         const result = await queryEngine.processQuery('what stories do I have?')
 
@@ -183,7 +190,7 @@ describe('QueryEngine', () => {
       })
 
       it('should handle empty user stories', async () => {
-        mockDb.getWorkItemsByType.mockResolvedValue([])
+        ;(mockDb.getWorkItemsByType as any).mockResolvedValue([])
 
         const result = await queryEngine.processQuery('show me user stories')
 
@@ -194,11 +201,11 @@ describe('QueryEngine', () => {
     describe('backlog summary queries', () => {
       it('should process "backlog" queries', async () => {
         const allItems = [
-          createTestWorkItem({ title: 'Item 1' }),
-          createTestWorkItem({ title: 'Item 2' }),
+          createPrismaWorkItem({ title: 'Item 1' }),
+          createPrismaWorkItem({ title: 'Item 2' }),
         ]
 
-        mockDb.getAllWorkItems.mockResolvedValue(allItems)
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
         const result = await queryEngine.processQuery('show me my backlog')
 
@@ -209,8 +216,8 @@ describe('QueryEngine', () => {
       })
 
       it('should process "summary" queries', async () => {
-        const allItems = [createTestWorkItem()]
-        mockDb.getAllWorkItems.mockResolvedValue(allItems)
+        const allItems = [createPrismaWorkItem()]
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
         const result = await queryEngine.processQuery('give me a summary')
 
@@ -219,8 +226,8 @@ describe('QueryEngine', () => {
       })
 
       it('should process "all" queries', async () => {
-        const allItems = [createTestWorkItem()]
-        mockDb.getAllWorkItems.mockResolvedValue(allItems)
+        const allItems = [createPrismaWorkItem()]
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
         const result = await queryEngine.processQuery('show me all work items')
 
@@ -229,7 +236,7 @@ describe('QueryEngine', () => {
       })
 
       it('should handle empty backlog', async () => {
-        mockDb.getAllWorkItems.mockResolvedValue([])
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue([])
 
         const result = await queryEngine.processQuery('show me my backlog')
 
@@ -239,8 +246,8 @@ describe('QueryEngine', () => {
 
     describe('default behavior', () => {
       it('should default to backlog summary for unrecognized queries', async () => {
-        const allItems = [createTestWorkItem({ title: 'Default Item' })]
-        mockDb.getAllWorkItems.mockResolvedValue(allItems)
+        const allItems = [createPrismaWorkItem({ title: 'Default Item' })]
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
         const result = await queryEngine.processQuery('some random query')
 
@@ -250,8 +257,8 @@ describe('QueryEngine', () => {
       })
 
       it('should handle empty queries by showing backlog', async () => {
-        const allItems = [createTestWorkItem()]
-        mockDb.getAllWorkItems.mockResolvedValue(allItems)
+        const allItems = [createPrismaWorkItem()]
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
         const result = await queryEngine.processQuery('')
 
@@ -260,8 +267,8 @@ describe('QueryEngine', () => {
       })
 
       it('should trim and normalize queries', async () => {
-        const allItems = [createTestWorkItem()]
-        mockDb.getAllWorkItems.mockResolvedValue(allItems)
+        const allItems = [createPrismaWorkItem()]
+        ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
         const result = await queryEngine.processQuery('  SUMMARY  ')
 
@@ -272,8 +279,8 @@ describe('QueryEngine', () => {
 
     describe('case sensitivity', () => {
       it('should handle uppercase queries', async () => {
-        const activeItems = [createTestWorkItem({ state: 'Active' })]
-        mockDb.getWorkItemsByState.mockResolvedValue(activeItems)
+        const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+        ;(mockDb.getWorkItemsByState as any).mockResolvedValue(activeItems)
 
         const result = await queryEngine.processQuery('SHOW ME ACTIVE ITEMS')
 
@@ -281,8 +288,8 @@ describe('QueryEngine', () => {
       })
 
       it('should handle mixed case queries', async () => {
-        const userStories = [createTestWorkItem({ type: 'User Story' })]
-        mockDb.getWorkItemsByType.mockResolvedValue(userStories)
+        const userStories = [createPrismaWorkItem({ type: 'User Story' })]
+        ;(mockDb.getWorkItemsByType as any).mockResolvedValue(userStories)
 
         const result = await queryEngine.processQuery('Show Me User Stories')
 
@@ -292,7 +299,7 @@ describe('QueryEngine', () => {
 
     describe('keyword matching', () => {
       it('should match partial keywords', async () => {
-        const activeItems = [createTestWorkItem({ state: 'Active' })]
+        const activeItems = [createPrismaWorkItem({ state: 'Active' })]
         vi.mocked(mockDb.getWorkItemsByState).mockImplementation(
           (state: string) => {
             if (state === 'Active') return Promise.resolve(activeItems)
@@ -309,14 +316,16 @@ describe('QueryEngine', () => {
       })
 
       it('should match multiple keywords in same query', async () => {
-        const activeItems = [createTestWorkItem({ state: 'Active' })]
-        const inProgressItems = [createTestWorkItem({ state: 'In Progress' })]
+        const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+        const inProgressItems = [createPrismaWorkItem({ state: 'In Progress' })]
 
-        mockDb.getWorkItemsByState.mockImplementation((state: string) => {
-          if (state === 'Active') return Promise.resolve(activeItems)
-          if (state === 'In Progress') return Promise.resolve(inProgressItems)
-          return Promise.resolve([])
-        })
+        ;(mockDb.getWorkItemsByState as any).mockImplementation(
+          (state: string) => {
+            if (state === 'Active') return Promise.resolve(activeItems)
+            if (state === 'In Progress') return Promise.resolve(inProgressItems)
+            return Promise.resolve([])
+          },
+        )
 
         // This should match "today" and "current" keywords
         const result = await queryEngine.processQuery(
@@ -329,7 +338,9 @@ describe('QueryEngine', () => {
 
     describe('error handling', () => {
       it('should handle database errors gracefully', async () => {
-        mockDb.getAllWorkItems.mockRejectedValue(new Error('Database error'))
+        ;(mockDb.getAllWorkItems as any).mockRejectedValue(
+          new Error('Database error'),
+        )
 
         await expect(
           queryEngine.processQuery('show me all items'),
@@ -337,7 +348,7 @@ describe('QueryEngine', () => {
       })
 
       it('should handle errors from specific state queries', async () => {
-        mockDb.getWorkItemsByState.mockRejectedValue(
+        ;(mockDb.getWorkItemsByState as any).mockRejectedValue(
           new Error('State query failed'),
         )
 
@@ -347,7 +358,7 @@ describe('QueryEngine', () => {
       })
 
       it('should handle errors from type queries', async () => {
-        mockDb.getWorkItemsByType.mockRejectedValue(
+        ;(mockDb.getWorkItemsByType as any).mockRejectedValue(
           new Error('Type query failed'),
         )
 
@@ -361,42 +372,42 @@ describe('QueryEngine', () => {
   describe('formatWorkItems', () => {
     it('should format work items correctly', async () => {
       const testItems = [
-        createTestWorkItem({
+        createPrismaWorkItem({
           id: 1234,
           title: 'Test Item 1',
           state: 'Active',
-          azureUrl: 'https://dev.azure.com/test/1234',
+          azureUrl: 'https://dev.azure.com/fwcdev/_workitems/edit/1234',
         }),
-        createTestWorkItem({
+        createPrismaWorkItem({
           id: 5678,
           title: 'Test Item 2',
           state: 'Done',
-          azureUrl: 'https://dev.azure.com/test/5678',
+          azureUrl: 'https://dev.azure.com/fwcdev/_workitems/edit/5678',
         }),
       ]
 
-      mockDb.getAllWorkItems.mockResolvedValue(testItems)
+      ;(mockDb.getAllWorkItems as any).mockResolvedValue(testItems)
 
       const result = await queryEngine.processQuery('summary')
 
       expect(result).toContain("Here's your backlog summary:")
       expect(result).toContain('• [1234] Test Item 1 - Active')
-      expect(result).toContain('https://dev.azure.com/test/1234')
+      expect(result).toContain('https://dev.azure.com/fwcdev/_workitems/edit/1234')
       expect(result).toContain('• [5678] Test Item 2 - Done')
-      expect(result).toContain('https://dev.azure.com/test/5678')
+      expect(result).toContain('https://dev.azure.com/fwcdev/_workitems/edit/5678')
     })
 
     it('should handle items without Azure URLs', async () => {
       const testItems = [
-        createTestWorkItem({
+        createPrismaWorkItem({
           id: 1234,
           title: 'Test Item',
           state: 'Active',
-          azureUrl: undefined,
+          azureUrl: undefined as any, // Explicitly set to undefined
         }),
       ]
 
-      mockDb.getAllWorkItems.mockResolvedValue(testItems)
+      ;(mockDb.getAllWorkItems as any).mockResolvedValue(testItems)
 
       const result = await queryEngine.processQuery('summary')
 
@@ -406,14 +417,14 @@ describe('QueryEngine', () => {
 
     it('should handle items with special characters in title', async () => {
       const testItems = [
-        createTestWorkItem({
+        createPrismaWorkItem({
           id: 1234,
           title: 'Test & Item with "quotes" and special chars!',
           state: 'Active',
         }),
       ]
 
-      mockDb.getAllWorkItems.mockResolvedValue(testItems)
+      ;(mockDb.getAllWorkItems as any).mockResolvedValue(testItems)
 
       const result = await queryEngine.processQuery('summary')
 
@@ -423,8 +434,8 @@ describe('QueryEngine', () => {
 
   describe('private method matchesKeywords', () => {
     it('should match single keyword', async () => {
-      const activeItems = [createTestWorkItem({ state: 'Active' })]
-      mockDb.getWorkItemsByState.mockResolvedValue(activeItems)
+      const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+      ;(mockDb.getWorkItemsByState as any).mockResolvedValue(activeItems)
 
       // Test that 'active' keyword matches
       const result = await queryEngine.processQuery('active')
@@ -433,14 +444,16 @@ describe('QueryEngine', () => {
     })
 
     it('should match any keyword in array', async () => {
-      const activeItems = [createTestWorkItem({ state: 'Active' })]
-      const inProgressItems = [createTestWorkItem({ state: 'In Progress' })]
+      const activeItems = [createPrismaWorkItem({ state: 'Active' })]
+      const inProgressItems = [createPrismaWorkItem({ state: 'In Progress' })]
 
-      mockDb.getWorkItemsByState.mockImplementation((state: string) => {
-        if (state === 'Active') return Promise.resolve(activeItems)
-        if (state === 'In Progress') return Promise.resolve(inProgressItems)
-        return Promise.resolve([])
-      })
+      ;(mockDb.getWorkItemsByState as any).mockImplementation(
+        (state: string) => {
+          if (state === 'Active') return Promise.resolve(activeItems)
+          if (state === 'In Progress') return Promise.resolve(inProgressItems)
+          return Promise.resolve([])
+        },
+      )
 
       // Test that 'current' keyword (from ['today', 'working', 'current']) matches
       const result = await queryEngine.processQuery('current work')
@@ -449,8 +462,8 @@ describe('QueryEngine', () => {
     })
 
     it('should not match when no keywords present', async () => {
-      const allItems = [createTestWorkItem()]
-      mockDb.getAllWorkItems.mockResolvedValue(allItems)
+      const allItems = [createPrismaWorkItem()]
+      ;(mockDb.getAllWorkItems as any).mockResolvedValue(allItems)
 
       // Query with no matching keywords should default to backlog
       const result = await queryEngine.processQuery(

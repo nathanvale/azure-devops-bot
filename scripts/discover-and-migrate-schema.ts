@@ -42,7 +42,9 @@ async function main() {
   if (args[0]?.startsWith('--sample=')) {
     const samplePart = args[0]?.split('=')[1]
     if (!samplePart) {
-      console.log('❌ Invalid sample format. Use --sample=N where N is a number')
+      console.log(
+        '❌ Invalid sample format. Use --sample=N where N is a number',
+      )
       process.exit(1)
     }
     const sampleCount = parseInt(samplePart)

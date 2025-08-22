@@ -179,7 +179,11 @@ export class QueryEngine {
         ? await this.db.getWorkItemsForUsers(userEmails)
         : await this.db.getAllWorkItems()
     const historicalItems = allItems.filter(
-      (item: any) =>
+      (item: {
+        state: string
+        closedDate: Date | null
+        resolvedDate: Date | null
+      }) =>
         ['Closed', 'Resolved', 'Done', 'Completed'].includes(item.state) &&
         (item.closedDate || item.resolvedDate),
     )
@@ -191,6 +195,7 @@ export class QueryEngine {
     const stats = {
       total: historicalItems.length,
       byType: historicalItems.reduce(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (acc: Record<string, number>, item: any) => {
           acc[item.type] = (acc[item.type] || 0) + 1
           return acc
@@ -198,6 +203,7 @@ export class QueryEngine {
         {} as Record<string, number>,
       ),
       byState: historicalItems.reduce(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (acc: Record<string, number>, item: any) => {
           acc[item.state] = (acc[item.state] || 0) + 1
           return acc
@@ -220,12 +226,13 @@ export class QueryEngine {
     // Show most recent 10 historical items
     const recentItems = historicalItems
       .sort(
-        (a: any, b: any) =>
+        (a: { lastUpdatedAt: Date }, b: { lastUpdatedAt: Date }) =>
           new Date(b.lastUpdatedAt).getTime() -
           new Date(a.lastUpdatedAt).getTime(),
       )
       .slice(0, 10)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recentItems.forEach((item: any) => {
       result += `• [${item.id}] ${item.title} - ${item.state}\n`
       if (item.description) {
@@ -250,10 +257,12 @@ export class QueryEngine {
     return this.formatWorkItems(allItems, "Here's your backlog summary:")
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private formatWorkItems(items: any[], title: string): string {
     let result = `${title}\n\n`
 
-    items.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    items.forEach((item: any) => {
       result += `• [${item.id}] ${item.title} - ${item.state}\n`
       result += `  ${item.azureUrl}\n\n`
     })

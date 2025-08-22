@@ -9,7 +9,6 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import { AzureAuth } from './services/auth.js'
 import { AzureDevOpsClient } from './services/azure-devops.js'
 import { DatabaseService } from './services/database.js'
 import { QueryEngine } from './services/query-engine.js'
@@ -59,7 +58,9 @@ export class AzureDevOpsMCPServer {
 
     const emailPart = emailArg.split('=')[1]
     if (!emailPart) {
-      console.error('❌ Invalid email format. Expected: --emails=email@domain.com')
+      console.error(
+        '❌ Invalid email format. Expected: --emails=email@domain.com',
+      )
       process.exit(1)
     }
     const emails = emailPart
@@ -187,7 +188,7 @@ export class AzureDevOpsMCPServer {
     })
   }
 
-  private async handleGetWorkItems(args: any) {
+  private async handleGetWorkItems(args?: { filter?: string }) {
     const filter = args?.filter || 'all'
     let items
 
@@ -198,7 +199,7 @@ export class AzureDevOpsMCPServer {
           this.userEmails,
         )
         break
-      case 'open':
+      case 'open': {
         const newItems = await this.db.getWorkItemsByStateForUsers(
           'New',
           this.userEmails,
@@ -213,6 +214,7 @@ export class AzureDevOpsMCPServer {
         )
         items = [...newItems, ...activeItems, ...inProgressItems]
         break
+      }
       case 'user-stories':
         items = await this.db.getWorkItemsByTypeForUsers(
           'User Story',
@@ -242,7 +244,7 @@ export class AzureDevOpsMCPServer {
     }
   }
 
-  private async handleQueryWork(args: any) {
+  private async handleQueryWork(args?: { query?: string }) {
     const query = args?.query
     if (!query) {
       throw new Error('Query is required')
@@ -314,7 +316,7 @@ export class AzureDevOpsMCPServer {
     }
   }
 
-  private async handleSyncData(args: any) {
+  private async handleSyncData(args?: { concurrency?: number }) {
     const concurrency = args?.concurrency || 5
     await this.syncService.performSyncDetailed(concurrency)
 
@@ -328,7 +330,7 @@ export class AzureDevOpsMCPServer {
     }
   }
 
-  private async handleGetWorkItemUrl(args: any) {
+  private async handleGetWorkItemUrl(args?: { id?: string | number }) {
     const id = args?.id
     if (!id) {
       throw new Error('Work item ID is required')

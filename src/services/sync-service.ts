@@ -34,7 +34,7 @@ export class SyncService {
 
       // Step 1: Discover work item IDs using fast WIQL query
       const workItemIds = await this.client.fetchWorkItems()
-      const idList = workItemIds.map((item: any) => item.id)
+      const idList = workItemIds.map((item: { id: number }) => item.id)
 
       console.log(`🔍 Discovered ${idList.length} work items for detailed sync`)
 
@@ -48,7 +48,9 @@ export class SyncService {
       await this.db.syncWorkItems(detailedWorkItems)
 
       // Step 4: Sync comments for work items that need it
-      await this.syncCommentsForWorkItems(detailedWorkItems)
+      // Get the stored work items with database fields
+      const storedWorkItems = await this.db.getAllWorkItems()
+      await this.syncCommentsForWorkItems(storedWorkItems)
 
       const endTime = Date.now()
       const duration = endTime - startTime
@@ -66,7 +68,9 @@ export class SyncService {
     }
   }
 
-  private async syncCommentsForWorkItems(workItems: any[]): Promise<void> {
+  private async syncCommentsForWorkItems(
+    workItems: { id: number; commentCount: number; changedDate: Date | null }[],
+  ): Promise<void> {
     const lastSyncTime = await this.db.getLastSyncTime()
     let checkedCount = 0
     let syncedCount = 0
@@ -79,7 +83,11 @@ export class SyncService {
     )
 
     // Filter work items that need comment sync first
-    const workItemsNeedingSync: any[] = []
+    const workItemsNeedingSync: {
+      id: number
+      commentCount: number
+      changedDate: Date | null
+    }[] = []
     for (const workItem of workItems) {
       checkedCount++
 
@@ -170,7 +178,9 @@ export class SyncService {
     )
   }
 
-  private async syncSingleWorkItemComments(workItem: any): Promise<number> {
+  private async syncSingleWorkItemComments(workItem: {
+    id: number
+  }): Promise<number> {
     const comments = await this.client.fetchWorkItemComments(workItem.id)
     await this.db.storeWorkItemComments(comments)
     return comments.length

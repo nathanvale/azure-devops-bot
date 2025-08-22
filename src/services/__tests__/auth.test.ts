@@ -159,9 +159,9 @@ describe('AzureAuth', () => {
     })
 
     it('should handle checkAuth errors', async () => {
-      const checkAuthSpy = vi
-        .spyOn(auth, 'checkAuth')
-        .mockRejectedValue(new Error('Check auth failed'))
+      vi.spyOn(auth, 'checkAuth').mockRejectedValue(
+        new Error('Check auth failed'),
+      )
 
       await expect(auth.ensureAuth()).rejects.toThrow('Check auth failed')
     })

@@ -79,43 +79,51 @@ export const mockPrismaClient = {
 export const resetPrismaMocks = () => {
   Object.values(mockPrismaClient.workItem).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
-      (mock as unknown as MockInstance).mockReset()
+      ;(mock as unknown as MockInstance).mockReset()
     }
   })
   Object.values(mockPrismaClient.workItemComment).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
-      (mock as unknown as MockInstance).mockReset()
+      ;(mock as unknown as MockInstance).mockReset()
     }
   })
   if (vi.isMockFunction(mockPrismaClient.$connect)) {
-    (mockPrismaClient.$connect as unknown as MockInstance).mockReset()
+    ;(mockPrismaClient.$connect as unknown as MockInstance).mockReset()
   }
   if (vi.isMockFunction(mockPrismaClient.$disconnect)) {
-    (mockPrismaClient.$disconnect as unknown as MockInstance).mockReset()
+    ;(mockPrismaClient.$disconnect as unknown as MockInstance).mockReset()
   }
   if (vi.isMockFunction(mockPrismaClient.$transaction)) {
-    (mockPrismaClient.$transaction as unknown as MockInstance).mockReset()
+    ;(mockPrismaClient.$transaction as unknown as MockInstance).mockReset()
   }
 }
 
 // Setup default mock implementations
 export const setupPrismaDefaults = () => {
   // Default implementations for common operations
-  ;(mockPrismaClient.workItem.findMany as unknown as MockInstance).mockResolvedValue(mockWorkItemData)
-  ;(mockPrismaClient.workItem.findUnique as unknown as MockInstance).mockImplementation(({ where }: { where: any }) => {
+  ;(
+    mockPrismaClient.workItem.findMany as unknown as MockInstance
+  ).mockResolvedValue(mockWorkItemData)
+  ;(
+    mockPrismaClient.workItem.findUnique as unknown as MockInstance
+  ).mockImplementation(({ where }: { where: any }) => {
     const item = mockWorkItemData.find(
       (item) => item.id === where.id || item.azureId === where.azureId,
     )
     return Promise.resolve(item || null)
   })
-  ;(mockPrismaClient.workItem.create as unknown as MockInstance).mockImplementation(({ data }: { data: any }) => {
+  ;(
+    mockPrismaClient.workItem.create as unknown as MockInstance
+  ).mockImplementation(({ data }: { data: any }) => {
     const newItem = {
       id: Math.floor(Math.random() * 10000),
       ...data,
     }
     return Promise.resolve(newItem)
   })
-  ;(mockPrismaClient.workItem.update as unknown as MockInstance).mockImplementation(({ data, where }: { data: any; where: any }) => {
+  ;(
+    mockPrismaClient.workItem.update as unknown as MockInstance
+  ).mockImplementation(({ data, where }: { data: any; where: any }) => {
     const existingItem = mockWorkItemData.find(
       (item) => item.id === where.id || item.azureId === where.azureId,
     )
@@ -125,7 +133,9 @@ export const setupPrismaDefaults = () => {
     const updatedItem = { ...existingItem, ...data }
     return Promise.resolve(updatedItem)
   })
-  ;(mockPrismaClient.workItem.upsert as unknown as MockInstance).mockImplementation(
+  ;(
+    mockPrismaClient.workItem.upsert as unknown as MockInstance
+  ).mockImplementation(
     ({ create, update, where }: { create: any; update: any; where: any }) => {
       const existingItem = mockWorkItemData.find(
         (item) => item.id === where.id || item.azureId === where.azureId,
@@ -142,9 +152,15 @@ export const setupPrismaDefaults = () => {
       }
     },
   )
-  ;(mockPrismaClient.$connect as unknown as MockInstance).mockResolvedValue(undefined)
-  ;(mockPrismaClient.$disconnect as unknown as MockInstance).mockResolvedValue(undefined)
-  ;(mockPrismaClient.$transaction as unknown as MockInstance).mockImplementation(async (operations: any) => {
+  ;(mockPrismaClient.$connect as unknown as MockInstance).mockResolvedValue(
+    undefined,
+  )
+  ;(mockPrismaClient.$disconnect as unknown as MockInstance).mockResolvedValue(
+    undefined,
+  )
+  ;(
+    mockPrismaClient.$transaction as unknown as MockInstance
+  ).mockImplementation(async (operations: any) => {
     // For normal operation, execute all operations and return array of results
     if (Array.isArray(operations)) {
       // Use sequential execution to better model transaction fail-fast behavior

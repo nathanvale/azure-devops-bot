@@ -1,4 +1,8 @@
+import type { WorkItem as PrismaWorkItem } from '@prisma/client'
+
 import { vi } from 'vitest'
+
+import type { WorkItemData } from '../../src/services/azure-devops'
 
 // Types for test data
 export interface TestWorkItem {
@@ -62,6 +66,90 @@ export function createTestWorkItem(
     severity: null,
     description: 'A test work item for unit testing',
     lastSyncDate: new Date(),
+    ...overrides,
+  }
+}
+
+// Factory function to create Prisma WorkItem objects (for database mocking)
+export function createPrismaWorkItem(
+  overrides: Partial<PrismaWorkItem> = {},
+): PrismaWorkItem {
+  const baseId = Math.floor(Math.random() * 10000) + 1000
+
+  return {
+    id: baseId,
+    title: 'Test Work Item',
+    state: 'Active',
+    type: 'User Story',
+    assignedTo: 'nathan.vale@example.com',
+    azureUrl: `https://dev.azure.com/fwcdev/_workitems/edit/${baseId}`,
+    description: 'Test description for unit testing',
+    iterationPath: 'Customer Services Platform\\Sprint 1',
+    areaPath: 'Customer Services Platform',
+    boardColumn: '2. Build',
+    boardColumnDone: false,
+    priority: 2,
+    severity: null,
+    tags: null,
+    createdDate: new Date('2025-01-01T10:00:00Z'),
+    changedDate: new Date('2025-01-08T10:00:00Z'),
+    closedDate: null,
+    resolvedDate: null,
+    activatedDate: null,
+    stateChangeDate: null,
+    createdBy: 'nathan.vale@example.com',
+    changedBy: 'nathan.vale@example.com',
+    closedBy: null,
+    resolvedBy: null,
+    storyPoints: null,
+    effort: null,
+    remainingWork: null,
+    completedWork: null,
+    originalEstimate: null,
+    acceptanceCriteria: null,
+    reproSteps: null,
+    systemInfo: null,
+    parentId: null,
+    rev: 1,
+    lastUpdatedAt: new Date(),
+    lastSyncedAt: new Date(),
+    rawJson: JSON.stringify({
+      id: baseId,
+      fields: {
+        'System.Title': 'Test Work Item',
+        'System.State': 'Active',
+        'System.WorkItemType': 'User Story',
+      },
+    }),
+    ...overrides,
+  } as PrismaWorkItem
+}
+
+// Factory function to create WorkItemData for database/sync service tests
+export function createWorkItemData(
+  overrides: Partial<WorkItemData> = {},
+): WorkItemData {
+  const baseId = Math.floor(Math.random() * 10000) + 1000
+
+  return {
+    id: baseId,
+    title: 'Test Work Item',
+    state: 'Active',
+    type: 'User Story',
+    assignedTo: 'nathan.vale@example.com',
+    lastUpdatedAt: new Date(),
+    description: 'Test description for unit testing',
+    iterationPath: 'Customer Services Platform\\Sprint 1',
+    areaPath: 'Customer Services Platform',
+    priority: 2,
+    rawJson: JSON.stringify({
+      id: baseId,
+      fields: {
+        'System.Title': 'Test Work Item',
+        'System.State': 'Active',
+        'System.WorkItemType': 'User Story',
+      },
+    }),
     ...overrides,
   }
 }

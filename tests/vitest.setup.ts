@@ -39,6 +39,12 @@ vi.stubEnv('AZURE_DEVOPS_ORG', 'fwcdev')
 vi.stubEnv('AZURE_DEVOPS_PROJECT', 'Customer Services Platform')
 
 // Global test utilities
-;(global as any).consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-;(global as any).consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-;(global as any).consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+;(global as any).consoleLogSpy = vi
+  .spyOn(console, 'log')
+  .mockImplementation(() => {})
+;(global as any).consoleErrorSpy = vi
+  .spyOn(console, 'error')
+  .mockImplementation(() => {})
+;(global as any).consoleWarnSpy = vi
+  .spyOn(console, 'warn')
+  .mockImplementation(() => {})

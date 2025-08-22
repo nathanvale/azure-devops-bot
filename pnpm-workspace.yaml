@@ -1,2 +1,0 @@
-overrides:
-  '@orchestr8/resilience': link:../../.local/share/pnpm/global/5/node_modules/@orchestr8/resilience

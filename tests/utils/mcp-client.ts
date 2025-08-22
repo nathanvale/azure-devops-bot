@@ -191,7 +191,7 @@ export async function waitForServerReady(
         await client.listTools()
         return // Server is ready
       }
-    } catch (error) {
+    } catch {
       // Server not ready yet, continue waiting
     }
 

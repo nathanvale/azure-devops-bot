@@ -166,7 +166,7 @@ export const updateWorkItemHandler = http.patch(
     body.forEach((operation) => {
       if (operation.op === 'replace' && operation.path.startsWith('/fields/')) {
         const fieldName = operation.path.replace('/fields/', '')
-        updatedFields[fieldName] = operation.value
+        ;(updatedFields as any)[fieldName] = operation.value
       }
     })
 
@@ -185,9 +185,7 @@ export const updateWorkItemHandler = http.patch(
 
 export const workItemCommentsHandler = http.get(
   `${AZURE_DEVOPS_BASE}/wit/workitems/:id/comments`,
-  ({ params }) => {
-    const id = params.id as string
-
+  () => {
     return HttpResponse.json({
       totalCount: 2,
       count: 2,

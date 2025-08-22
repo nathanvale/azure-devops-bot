@@ -5,7 +5,6 @@ import { createTestWorkItem } from '../../tests/utils/test-helpers'
 import { DatabaseService } from '../services/database'
 import { QueryEngine } from '../services/query-engine'
 import { SyncService } from '../services/sync-service'
-import { MockedFunction } from '../types/test-utils'
 
 // Mock all dependencies
 vi.mock('../services/sync-service')
@@ -15,8 +14,14 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js')
 
 import { AzureDevOpsMCPServer } from '../mcp-server'
 
+interface MCPTool {
+  name: string
+  description?: string
+  inputSchema?: unknown
+}
+
 describe('AzureDevOpsMCPServer', () => {
-  let server: any
+  let server: AzureDevOpsMCPServer
   let mockSyncService: any
   let mockDb: any
   let mockQueryEngine: any
@@ -38,7 +43,7 @@ describe('AzureDevOpsMCPServer', () => {
     // Mock process.exit to prevent test termination
     vi.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit called')
-    }) as any)
+    }) as typeof process.exit)
 
     // Mock the MCP Server
     mockMCPServer = {
@@ -46,7 +51,7 @@ describe('AzureDevOpsMCPServer', () => {
       connect: vi.fn(),
       close: vi.fn(),
     }
-    vi.mocked(Server).mockImplementation(() => mockMCPServer)
+    vi.mocked(Server).mockImplementation(() => mockMCPServer as any)
 
     // Create server instance
     server = new AzureDevOpsMCPServer()
@@ -54,10 +59,10 @@ describe('AzureDevOpsMCPServer', () => {
     // Set user emails for testing
     server.userEmails = ['test@example.com', 'test2@example.com']
 
-    // Get mocked dependencies
-    mockSyncService = server.syncService
-    mockDb = server.db
-    mockQueryEngine = server.queryEngine
+    // Get mocked dependencies using type assertion to access private properties
+    mockSyncService = (server as any).syncService
+    mockDb = (server as any).db
+    mockQueryEngine = (server as any).queryEngine
 
     // Setup default mock implementations
     mockSyncService.shouldSync = vi.fn().mockResolvedValue(false)
@@ -113,8 +118,8 @@ describe('AzureDevOpsMCPServer', () => {
   describe('tool registration', () => {
     it('should register ListToolsRequestSchema handler', () => {
       const calls = mockMCPServer.setRequestHandler.mock.calls
-      const listToolsCall = calls.find((call: any) => {
-        const schema = call[0]
+      const listToolsCall = calls.find((call: unknown[]) => {
+        const schema = call[0] as any
         // Check if this is a Zod schema with the correct structure
         return schema && schema._def && schema._def.typeName === 'ZodObject'
       })
@@ -132,7 +137,7 @@ describe('AzureDevOpsMCPServer', () => {
   })
 
   describe('list tools handler', () => {
-    let listToolsHandler: Function
+    let listToolsHandler: (...args: any[]) => any
 
     beforeEach(() => {
       const calls = mockMCPServer.setRequestHandler.mock.calls
@@ -145,7 +150,7 @@ describe('AzureDevOpsMCPServer', () => {
 
       expect(result.tools).toHaveLength(4)
 
-      const toolNames = result.tools.map((tool: any) => tool.name)
+      const toolNames = result.tools.map((tool: MCPTool) => tool.name)
       expect(toolNames).toContain('get_work_items')
       expect(toolNames).toContain('query_work')
       expect(toolNames).toContain('sync_data')
@@ -155,7 +160,7 @@ describe('AzureDevOpsMCPServer', () => {
     it('should have properly defined tool schemas', async () => {
       const result = await listToolsHandler()
 
-      result.tools.forEach((tool: any) => {
+      result.tools.forEach((tool: MCPTool) => {
         expect(tool).toHaveProperty('name')
         expect(tool).toHaveProperty('description')
         expect(tool).toHaveProperty('inputSchema')
@@ -165,7 +170,9 @@ describe('AzureDevOpsMCPServer', () => {
 
     it('should define get_work_items tool correctly', async () => {
       const result = await listToolsHandler()
-      const tool = result.tools.find((t: any) => t.name === 'get_work_items')
+      const tool = result.tools.find(
+        (t: MCPTool) => t.name === 'get_work_items',
+      )
 
       expect(tool.description).toContain('Get all work items')
       expect(tool.inputSchema.properties).toHaveProperty('filter')
@@ -181,7 +188,7 @@ describe('AzureDevOpsMCPServer', () => {
 
     it('should define query_work tool correctly', async () => {
       const result = await listToolsHandler()
-      const tool = result.tools.find((t: any) => t.name === 'query_work')
+      const tool = result.tools.find((t: MCPTool) => t.name === 'query_work')
 
       expect(tool.description).toContain(
         'Query work items using natural language',
@@ -192,7 +199,7 @@ describe('AzureDevOpsMCPServer', () => {
 
     it('should define sync_data tool correctly', async () => {
       const result = await listToolsHandler()
-      const tool = result.tools.find((t: any) => t.name === 'sync_data')
+      const tool = result.tools.find((t: MCPTool) => t.name === 'sync_data')
 
       expect(tool.description).toContain(
         'Manually sync all work items with detailed metadata',
@@ -202,7 +209,9 @@ describe('AzureDevOpsMCPServer', () => {
 
     it('should define get_work_item_url tool correctly', async () => {
       const result = await listToolsHandler()
-      const tool = result.tools.find((t: any) => t.name === 'get_work_item_url')
+      const tool = result.tools.find(
+        (t: MCPTool) => t.name === 'get_work_item_url',
+      )
 
       expect(tool.description).toContain('Get direct Azure DevOps URL')
       expect(tool.inputSchema.properties).toHaveProperty('id')
@@ -212,7 +221,7 @@ describe('AzureDevOpsMCPServer', () => {
   })
 
   describe('call tool handler', () => {
-    let callToolHandler: Function
+    let callToolHandler: (...args: any[]) => any
 
     beforeEach(() => {
       const calls = mockMCPServer.setRequestHandler.mock.calls
@@ -269,7 +278,7 @@ describe('AzureDevOpsMCPServer', () => {
         const inProgressItems = [createTestWorkItem({ state: 'In Progress' })]
 
         mockDb.getWorkItemsByStateForUsers.mockImplementation(
-          (state: string, emails: string[]) => {
+          (state: string, _emails: string[]) => {
             if (state === 'New') return Promise.resolve(newItems)
             if (state === 'Active') return Promise.resolve(activeItems)
             if (state === 'In Progress') return Promise.resolve(inProgressItems)
@@ -407,7 +416,7 @@ describe('AzureDevOpsMCPServer', () => {
         const allItems = [createTestWorkItem()]
         mockDb.getWorkItemsForUsers.mockResolvedValue(allItems)
 
-        const result = await callToolHandler({
+        await callToolHandler({
           params: {
             name: 'get_work_items',
             arguments: {},

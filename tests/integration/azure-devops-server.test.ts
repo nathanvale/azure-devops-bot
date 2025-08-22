@@ -1,10 +1,9 @@
-import path from 'path'
+import * as path from 'path'
 
 import { http, HttpResponse } from 'msw'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
 import { server } from '../../src/mocks/server'
-
 import { TestMCPClient } from '../utils/mcp-client'
 import {
   createWorkItemsResponse,
@@ -13,7 +12,7 @@ import {
 
 describe('Azure DevOps MCP Server Integration', () => {
   let client: TestMCPClient
-  const serverPath = path.resolve(__dirname, '../../dist/mcp-server.js')
+  // const serverPath = path.resolve(__dirname, '../../dist/mcp-server.js')
 
   beforeAll(async () => {
     client = new TestMCPClient()
@@ -82,7 +81,7 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_items')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0]!!.type).toBe('text')
+      expect(result.content[0]!.type).toBe('text')
 
       const workItems = JSON.parse((result.content[0]! as any).text)
       expect(Array.isArray(workItems)).toBe(true)
@@ -153,7 +152,9 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_item_url', { id: 1234 })
 
       expect(result.content).toHaveLength(1)
-      expect((result.content[0]! as any).text).toContain('https://dev.azure.com')
+      expect((result.content[0]! as any).text).toContain(
+        'https://dev.azure.com',
+      )
       expect((result.content[0]! as any).text).toContain('1234')
     })
 
@@ -162,7 +163,9 @@ describe('Azure DevOps MCP Server Integration', () => {
 
       expect(result.content).toHaveLength(1)
       expect((result.content[0]! as any).text).toContain('Error')
-      expect((result.content[0]! as any).text).toContain('Work item ID is required')
+      expect((result.content[0]! as any).text).toContain(
+        'Work item ID is required',
+      )
     })
   })
 

@@ -43,9 +43,13 @@ vi.setConfig({ testTimeout: 30000 })
 
 // Suppress console output during integration tests unless debugging
 if (!process.env.DEBUG_TESTS) {
-  ;(global as any).consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+  ;(global as any).consoleLogSpy = vi
+    .spyOn(console, 'log')
+    .mockImplementation(() => {})
   ;(global as any).consoleErrorSpy = vi
     .spyOn(console, 'error')
     .mockImplementation(() => {})
-  ;(global as any).consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  ;(global as any).consoleWarnSpy = vi
+    .spyOn(console, 'warn')
+    .mockImplementation(() => {})
 }
