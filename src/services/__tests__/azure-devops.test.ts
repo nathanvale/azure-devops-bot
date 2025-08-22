@@ -19,7 +19,7 @@ vi.mock('@orchestr8/resilience', () => ({
   })),
 }))
 
-import { AzureDevOpsClient, WorkItemData } from '../azure-devops'
+import { AzureDevOpsClient } from '../azure-devops'
 
 describe('AzureDevOpsClient', () => {
   let client: AzureDevOpsClient
@@ -28,7 +28,7 @@ describe('AzureDevOpsClient', () => {
     vi.resetAllMocks()
 
     // Configure the resilience mock to call operations directly
-    mockApplyPolicy.mockImplementation(async (operation, policy) => {
+    mockApplyPolicy.mockImplementation(async (operation, _policy) => {
       return await operation()
     })
 
@@ -125,6 +125,7 @@ describe('AzureDevOpsClient', () => {
         stackRank: undefined,
         valueArea: undefined,
         rawJson: expect.any(String),
+        azureUrl: expect.any(String),
       })
       expect(result[1]).toEqual({
         id: 5678,
@@ -173,6 +174,7 @@ describe('AzureDevOpsClient', () => {
         stackRank: undefined,
         valueArea: undefined,
         rawJson: expect.any(String),
+        azureUrl: expect.any(String),
       })
     })
 
@@ -243,6 +245,7 @@ describe('AzureDevOpsClient', () => {
         stackRank: undefined,
         valueArea: undefined,
         rawJson: expect.any(String),
+        azureUrl: expect.any(String),
       })
     })
 
@@ -314,6 +317,7 @@ describe('AzureDevOpsClient', () => {
         stackRank: undefined,
         valueArea: undefined,
         rawJson: expect.any(String),
+        azureUrl: expect.any(String),
       })
     })
 
@@ -323,7 +327,7 @@ describe('AzureDevOpsClient', () => {
       await client.fetchWorkItems()
 
       expect(mockExecAsync).toHaveBeenCalledTimes(1)
-      const calledCommand = mockExecAsync.mock.calls[0][0]
+      const calledCommand = mockExecAsync.mock.calls[0]![0]
       expect(calledCommand).toContain('az boards query')
       expect(calledCommand).toContain('--wiql')
       expect(calledCommand).toContain('--output json')
@@ -408,7 +412,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      expect(result[0].lastUpdatedAt.toISOString()).toBe(
+      expect(result[0]!.lastUpdatedAt.toISOString()).toBe(
         '2025-01-08T14:30:45.123Z',
       )
     })
@@ -484,6 +488,7 @@ describe('AzureDevOpsClient', () => {
         stackRank: undefined,
         valueArea: undefined,
         rawJson: expect.any(String),
+        azureUrl: expect.any(String),
       })
     })
   })
@@ -509,7 +514,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should validate emails that exist in organization but have no work items', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const userResponse = { principalName: 'user@fwc.gov.au' }
 
       mockExecAsync
@@ -526,7 +531,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it("should mark emails as invalid when they don't exist in organization", async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const emptyUserResponse = '[]'
 
       mockExecAsync
@@ -546,7 +551,7 @@ describe('AzureDevOpsClient', () => {
       const workItemsResponse = [
         { id: 1234, fields: { 'System.Title': 'Test' } },
       ]
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const emptyUserResponse = '[]'
 
       mockExecAsync
@@ -603,7 +608,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should use correct user validation command', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const userResponse = { principalName: 'user@fwc.gov.au' }
 
       mockExecAsync
@@ -621,7 +626,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should handle invalid JSON in user response', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
 
       mockExecAsync
         .mockResolvedValueOnce({
@@ -636,7 +641,7 @@ describe('AzureDevOpsClient', () => {
     })
 
     it('should handle user response without principalName', async () => {
-      const emptyWorkItemsResponse = []
+      const emptyWorkItemsResponse: any[] = []
       const userResponse = { displayName: 'User Name' }
 
       mockExecAsync
@@ -736,7 +741,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       // Basic fields
       expect(workItem.id).toBe(1234)
@@ -832,7 +837,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       // Required fields should be present
       expect(workItem.id).toBe(9999)
@@ -909,7 +914,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       expect(workItem.storyPoints).toBe(5.5)
       expect(workItem.effort).toBe(12.75)
@@ -943,7 +948,7 @@ describe('AzureDevOpsClient', () => {
       const result = await client.fetchWorkItems()
 
       expect(result).toHaveLength(1)
-      const workItem = result[0]
+      const workItem = result[0]!
 
       expect(workItem.storyPoints).toBeUndefined()
       expect(workItem.effort).toBeUndefined()
@@ -1037,6 +1042,7 @@ describe('AzureDevOpsClient', () => {
         stackRank: undefined,
         valueArea: undefined,
         rawJson: JSON.stringify(mockSingleResponse),
+        azureUrl: expect.any(String),
       })
     })
 
@@ -1172,9 +1178,9 @@ describe('AzureDevOpsClient', () => {
 
       // Verify each work item was fetched correctly
       for (let i = 0; i < workItemIds.length; i++) {
-        expect(result[i].id).toBe(workItemIds[i])
-        expect(result[i].title).toBe(`Work Item ${workItemIds[i]}`)
-        expect(result[i].storyPoints).toBe(workItemIds[i])
+        expect(result[i]!.id).toBe(workItemIds[i])
+        expect(result[i]!.title).toBe(`Work Item ${workItemIds[i]}`)
+        expect(result[i]!.storyPoints).toBe(workItemIds[i])
       }
     })
 
@@ -1249,10 +1255,10 @@ describe('AzureDevOpsClient', () => {
 
       // Should return only successful items
       expect(result).toHaveLength(2)
-      expect(result[0].id).toBe(1)
-      expect(result[0].title).toBe('Success Item')
-      expect(result[1].id).toBe(3)
-      expect(result[1].title).toBe('Another Success')
+      expect(result[0]!.id).toBe(1)
+      expect(result[0]!.title).toBe('Success Item')
+      expect(result[1]!.id).toBe(3)
+      expect(result[1]!.title).toBe('Another Success')
 
       expect(mockExecAsync).toHaveBeenCalledTimes(3)
     })
@@ -1302,7 +1308,7 @@ describe('AzureDevOpsClient', () => {
       expect(result).toHaveLength(5)
       // Results should maintain original order
       for (let i = 0; i < workItemIds.length; i++) {
-        expect(result[i].id).toBe(workItemIds[i])
+        expect(result[i]!.id).toBe(workItemIds[i])
       }
     })
 
@@ -1373,7 +1379,7 @@ describe('AzureDevOpsClient', () => {
         let attemptCount = 0
 
         // Mock the resilience adapter to simulate circuit breaker behavior
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           attemptCount++
 
           if (attemptCount <= 3) {
@@ -1391,11 +1397,13 @@ describe('AzureDevOpsClient', () => {
             await client.fetchWorkItems()
           } catch (error) {
             if (i < 3) {
-              expect(error.message).toContain(
+              expect((error as Error).message).toContain(
                 'Azure DevOps service unavailable',
               )
             } else {
-              expect(error.message).toContain('Circuit breaker is open')
+              expect((error as Error).message).toContain(
+                'Circuit breaker is open',
+              )
             }
           }
         }
@@ -1406,7 +1414,7 @@ describe('AzureDevOpsClient', () => {
       it('should allow operations after circuit breaker recovery time', async () => {
         let circuitBreakerOpen = false
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           if (circuitBreakerOpen) {
             // Simulate recovery - circuit breaker allows test call
             circuitBreakerOpen = false
@@ -1429,10 +1437,10 @@ describe('AzureDevOpsClient', () => {
 
       it('should handle circuit breaker state for different operations independently', async () => {
         // Simulate circuit breaker for list operations only
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
-          if (policy.circuitBreaker?.key === 'azure-devops-list') {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
+          if (_policy.circuitBreaker?.key === 'azure-devops-list') {
             throw new Error('List circuit breaker is open')
-          } else if (policy.circuitBreaker?.key === 'azure-devops-detail') {
+          } else if (_policy.circuitBreaker?.key === 'azure-devops-detail') {
             // Detail operations should still work
             return await operation()
           }
@@ -1466,7 +1474,7 @@ describe('AzureDevOpsClient', () => {
       it('should exhaust retries and propagate final error', async () => {
         let retryCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           retryCount++
           // Always throw the final error regardless of count
           throw new Error('Retry exhausted after 5 attempts')
@@ -1481,7 +1489,7 @@ describe('AzureDevOpsClient', () => {
       it('should not retry on authentication errors', async () => {
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           attemptCount++
           // Simulate that auth errors will eventually be thrown by the resilience wrapper
           throw new Error("Azure CLI unauthorized - please run 'az login'")
@@ -1496,7 +1504,7 @@ describe('AzureDevOpsClient', () => {
       it('should not retry on work item not found errors', async () => {
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (_operation, _policy) => {
           attemptCount++
           // Simulate that not found errors will eventually be thrown by the resilience wrapper
           throw new Error('Work item 99999 not found')
@@ -1511,7 +1519,7 @@ describe('AzureDevOpsClient', () => {
       it('should retry on transient errors with exponential backoff', async () => {
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           attemptCount++
           // Simulate successful retry behavior - just succeed immediately
           return await operation()
@@ -1538,9 +1546,9 @@ describe('AzureDevOpsClient', () => {
 
     describe('timeout handling', () => {
       it('should timeout hanging CLI commands', async () => {
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           // Simulate timeout by checking timeout value
-          if (policy.timeout === 15000) {
+          if (_policy.timeout === 15000) {
             throw new Error('Operation timed out after 15000ms')
           }
           return await operation()
@@ -1554,9 +1562,9 @@ describe('AzureDevOpsClient', () => {
       it('should use different timeout values for list vs detail operations', async () => {
         const timeouts: number[] = []
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
-          if (typeof policy.timeout === 'number') {
-            timeouts.push(policy.timeout)
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
+          if (typeof _policy.timeout === 'number') {
+            timeouts.push(_policy.timeout)
           }
 
           // Mock successful execution
@@ -1586,9 +1594,9 @@ describe('AzureDevOpsClient', () => {
       it('should handle timeout with proper operation names', async () => {
         const operationKeys: string[] = []
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
-          if (policy.circuitBreaker?.key) {
-            operationKeys.push(policy.circuitBreaker.key)
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
+          if (_policy.circuitBreaker?.key) {
+            operationKeys.push(_policy.circuitBreaker.key)
           }
           return await operation()
         })
@@ -1618,10 +1626,10 @@ describe('AzureDevOpsClient', () => {
       it('should provide circuit breaker state information', async () => {
         const circuitBreakerStates: string[] = []
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           // Simulate circuit breaker state monitoring
-          if (policy.circuitBreaker?.key) {
-            circuitBreakerStates.push(`${policy.circuitBreaker.key}:closed`)
+          if (_policy.circuitBreaker?.key) {
+            circuitBreakerStates.push(`${_policy.circuitBreaker.key}:closed`)
           }
           return await operation()
         })
@@ -1654,18 +1662,18 @@ describe('AzureDevOpsClient', () => {
         }> = []
         let attemptCount = 0
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           attemptCount++
 
           // Track metrics for the successful operation
           retryMetrics.push({
             operation:
-              policy.circuitBreaker?.key?.replace(
+              _policy.circuitBreaker?.key?.replace(
                 'azure-devops-',
                 'work-item-',
               ) || 'unknown',
             attempt: attemptCount,
-            delay: policy.retry?.initialDelay! || 200,
+            delay: _policy.retry?.initialDelay ?? 200,
           })
 
           return await operation()
@@ -1701,7 +1709,7 @@ describe('AzureDevOpsClient', () => {
           success: boolean
         }> = []
 
-        mockApplyPolicy.mockImplementation(async (operation, policy) => {
+        mockApplyPolicy.mockImplementation(async (operation, _policy) => {
           const startTime = Date.now()
 
           try {
@@ -1710,7 +1718,7 @@ describe('AzureDevOpsClient', () => {
             // Simulate performance monitoring
             performanceMetrics.push({
               operation:
-                policy.circuitBreaker?.key?.replace(
+                _policy.circuitBreaker?.key?.replace(
                   'azure-devops-',
                   'work-item-',
                 ) || 'unknown',
@@ -1722,7 +1730,7 @@ describe('AzureDevOpsClient', () => {
           } catch (error) {
             performanceMetrics.push({
               operation:
-                policy.circuitBreaker?.key?.replace(
+                _policy.circuitBreaker?.key?.replace(
                   'azure-devops-',
                   'work-item-',
                 ) || 'unknown',
@@ -1737,9 +1745,9 @@ describe('AzureDevOpsClient', () => {
         await client.fetchWorkItems()
 
         expect(performanceMetrics).toHaveLength(1)
-        expect(performanceMetrics[0].operation).toBe('work-item-list')
-        expect(performanceMetrics[0].success).toBe(true)
-        expect(performanceMetrics[0].duration).toBeGreaterThanOrEqual(0)
+        expect(performanceMetrics[0]!.operation).toBe('work-item-list')
+        expect(performanceMetrics[0]!.success).toBe(true)
+        expect(performanceMetrics[0]!.duration).toBeGreaterThanOrEqual(0)
       })
     })
   })

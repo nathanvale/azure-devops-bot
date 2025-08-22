@@ -59,8 +59,8 @@ export class TestMCPClient {
 
       // Create transport
       this.transport = new StdioClientTransport({
-        readable: this.process.stdout,
-        writable: this.process.stdin,
+        command: this.process.spawnfile || 'node',
+        args: this.process.spawnargs || [],
       })
 
       // Connect client
@@ -87,10 +87,10 @@ export class TestMCPClient {
 
   async callTool(name: string, args: any = {}): Promise<CallToolResult> {
     try {
-      return await this.client.callTool({
+      return (await this.client.callTool({
         name,
         arguments: args,
-      })
+      })) as CallToolResult
     } catch (error) {
       throw new Error(
         `Failed to call tool '${name}': ${error instanceof Error ? error.message : String(error)}`,
@@ -191,7 +191,7 @@ export async function waitForServerReady(
         await client.listTools()
         return // Server is ready
       }
-    } catch (error) {
+    } catch {
       // Server not ready yet, continue waiting
     }
 

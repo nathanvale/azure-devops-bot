@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest'
+
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Mock the @orchestr8/resilience package before any imports
@@ -7,11 +9,10 @@ vi.mock('@orchestr8/resilience', () => ({
   })),
 }))
 
-import { mockPrismaClient, resetPrismaMocks } from '@/mocks/prisma.mock'
-
 import type { WorkItemData, WorkItemCommentData } from '../azure-devops'
 
-import { createTestWorkItem } from '../../../tests/utils/test-helpers'
+import { createWorkItemData } from '../../../tests/utils/test-helpers'
+import { mockPrismaClient, resetPrismaMocks } from '../../mocks/prisma.mock'
 import { DatabaseService } from '../database'
 
 describe('DatabaseService', () => {
@@ -48,7 +49,9 @@ describe('DatabaseService', () => {
         lastSyncedAt: expect.any(Date),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue(mockUpsertedItem)
+      ;(
+        mockPrismaClient.workItem.upsert as unknown as MockInstance
+      ).mockResolvedValue(mockUpsertedItem)
 
       await service.syncWorkItems(workItems)
 
@@ -101,7 +104,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      const mockUpsert = mockPrismaClient.workItem
+        .upsert as unknown as MockInstance
+      mockUpsert.mockResolvedValue({} as any)
 
       await service.syncWorkItems(workItems)
 
@@ -121,9 +126,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.$transaction.mockRejectedValue(
-        new Error('Database connection failed'),
-      )
+      const mockTransaction =
+        mockPrismaClient.$transaction as unknown as MockInstance
+      mockTransaction.mockRejectedValue(new Error('Database connection failed'))
 
       await expect(service.syncWorkItems(workItems)).rejects.toThrow(
         'Database connection failed',
@@ -143,7 +148,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      const mockWorkItemUpsert = mockPrismaClient.workItem
+        .upsert as unknown as MockInstance
+      mockWorkItemUpsert.mockResolvedValue({} as any)
 
       await service.syncWorkItems(workItems)
 
@@ -184,7 +191,7 @@ describe('DatabaseService', () => {
 
         // All the dates
         createdDate: new Date('2025-01-01T08:00:00Z'),
-        changedDate: new Date('2025-01-08T14:30:00Z'),
+        changedDate: new Date('2025-08-21T10:30:00Z'),
         closedDate: new Date('2025-01-10T16:00:00Z'),
         resolvedDate: new Date('2025-01-09T12:00:00Z'),
         activatedDate: new Date('2025-01-02T09:00:00Z'),
@@ -229,7 +236,9 @@ describe('DatabaseService', () => {
           '{"id": 12345, "fields": {"System.Title": "Comprehensive Test Item"}}',
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      const mockUpsertComprehensive = mockPrismaClient.workItem
+        .upsert as unknown as MockInstance
+      mockUpsertComprehensive.mockResolvedValue({} as any)
 
       await service.syncWorkItems([comprehensiveWorkItem])
 
@@ -256,7 +265,7 @@ describe('DatabaseService', () => {
 
           // Dates
           createdDate: new Date('2025-01-01T08:00:00Z'),
-          changedDate: new Date('2025-01-08T14:30:00Z'),
+          lastUpdatedAt: new Date('2025-01-08T14:30:00Z'),
           closedDate: new Date('2025-01-10T16:00:00Z'),
           resolvedDate: new Date('2025-01-09T12:00:00Z'),
           activatedDate: new Date('2025-01-02T09:00:00Z'),
@@ -366,7 +375,9 @@ describe('DatabaseService', () => {
         rawJson: JSON.stringify(completeAzureResponse),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      const mockUpsertRawJson = mockPrismaClient.workItem
+        .upsert as unknown as MockInstance
+      mockUpsertRawJson.mockResolvedValue({} as any)
 
       await service.syncWorkItems([workItemData])
 
@@ -427,12 +438,16 @@ describe('DatabaseService', () => {
         rawJson: JSON.stringify(responseWithNulls),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      const mockUpsertNulls = mockPrismaClient.workItem
+        .upsert as unknown as MockInstance
+      mockUpsertNulls.mockResolvedValue({} as any)
 
       await service.syncWorkItems([workItemData])
 
-      const storedCall = mockPrismaClient.workItem.upsert.mock.calls[0][0]
-      const storedRawJson = storedCall.create.rawJson
+      const storedCall = (
+        mockPrismaClient.workItem.upsert as unknown as MockInstance
+      ).mock.calls[0]?.[0]
+      const storedRawJson = storedCall?.create.rawJson
       const parsedResponse = JSON.parse(storedRawJson)
 
       expect(parsedResponse.fields['System.AssignedTo']).toBeNull()
@@ -462,54 +477,53 @@ describe('DatabaseService', () => {
         boardColumnDone: false,
 
         // Priority/Tags - all variations
-        priority: 1,
-        severity: '1 - Critical',
-        tags: 'integration-test; data-completeness; automated-testing',
+        priority: 2,
+        severity: '2 - High',
+        tags: 'integration-test; data-completeness; automated-testing; bug-fix',
 
         // All date fields populated
-        createdDate: new Date('2025-07-15T09:00:00Z'),
+        createdDate: new Date('2025-01-01T08:00:00Z'),
         changedDate: new Date('2025-08-21T10:30:00Z'),
-        closedDate: new Date('2025-08-22T16:00:00Z'),
-        resolvedDate: new Date('2025-08-22T15:30:00Z'),
-        activatedDate: new Date('2025-07-16T08:30:00Z'),
-        stateChangeDate: new Date('2025-08-21T10:30:00Z'),
+        closedDate: new Date('2025-01-10T16:00:00Z'),
+        resolvedDate: new Date('2025-01-09T12:00:00Z'),
+        activatedDate: new Date('2025-01-02T09:00:00Z'),
+        stateChangeDate: new Date('2025-01-08T14:30:00Z'),
 
         // All people fields populated
-        createdBy: 'project.manager@fwc.gov.au',
-        changedBy: 'developer.lead@fwc.gov.au',
-        closedBy: 'qa.engineer@fwc.gov.au',
-        resolvedBy: 'senior.dev@fwc.gov.au',
+        createdBy: 'john.doe@fwc.gov.au',
+        changedBy: 'jane.smith@fwc.gov.au',
+        closedBy: 'bob.wilson@fwc.gov.au',
+        resolvedBy: 'alice.johnson@fwc.gov.au',
 
         // All work tracking fields
-        storyPoints: 13,
-        effort: 24.5,
-        remainingWork: 8.25,
-        completedWork: 16.25,
-        originalEstimate: 24.5,
+        storyPoints: 8,
+        effort: 16,
+        remainingWork: 4,
+        completedWork: 12,
+        originalEstimate: 16,
 
         // All content fields
-        acceptanceCriteria:
-          'GIVEN a complete integration test\nWHEN all fields are populated\nTHEN data should be preserved completely',
+        acceptanceCriteria: 'Given when then acceptance criteria',
         reproSteps:
-          '1. Execute comprehensive test\n2. Verify all fields\n3. Confirm data integrity',
+          'Steps to reproduce the issue:\n1. Execute comprehensive test\n2. Verify all fields\n3. Confirm data integrity',
         systemInfo:
-          'macOS 14.6, Node.js 20.18.0, Vitest 3.2.4, TypeScript 5.8.4',
+          'Windows 11, macOS 14.6, Node.js 20.18.0, Vitest 3.2.4, TypeScript 5.8.4',
 
         // Related items
-        parentId: 77777,
+        parentId: 5678,
 
         // All additional Azure DevOps fields
-        rev: 15,
-        reason: 'Implementation',
-        watermark: 999888777,
+        rev: 5,
+        reason: 'New',
+        watermark: 123456,
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888',
-        commentCount: 7,
+        commentCount: 3,
         hasAttachments: true,
         teamProject: 'Customer Services Platform',
-        areaId: 2024,
-        nodeId: 3035,
-        stackRank: 500000.75,
-        valueArea: 'Architectural',
+        areaId: 789,
+        nodeId: 101112,
+        stackRank: 1000000.5,
+        valueArea: 'Business',
 
         // Complete raw JSON with nested structures
         rawJson: JSON.stringify({
@@ -548,14 +562,18 @@ describe('DatabaseService', () => {
         }),
       }
 
-      mockPrismaClient.workItem.upsert.mockResolvedValue({} as any)
+      const mockUpsertCompleteness = mockPrismaClient.workItem
+        .upsert as unknown as MockInstance
+      mockUpsertCompleteness.mockResolvedValue({} as any)
 
       await service.syncWorkItems([completeWorkItem])
 
       // Verify that ALL fields are stored correctly
-      const upsertCall = mockPrismaClient.workItem.upsert.mock.calls[0][0]
-      const createData = upsertCall.create
-      const updateData = upsertCall.update
+      const upsertCall = (
+        mockPrismaClient.workItem.upsert as unknown as MockInstance
+      ).mock.calls[0]?.[0]
+      const createData = upsertCall?.create
+      const updateData = upsertCall?.update
 
       // Test core field mapping
       expect(createData.id).toBe(88888)
@@ -576,57 +594,57 @@ describe('DatabaseService', () => {
       expect(createData.boardColumnDone).toBe(false)
 
       // Test priority/tag fields
-      expect(createData.priority).toBe(1)
-      expect(createData.severity).toBe('1 - Critical')
-      expect(createData.tags).toContain('integration-test')
+      expect(createData.priority).toBe(2)
+      expect(createData.severity).toBe('2 - High')
+      expect(createData.tags).toContain('bug-fix')
 
       // Test all date fields
-      expect(createData.createdDate).toEqual(new Date('2025-07-15T09:00:00Z'))
+      expect(createData.createdDate).toEqual(new Date('2025-01-01T08:00:00Z'))
       expect(createData.changedDate).toEqual(new Date('2025-08-21T10:30:00Z'))
-      expect(createData.closedDate).toEqual(new Date('2025-08-22T16:00:00Z'))
-      expect(createData.resolvedDate).toEqual(new Date('2025-08-22T15:30:00Z'))
-      expect(createData.activatedDate).toEqual(new Date('2025-07-16T08:30:00Z'))
+      expect(createData.closedDate).toEqual(new Date('2025-01-10T16:00:00Z'))
+      expect(createData.resolvedDate).toEqual(new Date('2025-01-09T12:00:00Z'))
+      expect(createData.activatedDate).toEqual(new Date('2025-01-02T09:00:00Z'))
       expect(createData.stateChangeDate).toEqual(
-        new Date('2025-08-21T10:30:00Z'),
+        new Date('2025-01-08T14:30:00Z'),
       )
 
       // Test all people fields
-      expect(createData.createdBy).toBe('project.manager@fwc.gov.au')
-      expect(createData.changedBy).toBe('developer.lead@fwc.gov.au')
-      expect(createData.closedBy).toBe('qa.engineer@fwc.gov.au')
-      expect(createData.resolvedBy).toBe('senior.dev@fwc.gov.au')
+      expect(createData.createdBy).toBe('john.doe@fwc.gov.au')
+      expect(createData.changedBy).toBe('jane.smith@fwc.gov.au')
+      expect(createData.closedBy).toBe('bob.wilson@fwc.gov.au')
+      expect(createData.resolvedBy).toBe('alice.johnson@fwc.gov.au')
 
       // Test all work tracking fields
-      expect(createData.storyPoints).toBe(13)
-      expect(createData.effort).toBe(24.5)
-      expect(createData.remainingWork).toBe(8.25)
-      expect(createData.completedWork).toBe(16.25)
-      expect(createData.originalEstimate).toBe(24.5)
+      expect(createData.storyPoints).toBe(8)
+      expect(createData.effort).toBe(16)
+      expect(createData.remainingWork).toBe(4)
+      expect(createData.completedWork).toBe(12)
+      expect(createData.originalEstimate).toBe(16)
 
       // Test content fields
       expect(createData.acceptanceCriteria).toContain(
-        'GIVEN a complete integration test',
+        'Given when then acceptance criteria',
       )
-      expect(createData.reproSteps).toContain('1. Execute comprehensive test')
-      expect(createData.systemInfo).toContain('macOS 14.6')
+      expect(createData.reproSteps).toContain('Steps to reproduce the issue')
+      expect(createData.systemInfo).toContain('Windows 11')
 
       // Test related items
-      expect(createData.parentId).toBe(77777)
+      expect(createData.parentId).toBe(5678)
 
       // Test additional Azure DevOps fields
-      expect(createData.rev).toBe(15)
-      expect(createData.reason).toBe('Implementation')
-      expect(createData.watermark).toBe(999888777)
+      expect(createData.rev).toBe(5)
+      expect(createData.reason).toBe('New')
+      expect(createData.watermark).toBe(123456)
       expect(createData.url).toBe(
         'https://dev.azure.com/fwcdev/_apis/wit/workItems/88888',
       )
-      expect(createData.commentCount).toBe(7)
+      expect(createData.commentCount).toBe(3)
       expect(createData.hasAttachments).toBe(true)
       expect(createData.teamProject).toBe('Customer Services Platform')
-      expect(createData.areaId).toBe(2024)
-      expect(createData.nodeId).toBe(3035)
-      expect(createData.stackRank).toBe(500000.75)
-      expect(createData.valueArea).toBe('Architectural')
+      expect(createData.areaId).toBe(789)
+      expect(createData.nodeId).toBe(101112)
+      expect(createData.stackRank).toBe(1000000.5)
+      expect(createData.valueArea).toBe('Business')
 
       // Test rawJson completeness
       const rawJsonData = JSON.parse(createData.rawJson)
@@ -658,17 +676,19 @@ describe('DatabaseService', () => {
   describe('getAllWorkItems', () => {
     it('should return all work items ordered by last updated date', async () => {
       const mockWorkItems = [
-        createTestWorkItem({
+        createWorkItemData({
           id: 1,
           lastUpdatedAt: new Date('2025-01-08T10:00:00Z'),
         }),
-        createTestWorkItem({
+        createWorkItemData({
           id: 2,
           lastUpdatedAt: new Date('2025-01-07T10:00:00Z'),
         }),
       ]
 
-      mockPrismaClient.workItem.findMany.mockResolvedValue(mockWorkItems)
+      const mockFindMany = mockPrismaClient.workItem
+        .findMany as unknown as MockInstance
+      mockFindMany.mockResolvedValue(mockWorkItems)
 
       const result = await service.getAllWorkItems()
 
@@ -679,7 +699,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array when no work items exist', async () => {
-      mockPrismaClient.workItem.findMany.mockResolvedValue([])
+      ;(
+        mockPrismaClient.workItem.findMany as unknown as MockInstance
+      ).mockResolvedValue([])
 
       const result = await service.getAllWorkItems()
 
@@ -687,9 +709,9 @@ describe('DatabaseService', () => {
     })
 
     it('should handle database errors', async () => {
-      mockPrismaClient.workItem.findMany.mockRejectedValue(
-        new Error('Database query failed'),
-      )
+      ;(
+        mockPrismaClient.workItem.findMany as unknown as MockInstance
+      ).mockRejectedValue(new Error('Database query failed'))
 
       await expect(service.getAllWorkItems()).rejects.toThrow(
         'Database query failed',
@@ -700,11 +722,13 @@ describe('DatabaseService', () => {
   describe('getWorkItemsByState', () => {
     it('should return work items filtered by state', async () => {
       const activeItems = [
-        createTestWorkItem({ id: 1, state: 'Active' }),
-        createTestWorkItem({ id: 2, state: 'Active' }),
+        createWorkItemData({ id: 1, state: 'Active' }),
+        createWorkItemData({ id: 2, state: 'Active' }),
       ]
 
-      mockPrismaClient.workItem.findMany.mockResolvedValue(activeItems)
+      const mockFindManyActive = mockPrismaClient.workItem
+        .findMany as unknown as MockInstance
+      mockFindManyActive.mockResolvedValue(activeItems)
 
       const result = await service.getWorkItemsByState('Active')
 
@@ -716,7 +740,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array for non-existent state', async () => {
-      mockPrismaClient.workItem.findMany.mockResolvedValue([])
+      ;(
+        mockPrismaClient.workItem.findMany as unknown as MockInstance
+      ).mockResolvedValue([])
 
       const result = await service.getWorkItemsByState('NonExistentState')
 
@@ -724,10 +750,12 @@ describe('DatabaseService', () => {
     })
 
     it('should handle different states correctly', async () => {
-      const doneItems = [createTestWorkItem({ state: 'Done' })]
-      mockPrismaClient.workItem.findMany.mockResolvedValue(doneItems)
+      const doneItems = [createWorkItemData({ state: 'Done' })]
+      const mockFindManyDone = mockPrismaClient.workItem
+        .findMany as unknown as MockInstance
+      mockFindManyDone.mockResolvedValue(doneItems)
 
-      const result = await service.getWorkItemsByState('Done')
+      await service.getWorkItemsByState('Done')
 
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
         where: { state: 'Done' },
@@ -739,11 +767,13 @@ describe('DatabaseService', () => {
   describe('getWorkItemsByType', () => {
     it('should return work items filtered by type', async () => {
       const userStories = [
-        createTestWorkItem({ id: 1, type: 'User Story' }),
-        createTestWorkItem({ id: 2, type: 'User Story' }),
+        createWorkItemData({ id: 1, type: 'User Story' }),
+        createWorkItemData({ id: 2, type: 'User Story' }),
       ]
 
-      mockPrismaClient.workItem.findMany.mockResolvedValue(userStories)
+      const mockFindManyStories = mockPrismaClient.workItem
+        .findMany as unknown as MockInstance
+      mockFindManyStories.mockResolvedValue(userStories)
 
       const result = await service.getWorkItemsByType('User Story')
 
@@ -755,10 +785,12 @@ describe('DatabaseService', () => {
     })
 
     it('should handle different work item types', async () => {
-      const tasks = [createTestWorkItem({ type: 'Task' })]
-      mockPrismaClient.workItem.findMany.mockResolvedValue(tasks)
+      const tasks = [createWorkItemData({ type: 'Task' })]
+      const mockFindManyTasks = mockPrismaClient.workItem
+        .findMany as unknown as MockInstance
+      mockFindManyTasks.mockResolvedValue(tasks)
 
-      const result = await service.getWorkItemsByType('Task')
+      await service.getWorkItemsByType('Task')
 
       expect(mockPrismaClient.workItem.findMany).toHaveBeenCalledWith({
         where: { type: 'Task' },
@@ -767,7 +799,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array for non-existent type', async () => {
-      mockPrismaClient.workItem.findMany.mockResolvedValue([])
+      ;(
+        mockPrismaClient.workItem.findMany as unknown as MockInstance
+      ).mockResolvedValue([])
 
       const result = await service.getWorkItemsByType('NonExistentType')
 
@@ -780,7 +814,9 @@ describe('DatabaseService', () => {
       const lastSyncDate = new Date('2025-01-08T15:30:00Z')
       const mockItem = { lastSyncedAt: lastSyncDate }
 
-      mockPrismaClient.workItem.findFirst.mockResolvedValue(mockItem)
+      const mockFindFirst = mockPrismaClient.workItem
+        .findFirst as unknown as MockInstance
+      mockFindFirst.mockResolvedValue(mockItem)
 
       const result = await service.getLastSyncTime()
 
@@ -792,7 +828,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return null when no work items exist', async () => {
-      mockPrismaClient.workItem.findFirst.mockResolvedValue(null)
+      ;(
+        mockPrismaClient.workItem.findFirst as unknown as MockInstance
+      ).mockResolvedValue(null)
 
       const result = await service.getLastSyncTime()
 
@@ -800,7 +838,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return null when sync time is not available', async () => {
-      mockPrismaClient.workItem.findFirst.mockResolvedValue({
+      ;(
+        mockPrismaClient.workItem.findFirst as unknown as MockInstance
+      ).mockResolvedValue({
         lastSyncedAt: null,
       })
 
@@ -810,9 +850,9 @@ describe('DatabaseService', () => {
     })
 
     it('should handle database errors', async () => {
-      mockPrismaClient.workItem.findFirst.mockRejectedValue(
-        new Error('Database query failed'),
-      )
+      ;(
+        mockPrismaClient.workItem.findFirst as unknown as MockInstance
+      ).mockRejectedValue(new Error('Database query failed'))
 
       await expect(service.getLastSyncTime()).rejects.toThrow(
         'Database query failed',
@@ -824,7 +864,7 @@ describe('DatabaseService', () => {
     it('should store comments for a work item successfully', async () => {
       const comments: WorkItemCommentData[] = [
         {
-          id: 'comment-1',
+          id: '1',
           workItemId: 1234,
           text: 'First comment on the work item',
           createdBy: 'nathan.vale@fwc.gov.au',
@@ -833,7 +873,7 @@ describe('DatabaseService', () => {
           modifiedDate: new Date('2025-01-08T10:30:00Z'),
         },
         {
-          id: 'comment-2',
+          id: '2',
           workItemId: 1234,
           text: 'Second comment with more details',
           createdBy: 'jane.smith@fwc.gov.au',
@@ -843,7 +883,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any)
+      const mockCommentUpsert = mockPrismaClient.workItemComment
+        .upsert as unknown as MockInstance
+      mockCommentUpsert.mockResolvedValue({} as any)
 
       await service.storeWorkItemComments(comments)
 
@@ -851,7 +893,7 @@ describe('DatabaseService', () => {
       expect(mockPrismaClient.workItemComment.upsert).toHaveBeenNthCalledWith(
         1,
         {
-          where: { id: 'comment-1' },
+          where: { id: 1 },
           update: {
             text: 'First comment on the work item',
             createdBy: 'nathan.vale@fwc.gov.au',
@@ -860,7 +902,7 @@ describe('DatabaseService', () => {
             modifiedDate: new Date('2025-01-08T10:30:00Z'),
           },
           create: {
-            id: 'comment-1',
+            id: 1,
             workItemId: 1234,
             text: 'First comment on the work item',
             createdBy: 'nathan.vale@fwc.gov.au',
@@ -881,7 +923,7 @@ describe('DatabaseService', () => {
     it('should handle database errors during comment storage', async () => {
       const comments: WorkItemCommentData[] = [
         {
-          id: 'comment-error',
+          id: '999',
           workItemId: 1234,
           text: 'Test comment',
           createdBy: 'test@example.com',
@@ -891,7 +933,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.$transaction.mockRejectedValue(
+      const mockTransactionConstraint =
+        mockPrismaClient.$transaction as unknown as MockInstance
+      mockTransactionConstraint.mockRejectedValue(
         new Error('Database constraint violation'),
       )
 
@@ -903,7 +947,7 @@ describe('DatabaseService', () => {
     it('should handle comments with null modified fields', async () => {
       const comments: WorkItemCommentData[] = [
         {
-          id: 'comment-no-modified',
+          id: '3',
           workItemId: 5678,
           text: 'Unmodified comment',
           createdBy: 'original.author@fwc.gov.au',
@@ -913,12 +957,14 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.upsert.mockResolvedValue({} as any)
+      const mockNullCommentUpsert = mockPrismaClient.workItemComment
+        .upsert as unknown as MockInstance
+      mockNullCommentUpsert.mockResolvedValue({} as any)
 
       await service.storeWorkItemComments(comments)
 
       expect(mockPrismaClient.workItemComment.upsert).toHaveBeenCalledWith({
-        where: { id: 'comment-no-modified' },
+        where: { id: 3 },
         update: {
           text: 'Unmodified comment',
           createdBy: 'original.author@fwc.gov.au',
@@ -927,7 +973,7 @@ describe('DatabaseService', () => {
           modifiedDate: null,
         },
         create: {
-          id: 'comment-no-modified',
+          id: 3,
           workItemId: 5678,
           text: 'Unmodified comment',
           createdBy: 'original.author@fwc.gov.au',
@@ -943,7 +989,7 @@ describe('DatabaseService', () => {
     it('should retrieve comments for a work item', async () => {
       const mockComments = [
         {
-          id: 'comment-1',
+          id: '1',
           workItemId: 1234,
           text: 'First comment',
           createdBy: 'user1@fwc.gov.au',
@@ -952,7 +998,7 @@ describe('DatabaseService', () => {
           modifiedDate: null,
         },
         {
-          id: 'comment-2',
+          id: '2',
           workItemId: 1234,
           text: 'Second comment',
           createdBy: 'user2@fwc.gov.au',
@@ -962,7 +1008,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments)
+      const mockCommentFind = mockPrismaClient.workItemComment
+        .findMany as unknown as MockInstance
+      mockCommentFind.mockResolvedValue(mockComments)
 
       const result = await service.getWorkItemComments(1234)
 
@@ -974,7 +1022,9 @@ describe('DatabaseService', () => {
     })
 
     it('should return empty array when no comments exist', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
+      ;(
+        mockPrismaClient.workItemComment.findMany as unknown as MockInstance
+      ).mockResolvedValue([])
 
       const result = await service.getWorkItemComments(9999)
 
@@ -982,9 +1032,9 @@ describe('DatabaseService', () => {
     })
 
     it('should handle database errors during comment retrieval', async () => {
-      mockPrismaClient.workItemComment.findMany.mockRejectedValue(
-        new Error('Database query failed'),
-      )
+      ;(
+        mockPrismaClient.workItemComment.findMany as unknown as MockInstance
+      ).mockRejectedValue(new Error('Database query failed'))
 
       await expect(service.getWorkItemComments(1234)).rejects.toThrow(
         'Database query failed',
@@ -1015,7 +1065,9 @@ describe('DatabaseService', () => {
         },
       ]
 
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue(mockComments)
+      const mockRecentCommentFind = mockPrismaClient.workItemComment
+        .findMany as unknown as MockInstance
+      mockRecentCommentFind.mockResolvedValue(mockComments)
 
       const result = await service.getRecentComments(10)
 
@@ -1027,7 +1079,9 @@ describe('DatabaseService', () => {
     })
 
     it('should use default limit when not specified', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
+      ;(
+        mockPrismaClient.workItemComment.findMany as unknown as MockInstance
+      ).mockResolvedValue([])
 
       await service.getRecentComments()
 
@@ -1038,7 +1092,9 @@ describe('DatabaseService', () => {
     })
 
     it('should handle large limit values', async () => {
-      mockPrismaClient.workItemComment.findMany.mockResolvedValue([])
+      ;(
+        mockPrismaClient.workItemComment.findMany as unknown as MockInstance
+      ).mockResolvedValue([])
 
       await service.getRecentComments(1000)
 
@@ -1107,7 +1163,9 @@ describe('DatabaseService', () => {
 
   describe('close', () => {
     it('should disconnect from Prisma', async () => {
-      mockPrismaClient.$disconnect.mockResolvedValue(undefined)
+      ;(
+        mockPrismaClient.$disconnect as unknown as MockInstance
+      ).mockResolvedValue(undefined)
 
       await service.close()
 
@@ -1115,9 +1173,9 @@ describe('DatabaseService', () => {
     })
 
     it('should handle disconnect errors gracefully', async () => {
-      mockPrismaClient.$disconnect.mockRejectedValue(
-        new Error('Disconnect failed'),
-      )
+      ;(
+        mockPrismaClient.$disconnect as unknown as MockInstance
+      ).mockRejectedValue(new Error('Disconnect failed'))
 
       await expect(service.close()).rejects.toThrow('Disconnect failed')
     })

@@ -37,7 +37,9 @@ vi.mock('../services/query-engine.js', () => ({
 
 vi.mock('../services/azure-devops.js', () => {
   const mockClass = vi.fn(() => mockAzureDevOpsClient)
-  ;(mockClass as any).setUserEmails = mockSetUserEmails
+  ;(
+    mockClass as unknown as { setUserEmails: typeof mockSetUserEmails }
+  ).setUserEmails = mockSetUserEmails
   return {
     AzureDevOpsClient: mockClass,
   }
@@ -48,7 +50,10 @@ import { AzureDevOpsBot } from '../index.js'
 describe('AzureDevOpsBot', () => {
   let originalEnv: typeof process.env
   let originalArgv: string[]
-  let consoleSpy: any
+  let consoleSpy: {
+    log: ReturnType<typeof vi.spyOn>
+    error: ReturnType<typeof vi.spyOn>
+  }
   let processExitSpy: any
   let bot: AzureDevOpsBot
 
@@ -62,9 +67,9 @@ describe('AzureDevOpsBot', () => {
       log: vi.spyOn(console, 'log').mockImplementation(() => {}),
       error: vi.spyOn(console, 'error').mockImplementation(() => {}),
     }
-    processExitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
-      throw new Error(`process.exit unexpectedly called with "${code}"`)
-    })
+    processExitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error(`process.exit unexpectedly called`)
+    }) as never)
 
     // Reset all mocks
     vi.resetAllMocks()

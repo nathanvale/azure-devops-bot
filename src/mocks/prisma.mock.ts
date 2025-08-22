@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client'
+import type { MockInstance } from 'vitest'
 
 import { vi } from 'vitest'
 
@@ -67,12 +68,6 @@ export const mockPrismaClient = {
     deleteMany: vi.fn(),
     count: vi.fn(),
   },
-  syncMetadata: {
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    upsert: vi.fn(),
-  },
   $connect: vi.fn(),
   $disconnect: vi.fn(),
   $executeRaw: vi.fn(),
@@ -84,48 +79,51 @@ export const mockPrismaClient = {
 export const resetPrismaMocks = () => {
   Object.values(mockPrismaClient.workItem).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
-      mock.mockReset()
+      ;(mock as unknown as MockInstance).mockReset()
     }
   })
   Object.values(mockPrismaClient.workItemComment).forEach((mock) => {
     if (vi.isMockFunction(mock)) {
-      mock.mockReset()
-    }
-  })
-  Object.values(mockPrismaClient.syncMetadata).forEach((mock) => {
-    if (vi.isMockFunction(mock)) {
-      mock.mockReset()
+      ;(mock as unknown as MockInstance).mockReset()
     }
   })
   if (vi.isMockFunction(mockPrismaClient.$connect)) {
-    mockPrismaClient.$connect.mockReset()
+    ;(mockPrismaClient.$connect as unknown as MockInstance).mockReset()
   }
   if (vi.isMockFunction(mockPrismaClient.$disconnect)) {
-    mockPrismaClient.$disconnect.mockReset()
+    ;(mockPrismaClient.$disconnect as unknown as MockInstance).mockReset()
   }
   if (vi.isMockFunction(mockPrismaClient.$transaction)) {
-    mockPrismaClient.$transaction.mockReset()
+    ;(mockPrismaClient.$transaction as unknown as MockInstance).mockReset()
   }
 }
 
 // Setup default mock implementations
 export const setupPrismaDefaults = () => {
   // Default implementations for common operations
-  mockPrismaClient.workItem.findMany.mockResolvedValue(mockWorkItemData)
-  mockPrismaClient.workItem.findUnique.mockImplementation(({ where }) => {
+  ;(
+    mockPrismaClient.workItem.findMany as unknown as MockInstance
+  ).mockResolvedValue(mockWorkItemData)
+  ;(
+    mockPrismaClient.workItem.findUnique as unknown as MockInstance
+  ).mockImplementation(({ where }: { where: any }) => {
     const item = mockWorkItemData.find(
       (item) => item.id === where.id || item.azureId === where.azureId,
     )
     return Promise.resolve(item || null)
   })
-  mockPrismaClient.workItem.create.mockImplementation(({ data }) => {
+  ;(
+    mockPrismaClient.workItem.create as unknown as MockInstance
+  ).mockImplementation(({ data }: { data: any }) => {
     const newItem = {
       id: Math.floor(Math.random() * 10000),
       ...data,
     }
     return Promise.resolve(newItem)
   })
-  mockPrismaClient.workItem.update.mockImplementation(({ data, where }) => {
+  ;(
+    mockPrismaClient.workItem.update as unknown as MockInstance
+  ).mockImplementation(({ data, where }: { data: any; where: any }) => {
     const existingItem = mockWorkItemData.find(
       (item) => item.id === where.id || item.azureId === where.azureId,
     )
@@ -135,8 +133,10 @@ export const setupPrismaDefaults = () => {
     const updatedItem = { ...existingItem, ...data }
     return Promise.resolve(updatedItem)
   })
-  mockPrismaClient.workItem.upsert.mockImplementation(
-    ({ create, update, where }) => {
+  ;(
+    mockPrismaClient.workItem.upsert as unknown as MockInstance
+  ).mockImplementation(
+    ({ create, update, where }: { create: any; update: any; where: any }) => {
       const existingItem = mockWorkItemData.find(
         (item) => item.id === where.id || item.azureId === where.azureId,
       )
@@ -152,9 +152,15 @@ export const setupPrismaDefaults = () => {
       }
     },
   )
-  mockPrismaClient.$connect.mockResolvedValue(undefined)
-  mockPrismaClient.$disconnect.mockResolvedValue(undefined)
-  mockPrismaClient.$transaction.mockImplementation(async (operations) => {
+  ;(mockPrismaClient.$connect as unknown as MockInstance).mockResolvedValue(
+    undefined,
+  )
+  ;(mockPrismaClient.$disconnect as unknown as MockInstance).mockResolvedValue(
+    undefined,
+  )
+  ;(
+    mockPrismaClient.$transaction as unknown as MockInstance
+  ).mockImplementation(async (operations: any) => {
     // For normal operation, execute all operations and return array of results
     if (Array.isArray(operations)) {
       // Use sequential execution to better model transaction fail-fast behavior

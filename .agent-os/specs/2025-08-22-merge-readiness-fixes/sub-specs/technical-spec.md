@@ -187,20 +187,20 @@ async initializeDatabase(): Promise<void> {
     console.log('DB auto-init disabled. Set DB_AUTO_INIT=true to enable.');
     return;
   }
-  
+
   const url = process.env.DATABASE_URL ?? '';
   const isFileProvider = url.startsWith('file:');
   if (!isFileProvider) {
     console.warn('DB auto-init skipped: non-file provider detected.');
     return;
   }
-  
+
   const dbPath = url.replace('file:', '') || './prisma/dev.db';
-  
+
   try {
     if (!fs.existsSync(dbPath)) {
       console.log('Database not found, initializing...');
-      
+
       // Create database directory
       const dbDir = path.dirname(dbPath);
       if (!fs.existsSync(dbDir)) {

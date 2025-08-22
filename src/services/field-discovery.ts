@@ -19,6 +19,7 @@ export class FieldDiscoveryService {
   /**
    * Fetch a single work item with all expanded fields using --expand all flag
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async fetchWorkItemWithAllFields(workItemId: number): Promise<any> {
     const command = `az boards work-item show --id ${workItemId} --expand all --output json`
 
@@ -39,6 +40,7 @@ export class FieldDiscoveryService {
   /**
    * Analyze a work item to categorize and type all its fields
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   analyzeFields(workItem: any): FieldAnalysisResult {
     const systemFields: string[] = []
     const vstsFields: string[] = []
@@ -49,7 +51,10 @@ export class FieldDiscoveryService {
     // Process top-level metadata fields (id, rev, url, relations, _links)
     const metadataKeys = ['id', 'rev', 'url', 'relations', '_links']
     metadataKeys.forEach((key) => {
-      if (workItem.hasOwnProperty(key) && workItem[key] !== undefined) {
+      if (
+        Object.prototype.hasOwnProperty.call(workItem, key) &&
+        workItem[key] !== undefined
+      ) {
         metadataFields.push(key)
         fieldTypes[key] = this.detectFieldType(workItem[key])
       }
@@ -84,7 +89,7 @@ export class FieldDiscoveryService {
   /**
    * Detect the type of a field value
    */
-  private detectFieldType(value: any): string {
+  private detectFieldType(value: unknown): string {
     if (value === null) return 'null'
     if (value === undefined) return 'undefined'
     if (Array.isArray(value)) return 'array'
@@ -260,7 +265,7 @@ No fields discovered from the analysis.
     // Add failed fetch info to documentation if any failed
     if (failedFetches > 0) {
       const summarySection = documentation.split('## Summary')[1]
-      const updatedSummary = summarySection.replace(
+      const updatedSummary = summarySection?.replace(
         /(\*\*Total Work Items Analyzed:\*\* \d+)/,
         `$1\n**Failed to Fetch:** ${failedFetches}`,
       )

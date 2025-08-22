@@ -1,6 +1,3 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
-
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Use vi.hoisted to ensure the mock function is available during module loading
@@ -430,7 +427,7 @@ describe('SchemaMigrationService', () => {
         new Error('Schema generation failed'),
       )
 
-      const result = await service.fullMigrationWorkflow({})
+      const result = await service.fullMigrationWorkflow([])
 
       expect(result.success).toBe(false)
       expect(result.schemaGenerated).toBe(false)

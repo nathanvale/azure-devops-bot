@@ -1,10 +1,9 @@
-import path from 'path'
+import * as path from 'path'
 
 import { http, HttpResponse } from 'msw'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
-import { server } from '@/mocks/server'
-
+import { server } from '../../src/mocks/server'
 import { TestMCPClient } from '../utils/mcp-client'
 import {
   createWorkItemsResponse,
@@ -13,7 +12,7 @@ import {
 
 describe('Azure DevOps MCP Server Integration', () => {
   let client: TestMCPClient
-  const serverPath = path.resolve(__dirname, '../../dist/mcp-server.js')
+  // const serverPath = path.resolve(__dirname, '../../dist/mcp-server.js')
 
   beforeAll(async () => {
     client = new TestMCPClient()
@@ -82,9 +81,9 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_items')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].type).toBe('text')
+      expect(result.content[0]!.type).toBe('text')
 
-      const workItems = JSON.parse(result.content[0].text)
+      const workItems = JSON.parse((result.content[0]! as any).text)
       expect(Array.isArray(workItems)).toBe(true)
       expect(workItems).toHaveLength(2)
     })
@@ -109,9 +108,9 @@ describe('Azure DevOps MCP Server Integration', () => {
       })
 
       expect(result.content).toHaveLength(1)
-      const workItems = JSON.parse(result.content[0].text)
+      const workItems = JSON.parse((result.content[0]! as any).text)
       expect(workItems).toHaveLength(1)
-      expect(workItems[0].fields['System.State']).toBe('Active')
+      expect(workItems[0]!.fields['System.State']).toBe('Active')
     })
 
     it('should handle API errors gracefully', async () => {
@@ -124,7 +123,7 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_items')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error')
+      expect((result.content[0]! as any).text).toContain('Error')
     })
   })
 
@@ -135,16 +134,16 @@ describe('Azure DevOps MCP Server Integration', () => {
       })
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].type).toBe('text')
-      expect(result.content[0].text).toBeTypeOf('string')
+      expect(result.content[0]!.type).toBe('text')
+      expect((result.content[0]! as any).text).toBeTypeOf('string')
     })
 
     it('should require a query parameter', async () => {
       const result = await client.callTool('query_work', {})
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error')
-      expect(result.content[0].text).toContain('Query is required')
+      expect((result.content[0]! as any).text).toContain('Error')
+      expect((result.content[0]! as any).text).toContain('Query is required')
     })
   })
 
@@ -153,16 +152,20 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_item_url', { id: 1234 })
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('https://dev.azure.com')
-      expect(result.content[0].text).toContain('1234')
+      expect((result.content[0]! as any).text).toContain(
+        'https://dev.azure.com',
+      )
+      expect((result.content[0]! as any).text).toContain('1234')
     })
 
     it('should require an id parameter', async () => {
       const result = await client.callTool('get_work_item_url', {})
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error')
-      expect(result.content[0].text).toContain('Work item ID is required')
+      expect((result.content[0]! as any).text).toContain('Error')
+      expect((result.content[0]! as any).text).toContain(
+        'Work item ID is required',
+      )
     })
   })
 
@@ -178,7 +181,7 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('sync_data')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Successfully synced')
+      expect((result.content[0]! as any).text).toContain('Successfully synced')
     })
   })
 
@@ -200,7 +203,7 @@ describe('Azure DevOps MCP Server Integration', () => {
 
       // Should not throw, but might return filtered results or handle gracefully
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].type).toBe('text')
+      expect(result.content[0]!.type).toBe('text')
     })
   })
 })

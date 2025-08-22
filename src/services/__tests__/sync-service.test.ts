@@ -1,8 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
 
-import type { AzureAuth } from '../auth'
-import type { AzureDevOpsClient } from '../azure-devops'
-import type { DatabaseService } from '../database'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import { SyncService } from '../sync-service'
 
@@ -14,15 +12,17 @@ vi.mock('../database')
 // Mock the resilience package
 vi.mock('@orchestr8/resilience', () => ({
   ProductionResilienceAdapter: vi.fn().mockImplementation(() => ({
-    applyPolicy: vi.fn().mockImplementation((operation, policy) => operation()),
+    applyPolicy: vi
+      .fn()
+      .mockImplementation((operation, _policy) => operation()),
   })),
 }))
 
 describe('SyncService', () => {
   let service: SyncService
-  let mockAuth: AzureAuth
-  let mockClient: AzureDevOpsClient
-  let mockDb: DatabaseService
+  let mockAuth: any
+  let mockClient: any
+  let mockDb: any
 
   beforeEach(() => {
     // Reset all mocks
@@ -41,6 +41,7 @@ describe('SyncService', () => {
     mockClient.fetchWorkItems = vi.fn().mockResolvedValue([])
     mockClient.fetchWorkItemsDetailed = vi.fn().mockResolvedValue([])
     mockDb.syncWorkItems = vi.fn().mockResolvedValue(undefined)
+    mockDb.getAllWorkItems = vi.fn().mockResolvedValue([])
     mockDb.getLastSyncTime = vi.fn().mockResolvedValue(null)
     mockDb.close = vi.fn().mockResolvedValue(undefined)
     mockDb.needsCommentSync = vi.fn().mockResolvedValue(false)
@@ -59,7 +60,7 @@ describe('SyncService', () => {
 
   describe('performSync', () => {
     it('should sync work items successfully', async () => {
-      const mockWorkItems = [
+      const testWorkItems1: any[] = [
         {
           id: 1234,
           title: 'Test Item',
@@ -70,18 +71,21 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItems)
+      const mockFetchWorkItems1 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems1.mockResolvedValue(testWorkItems1)
 
       await service.performSync()
 
       expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1)
       expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1)
-      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockWorkItems)
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(testWorkItems1)
       expect(console.log).toHaveBeenCalledWith('✅ Synced 1 work items')
     })
 
     it('should handle authentication failure', async () => {
-      mockAuth.ensureAuth.mockRejectedValue(new Error('Authentication failed'))
+      ;(mockAuth.ensureAuth as MockInstance).mockRejectedValue(
+        new Error('Authentication failed'),
+      )
 
       await expect(service.performSync()).rejects.toThrow(
         'Authentication failed',
@@ -97,7 +101,9 @@ describe('SyncService', () => {
     })
 
     it('should handle work items fetch failure', async () => {
-      mockClient.fetchWorkItems.mockRejectedValue(new Error('Fetch failed'))
+      ;(mockClient.fetchWorkItems as MockInstance).mockRejectedValue(
+        new Error('Fetch failed'),
+      )
 
       await expect(service.performSync()).rejects.toThrow('Fetch failed')
 
@@ -111,7 +117,7 @@ describe('SyncService', () => {
     })
 
     it('should handle database sync failure', async () => {
-      const mockWorkItems = [
+      const testWorkItems2: any[] = [
         {
           id: 1234,
           title: 'Test Item',
@@ -122,8 +128,10 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItems)
-      mockDb.syncWorkItems.mockRejectedValue(new Error('Database sync failed'))
+      const mockFetchWorkItems2 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems2.mockResolvedValue(testWorkItems2)
+      const mockSyncWorkItems = mockDb.syncWorkItems as MockInstance
+      mockSyncWorkItems.mockRejectedValue(new Error('Database sync failed'))
 
       await expect(service.performSync()).rejects.toThrow(
         'Database sync failed',
@@ -131,7 +139,7 @@ describe('SyncService', () => {
 
       expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1)
       expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1)
-      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockWorkItems)
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(testWorkItems2)
       expect(console.error).toHaveBeenCalledWith(
         '❌ Sync failed:',
         expect.any(Error),
@@ -139,7 +147,7 @@ describe('SyncService', () => {
     })
 
     it('should log correct number of synced items', async () => {
-      const mockWorkItems = [
+      const testWorkItems3: any[] = [
         {
           id: 1234,
           title: 'Item 1',
@@ -158,7 +166,8 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItems)
+      const mockFetchWorkItems3 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems3.mockResolvedValue(testWorkItems3)
 
       await service.performSync()
 
@@ -166,7 +175,7 @@ describe('SyncService', () => {
     })
 
     it('should handle empty work items list', async () => {
-      mockClient.fetchWorkItems.mockResolvedValue([])
+      ;(mockClient.fetchWorkItems as MockInstance).mockResolvedValue([])
 
       await service.performSync()
 
@@ -361,7 +370,7 @@ describe('SyncService', () => {
 
   describe('shouldSync', () => {
     it('should return true when no previous sync exists', async () => {
-      mockDb.getLastSyncTime.mockResolvedValue(null)
+      ;(mockDb.getLastSyncTime as MockInstance).mockResolvedValue(null)
 
       const result = await service.shouldSync()
 
@@ -371,7 +380,8 @@ describe('SyncService', () => {
 
     it('should return true when last sync was more than 5 minutes ago', async () => {
       const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000)
-      mockDb.getLastSyncTime.mockResolvedValue(sixMinutesAgo)
+      const mockGetLastSyncTime = mockDb.getLastSyncTime as MockInstance
+      mockGetLastSyncTime.mockResolvedValue(sixMinutesAgo)
 
       const result = await service.shouldSync()
 
@@ -380,7 +390,8 @@ describe('SyncService', () => {
 
     it('should return false when last sync was less than 5 minutes ago', async () => {
       const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000)
-      mockDb.getLastSyncTime.mockResolvedValue(twoMinutesAgo)
+      const mockGetLastSyncTime2 = mockDb.getLastSyncTime as MockInstance
+      mockGetLastSyncTime2.mockResolvedValue(twoMinutesAgo)
 
       const result = await service.shouldSync()
 
@@ -389,7 +400,8 @@ describe('SyncService', () => {
 
     it('should return false when last sync was exactly 5 minutes ago', async () => {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
-      mockDb.getLastSyncTime.mockResolvedValue(fiveMinutesAgo)
+      const mockGetLastSyncTime3 = mockDb.getLastSyncTime as MockInstance
+      mockGetLastSyncTime3.mockResolvedValue(fiveMinutesAgo)
 
       const result = await service.shouldSync()
 
@@ -397,7 +409,9 @@ describe('SyncService', () => {
     })
 
     it('should handle database errors when checking last sync time', async () => {
-      mockDb.getLastSyncTime.mockRejectedValue(new Error('Database error'))
+      ;(mockDb.getLastSyncTime as MockInstance).mockRejectedValue(
+        new Error('Database error'),
+      )
 
       await expect(service.shouldSync()).rejects.toThrow('Database error')
     })
@@ -414,18 +428,25 @@ describe('SyncService', () => {
     })
 
     it('should handle database close errors', async () => {
-      mockDb.close.mockRejectedValue(new Error('Database close failed'))
+      ;(mockDb.close as MockInstance).mockRejectedValue(
+        new Error('Database close failed'),
+      )
 
       await expect(service.close()).rejects.toThrow('Database close failed')
     })
 
     it('should stop background sync even if database close fails', async () => {
-      const stopBackgroundSyncSpy = vi.spyOn(service, 'stopBackgroundSync')
-      mockDb.close.mockRejectedValue(new Error('Database close failed'))
+      const stopBackgroundSyncSpy = vi
+        .spyOn(service, 'stopBackgroundSync')
+        .mockImplementation(() => {
+          // Mock implementation that doesn't access this.syncInterval
+        })
+      const mockDbClose = mockDb.close as MockInstance
+      mockDbClose.mockRejectedValue(new Error('Database close failed'))
 
       try {
         await service.close()
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 
@@ -461,8 +482,11 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
+      const mockFetchWorkItemIds = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItemIds.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
 
       await service.performSyncDetailed()
 
@@ -480,10 +504,13 @@ describe('SyncService', () => {
 
     it('should handle custom concurrency limit', async () => {
       const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }, { id: 9012 }]
-      const mockDetailedWorkItems = []
+      const mockDetailedWorkItems: any[] = []
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
+      const mockFetchWorkItems6 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems6.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed6 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed6.mockResolvedValue(mockDetailedWorkItems)
 
       await service.performSyncDetailed(10)
 
@@ -494,8 +521,11 @@ describe('SyncService', () => {
     })
 
     it('should handle empty work items list in detailed sync', async () => {
-      mockClient.fetchWorkItems.mockResolvedValue([])
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue([])
+      const mockFetchWorkItems7 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems7.mockResolvedValue([])
+      const mockFetchWorkItemsDetailed7 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed7.mockResolvedValue([])
 
       await service.performSyncDetailed()
 
@@ -522,8 +552,11 @@ describe('SyncService', () => {
         // Note: 5678 and 9012 failed to fetch
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
+      const mockFetchWorkItems8 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems8.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed8 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed8.mockResolvedValue(mockDetailedWorkItems)
 
       await service.performSyncDetailed()
 
@@ -539,14 +572,15 @@ describe('SyncService', () => {
 
     it('should log performance metrics for detailed sync', async () => {
       const mockWorkItemIds = [{ id: 1234 }, { id: 5678 }]
-      const mockDetailedWorkItems = []
+      const mockDetailedWorkItems: any[] = []
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
+      const mockFetchWorkItems9 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems9.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed9 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed9.mockResolvedValue(mockDetailedWorkItems)
 
-      const startTime = Date.now()
       await service.performSyncDetailed()
-      const endTime = Date.now()
 
       expect(console.log).toHaveBeenCalledWith(
         expect.stringMatching(/⏱️ {2}Detailed sync completed in \d+ms/),
@@ -557,7 +591,9 @@ describe('SyncService', () => {
     })
 
     it('should handle authentication failure in detailed sync', async () => {
-      mockAuth.ensureAuth.mockRejectedValue(new Error('Authentication failed'))
+      ;(mockAuth.ensureAuth as MockInstance).mockRejectedValue(
+        new Error('Authentication failed'),
+      )
 
       await expect(service.performSyncDetailed()).rejects.toThrow(
         'Authentication failed',
@@ -570,7 +606,9 @@ describe('SyncService', () => {
     })
 
     it('should handle work item discovery failure in detailed sync', async () => {
-      mockClient.fetchWorkItems.mockRejectedValue(new Error('Discovery failed'))
+      ;(mockClient.fetchWorkItems as MockInstance).mockRejectedValue(
+        new Error('Discovery failed'),
+      )
 
       await expect(service.performSyncDetailed()).rejects.toThrow(
         'Discovery failed',
@@ -585,8 +623,11 @@ describe('SyncService', () => {
     it('should handle detailed fetch failure', async () => {
       const mockWorkItemIds = [{ id: 1234 }]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockRejectedValue(
+      const mockFetchWorkItems10 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems10.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed10 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed10.mockRejectedValue(
         new Error('Detailed fetch failed'),
       )
 
@@ -614,9 +655,13 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
-      mockDb.syncWorkItems.mockRejectedValue(new Error('Database sync failed'))
+      const mockFetchWorkItems11 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems11.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed11 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed11.mockResolvedValue(mockDetailedWorkItems)
+      const mockSyncWorkItems11 = mockDb.syncWorkItems as MockInstance
+      mockSyncWorkItems11.mockRejectedValue(new Error('Database sync failed'))
 
       await expect(service.performSyncDetailed()).rejects.toThrow(
         'Database sync failed',
@@ -632,14 +677,14 @@ describe('SyncService', () => {
   describe('integration scenarios', () => {
     it('should handle complete sync lifecycle', async () => {
       // Setup initial state
-      mockDb.getLastSyncTime.mockResolvedValue(null)
+      ;(mockDb.getLastSyncTime as MockInstance).mockResolvedValue(null)
 
       // Check if sync is needed
       const shouldSync = await service.shouldSync()
       expect(shouldSync).toBe(true)
 
       // Perform sync
-      const mockWorkItems = [
+      const testWorkItems4: any[] = [
         {
           id: 1234,
           title: 'Integration Test Item',
@@ -649,18 +694,20 @@ describe('SyncService', () => {
           lastUpdatedAt: new Date(),
         },
       ]
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItems)
+      const mockFetchWorkItems12 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems12.mockResolvedValue(testWorkItems4)
 
       await service.performSync()
 
       expect(mockAuth.ensureAuth).toHaveBeenCalledTimes(1)
       expect(mockClient.fetchWorkItems).toHaveBeenCalledTimes(1)
-      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(mockWorkItems)
+      expect(mockDb.syncWorkItems).toHaveBeenCalledWith(testWorkItems4)
     })
 
     it('should skip sync when recently synced', async () => {
       const recentSync = new Date(Date.now() - 2 * 60 * 1000) // 2 minutes ago
-      mockDb.getLastSyncTime.mockResolvedValue(recentSync)
+      const mockGetLastSyncTime13 = mockDb.getLastSyncTime as MockInstance
+      mockGetLastSyncTime13.mockResolvedValue(recentSync)
 
       const shouldSync = await service.shouldSync()
       expect(shouldSync).toBe(false)
@@ -720,12 +767,25 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
-      mockDb.needsCommentSync
+      const mockFetchWorkItems14 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems14.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed14 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed14.mockResolvedValue(mockDetailedWorkItems)
+      const mockNeedsCommentSync14 = mockDb.needsCommentSync as MockInstance
+      mockNeedsCommentSync14
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false)
-      mockClient.fetchWorkItemComments.mockResolvedValue(mockComments)
+      const mockFetchWorkItemComments14 =
+        mockClient.fetchWorkItemComments as MockInstance
+      mockFetchWorkItemComments14.mockResolvedValue(mockComments)
+
+      // Mock getAllWorkItems to return work items for comment sync
+      const mockGetAllWorkItems14 = mockDb.getAllWorkItems as MockInstance
+      mockGetAllWorkItems14.mockResolvedValue([
+        { id: 1234, commentCount: 3, changedDate: new Date() },
+        { id: 5678, commentCount: 0, changedDate: new Date() },
+      ])
 
       const syncService = service as any
       await syncService.performSyncDetailed()
@@ -765,16 +825,28 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
-      mockDb.needsCommentSync.mockResolvedValue(true)
-      mockClient.fetchWorkItemComments.mockRejectedValue(
+      const mockFetchWorkItems15 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems15.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed15 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed15.mockResolvedValue(mockDetailedWorkItems)
+      const mockNeedsCommentSync15 = mockDb.needsCommentSync as MockInstance
+      mockNeedsCommentSync15.mockResolvedValue(true)
+      const mockFetchWorkItemComments15 =
+        mockClient.fetchWorkItemComments as MockInstance
+      mockFetchWorkItemComments15.mockRejectedValue(
         new Error('Comment fetch failed'),
       )
 
       const consoleWarnSpy = vi
         .spyOn(console, 'warn')
         .mockImplementation(() => {})
+
+      // Mock getAllWorkItems to return work items for comment sync
+      const mockGetAllWorkItems15 = mockDb.getAllWorkItems as MockInstance
+      mockGetAllWorkItems15.mockResolvedValue([
+        { id: 1234, commentCount: 2, changedDate: new Date() },
+      ])
 
       const syncService = service as any
       await syncService.performSyncDetailed()
@@ -839,12 +911,25 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
-      mockDb.needsCommentSync.mockResolvedValue(true)
-      mockClient.fetchWorkItemComments
+      const mockFetchWorkItems16 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems16.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed16 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed16.mockResolvedValue(mockDetailedWorkItems)
+      const mockNeedsCommentSync16 = mockDb.needsCommentSync as MockInstance
+      mockNeedsCommentSync16.mockResolvedValue(true)
+      const mockFetchWorkItemComments16 =
+        mockClient.fetchWorkItemComments as MockInstance
+      mockFetchWorkItemComments16
         .mockResolvedValueOnce(mockCommentsForItem1)
         .mockResolvedValueOnce(mockCommentsForItem2)
+
+      // Mock getAllWorkItems to return work items for comment sync
+      const mockGetAllWorkItems16 = mockDb.getAllWorkItems as MockInstance
+      mockGetAllWorkItems16.mockResolvedValue([
+        { id: 1234, commentCount: 1, changedDate: new Date() },
+        { id: 5678, commentCount: 1, changedDate: new Date() },
+      ])
 
       const syncService = service as any
       await syncService.performSyncDetailed()
@@ -872,9 +957,19 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
-      mockDb.needsCommentSync.mockResolvedValue(false)
+      const mockFetchWorkItems17 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems17.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed17 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed17.mockResolvedValue(mockDetailedWorkItems)
+      const mockNeedsCommentSync17 = mockDb.needsCommentSync as MockInstance
+      mockNeedsCommentSync17.mockResolvedValue(false)
+
+      // Mock getAllWorkItems to return work items for comment sync
+      const mockGetAllWorkItems17 = mockDb.getAllWorkItems as MockInstance
+      mockGetAllWorkItems17.mockResolvedValue([
+        { id: 1234, commentCount: 0, changedDate: new Date() },
+      ])
 
       const syncService = service as any
       await syncService.performSyncDetailed()
@@ -906,10 +1001,21 @@ describe('SyncService', () => {
         },
       ]
 
-      mockClient.fetchWorkItems.mockResolvedValue(mockWorkItemIds)
-      mockClient.fetchWorkItemsDetailed.mockResolvedValue(mockDetailedWorkItems)
-      mockDb.getLastSyncTime.mockResolvedValue(lastSyncTime)
-      mockDb.needsCommentSync.mockResolvedValue(false)
+      const mockFetchWorkItems18 = mockClient.fetchWorkItems as MockInstance
+      mockFetchWorkItems18.mockResolvedValue(mockWorkItemIds)
+      const mockFetchWorkItemsDetailed18 =
+        mockClient.fetchWorkItemsDetailed as MockInstance
+      mockFetchWorkItemsDetailed18.mockResolvedValue(mockDetailedWorkItems)
+      const mockGetLastSyncTime18 = mockDb.getLastSyncTime as MockInstance
+      mockGetLastSyncTime18.mockResolvedValue(lastSyncTime)
+      const mockNeedsCommentSync18 = mockDb.needsCommentSync as MockInstance
+      mockNeedsCommentSync18.mockResolvedValue(false)
+
+      // Mock getAllWorkItems to return work items for comment sync
+      const mockGetAllWorkItems18 = mockDb.getAllWorkItems as MockInstance
+      mockGetAllWorkItems18.mockResolvedValue([
+        { id: 1234, commentCount: 1, changedDate: new Date() },
+      ])
 
       const syncService = service as any
       await syncService.performSyncDetailed()

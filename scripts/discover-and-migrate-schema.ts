@@ -39,8 +39,15 @@ async function main() {
     process.exit(1)
   }
 
-  if (args[0].startsWith('--sample=')) {
-    const sampleCount = parseInt(args[0].split('=')[1])
+  if (args[0]?.startsWith('--sample=')) {
+    const samplePart = args[0]?.split('=')[1]
+    if (!samplePart) {
+      console.log(
+        '❌ Invalid sample format. Use --sample=N where N is a number',
+      )
+      process.exit(1)
+    }
+    const sampleCount = parseInt(samplePart)
     console.log(
       `📋 Using ${sampleCount} random work items from your project...\n`,
     )

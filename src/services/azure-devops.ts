@@ -67,24 +67,15 @@ const commentPolicy: ResiliencePolicy = {
 const resilience = new ProductionResilienceAdapter()
 
 // Add circuit breaker monitoring
-const logCircuitBreakerEvent = (event: string, key: string, details?: any) => {
+const logCircuitBreakerEvent = (
+  event: string,
+  key: string,
+  details?: unknown,
+) => {
   const timestamp = new Date().toISOString()
   console.log(
     `🔥 Circuit Breaker [${timestamp}] - ${event} for key '${key}'`,
     details ? JSON.stringify(details) : '',
-  )
-}
-
-// Log when circuit breaker state changes occur
-const logRetryAttempt = (
-  attempt: number,
-  maxAttempts: number,
-  delay: number,
-  error: any,
-) => {
-  console.warn(
-    `🔄 Retry attempt ${attempt}/${maxAttempts} after ${delay}ms delay. Error:`,
-    error.message,
   )
 }
 
@@ -234,7 +225,9 @@ export class AzureDevOpsClient {
       }
 
       // Extract work item IDs
-      const workItemIds = wiqlResult.map((item: any) => item.id).join(',')
+      const workItemIds = wiqlResult
+        .map((item: { id: number }) => item.id)
+        .join(',')
 
       // Fetch detailed work items with --expand all flag using resilience
       const expandCommand = `az boards work-item show --id "${workItemIds}" --expand all --output json`
@@ -261,7 +254,7 @@ export class AzureDevOpsClient {
         ? expandedResult
         : [expandedResult]
 
-      return workItems.map((item: any) => this.mapWorkItemData(item))
+      return workItems.map((item: unknown) => this.mapWorkItemData(item as any)) // eslint-disable-line @typescript-eslint/no-explicit-any
     } catch (error) {
       console.error('Failed to fetch work items:', error)
 
@@ -328,8 +321,10 @@ export class AzureDevOpsClient {
         return []
       }
 
-      return commentsResponse.value.map((comment: any) =>
-        this.mapCommentData(comment, workItemId),
+      return commentsResponse.value.map(
+        (
+          comment: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        ) => this.mapCommentData(comment, workItemId),
       )
     } catch (error) {
       console.error(
@@ -460,7 +455,7 @@ export class AzureDevOpsClient {
       const promises = semaphore.map(async () => {
         while (currentIndex < workItemIds.length) {
           const index = currentIndex++
-          const workItemId = workItemIds[index]
+          const workItemId = workItemIds[index]!
 
           try {
             const workItem = await this.fetchSingleWorkItem(workItemId)
@@ -482,6 +477,7 @@ export class AzureDevOpsClient {
   }
 
   private mapCommentData(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     comment: any,
     workItemId: number,
   ): WorkItemCommentData {
@@ -500,6 +496,7 @@ export class AzureDevOpsClient {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapWorkItemData(item: any): WorkItemData {
     return {
       id: item.id,
@@ -510,7 +507,7 @@ export class AzureDevOpsClient {
       lastUpdatedAt: new Date(
         item.fields?.['System.ChangedDate'] ||
           item.fields?.['System.CreatedDate'] ||
-          new Date(),
+          Date.now(),
       ),
       description: item.fields?.['System.Description'] || '',
 
@@ -594,6 +591,9 @@ export class AzureDevOpsClient {
 
       // Store complete raw JSON for backup
       rawJson: JSON.stringify(item),
+
+      // Azure DevOps URL
+      azureUrl: AzureDevOpsClient.buildWorkItemUrl(item.id),
     }
   }
 
@@ -601,10 +601,18 @@ export class AzureDevOpsClient {
     return `https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${encodeURIComponent(AzureDevOpsClient.PROJECT)}/_workitems/edit/${id}`
   }
 
-  private extractPersonName(person: any): string {
+  private extractPersonName(person: unknown): string {
     if (!person) return 'Unassigned'
     if (typeof person === 'string') return person
-    return person.uniqueName || person.displayName || 'Unassigned'
+    if (typeof person === 'object' && person !== null) {
+      const personObj = person as Record<string, unknown>
+      return (
+        (personObj.uniqueName as string) ||
+        (personObj.displayName as string) ||
+        'Unassigned'
+      )
+    }
+    return 'Unassigned'
   }
 
   private parseDate(dateString: string | undefined): Date | undefined {
@@ -612,12 +620,13 @@ export class AzureDevOpsClient {
     return new Date(dateString)
   }
 
-  private parseFloat(value: any): number | undefined {
+  private parseFloat(value: unknown): number | undefined {
     if (value === null || value === undefined) return undefined
-    const parsed = parseFloat(value)
+    const parsed = parseFloat(String(value))
     return isNaN(parsed) ? undefined : parsed
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private extractParentId(relations: any[]): number | undefined {
     if (!relations || !Array.isArray(relations)) return undefined
 
@@ -633,6 +642,7 @@ export class AzureDevOpsClient {
     return undefined
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private hasAttachments(relations: any[]): boolean {
     if (!relations || !Array.isArray(relations)) return false
 
@@ -671,7 +681,7 @@ export class AzureDevOpsClient {
             invalid.push(email)
           }
         }
-      } catch (error) {
+      } catch {
         invalid.push(email)
       }
     }

@@ -308,7 +308,7 @@ export class DatabaseService {
         await this.prisma.$transaction(
           batch.map((comment) => {
             return this.prisma.workItemComment.upsert({
-              where: { id: comment.id },
+              where: { id: parseInt(comment.id, 10) },
               update: {
                 text: comment.text,
                 createdBy: comment.createdBy,
@@ -317,7 +317,7 @@ export class DatabaseService {
                 modifiedDate: comment.modifiedDate,
               },
               create: {
-                id: comment.id,
+                id: parseInt(comment.id, 10),
                 workItemId: comment.workItemId,
                 text: comment.text,
                 createdBy: comment.createdBy,
