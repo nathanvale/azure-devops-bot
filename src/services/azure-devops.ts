@@ -233,35 +233,55 @@ export class AzureDevOpsClient {
         return []
       }
 
-      // Extract work item IDs
-      const workItemIds = (wiqlResult as AzureDevOpsWiqlResult).workItems
+      // Extract work item IDs - CLI returns array directly, not wrapped in workItems property
+      const workItemIds = (wiqlResult as AzureDevOpsWorkItem[])
         .map((item) => item.id)
-        .join(',')
 
-      // Fetch detailed work items with --expand all flag using resilience
-      const expandCommand = `az boards work-item show --id "${workItemIds}" --expand all --output json`
-
-      const { stdout: expandStdout } = await resilience.applyPolicy(
-        async () => {
-          try {
-            return await execAsync(expandCommand, {
-              maxBuffer: 50 * 1024 * 1024,
-            })
-          } catch (error) {
-            logCircuitBreakerEvent('FAILURE', 'azure-devops-detail', {
-              error: error instanceof Error ? error.message : error,
-            })
-            throw error
+      // Fetch detailed work items one by one (CLI doesn't support batch IDs)
+      const workItems: AzureDevOpsWorkItem[] = []
+      
+      // Process in smaller batches to avoid overwhelming the system
+      const batchSize = 50
+      for (let i = 0; i < workItemIds.length; i += batchSize) {
+        const batchIds = workItemIds.slice(i, i + batchSize)
+        console.log(`Fetching work items batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(workItemIds.length / batchSize)} (${batchIds.length} items)`)
+        
+        const batchPromises = batchIds.map(async (id) => {
+          const expandCommand = `az boards work-item show --id ${id} --expand all --output json`
+          
+          const { stdout: expandStdout } = await resilience.applyPolicy(
+            async () => {
+              try {
+                return await execAsync(expandCommand, {
+                  maxBuffer: 10 * 1024 * 1024,
+                })
+              } catch (error) {
+                logCircuitBreakerEvent('FAILURE', 'azure-devops-detail', {
+                  error: error instanceof Error ? error.message : error,
+                  workItemId: id,
+                })
+                console.warn(`Failed to fetch work item ${id}: ${error}`)
+                return null
+              }
+            },
+            detailPolicy,
+          )
+          
+          if (expandStdout) {
+            try {
+              return JSON.parse(expandStdout) as AzureDevOpsWorkItem
+            } catch (parseError) {
+              console.warn(`Failed to parse work item ${id}: ${parseError}`)
+              return null
+            }
           }
-        },
-        detailPolicy,
-      )
-      const expandedResult = JSON.parse(expandStdout)
-
-      // Handle both single work item (object) and multiple work items (array)
-      const workItems = Array.isArray(expandedResult)
-        ? expandedResult
-        : [expandedResult]
+          return null
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        const validResults = batchResults.filter((item): item is AzureDevOpsWorkItem => item !== null)
+        workItems.push(...validResults)
+      }
 
       return workItems.map((item: AzureDevOpsWorkItem) =>
         this.mapWorkItemData(item),

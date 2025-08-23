@@ -257,3 +257,56 @@ Current testing setup includes over 3,800 lines of complex database mocking code
 
 - Temporary reduction in database operation test coverage
 - Will need to implement in-memory SQLite testing for future database coverage
+
+---
+
+## 2025-08-23: Azure CLI to REST API Migration
+
+**ID:** DEC-007
+**Status:** Accepted
+**Category:** Technical
+**Related Spec:** @.agent-os/specs/2025-08-23-migrate-to-azure-devops-rest-api/
+
+### Decision
+
+Replace Azure CLI subprocess-based integration with direct Azure DevOps REST API calls, implemented as a fully abstracted package that can be extracted into its own repository for reuse across multiple projects.
+
+### Context
+
+Current Azure CLI approach is fundamentally flawed for bulk operations:
+- 1,056 subprocess spawns cause 3-5 minute sync times and constant rate limiting
+- Circuit breakers constantly trigger due to Azure Resource Manager's 12,000 requests/hour limit
+- No batch operations support requiring individual API calls per work item
+- Subprocess overhead (~200ms per call) creates significant performance bottleneck
+
+### Alternatives Considered
+
+1. **Fix Azure CLI Issues**
+   - Pros: Minimal code changes, familiar approach
+   - Cons: Cannot solve fundamental architectural problems with subprocess overhead and lack of batch operations
+
+2. **Azure DevOps Node.js SDK**
+   - Pros: Official Microsoft support
+   - Cons: Heavy dependencies, limited batch operations, slower performance
+
+3. **Direct REST API with Abstracted Package**
+   - Pros: 30x performance improvement, batch operations, repository-ready abstraction
+   - Cons: More initial development work
+
+### Rationale
+
+Direct REST API approach solves all current reliability issues while providing a reusable abstracted package. Batch operations reduce API calls from 1,056 to ~20, eliminating rate limiting issues entirely.
+
+### Consequences
+
+**Positive:**
+- 30x performance improvement (3-5 minutes → 10-30 seconds)
+- Eliminates circuit breaker failures and rate limiting issues
+- Creates reusable Azure DevOps REST client for future projects
+- Enables proper rate limiting with X-RateLimit-Remaining headers
+- Repository-ready package structure for easy extraction
+
+**Negative:**
+- Requires Personal Access Token (PAT) instead of Azure CLI SSO
+- Initial development effort to implement abstracted package
+- Need to maintain REST API compatibility as Azure DevOps evolves

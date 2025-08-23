@@ -12,6 +12,16 @@ prisma/dev.db
 
 .logs
 
+# PM2 logs and runtime files
+logs/
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# PM2 specific
+.pm2
+
 coverage/
 
 # Obsidian vault files

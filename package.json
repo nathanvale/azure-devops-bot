@@ -25,7 +25,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
-    "check": "pnpm type-check && pnpm lint && pnpm format:check && pnpm test:ci"
+    "check": "pnpm type-check && pnpm lint && pnpm format:check && pnpm test:ci",
+    "pm2:setup": "./scripts/pm2-setup.sh",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop azure-devops-bot",
+    "pm2:restart": "pm2 restart azure-devops-bot",
+    "pm2:reload": "pm2 reload azure-devops-bot",
+    "pm2:logs": "pm2 logs azure-devops-bot",
+    "pm2:status": "pm2 status",
+    "pm2:monitor": "pm2 monit",
+    "pm2:validate": "tsx scripts/pm2-validate.ts"
   },
   "keywords": [],
   "author": "",
