@@ -1,13 +1,23 @@
 import { http, HttpResponse } from 'msw'
 
+import type { AzureDevOpsWorkItem } from '../../types/azure-devops-api'
+
 // Base Azure DevOps API URL pattern
 const AZURE_DEVOPS_BASE = 'https://dev.azure.com/:org/:project/_apis'
 
+// PATCH operation types for Azure DevOps
+interface PatchOperation {
+  op: 'replace' | 'add' | 'remove'
+  path: string
+  value?: unknown
+}
+
 // Default mock work items
-const mockWorkItems = [
+const mockWorkItems: AzureDevOpsWorkItem[] = [
   {
     id: 1234,
     rev: 1,
+    url: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/1234',
     fields: {
       'System.Id': 1234,
       'System.Title': 'Implement user authentication',
@@ -26,10 +36,28 @@ const mockWorkItems = [
       'System.Description':
         'As a user, I want to authenticate so that I can access the system',
     },
+    _links: {
+      self: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/1234',
+      },
+      workItemUpdates: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/1234/updates',
+      },
+      workItemRevisions: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/1234/revisions',
+      },
+      workItemComments: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/1234/comments',
+      },
+      html: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/1234',
+      },
+    },
   },
   {
     id: 5678,
     rev: 1,
+    url: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/5678',
     fields: {
       'System.Id': 5678,
       'System.Title': 'Setup CI/CD pipeline',
@@ -45,6 +73,23 @@ const mockWorkItems = [
       'System.IterationPath': 'Customer Services Platform\\Sprint 1',
       'Microsoft.VSTS.Common.Priority': 2,
       'System.Description': 'Setup automated build and deployment pipeline',
+    },
+    _links: {
+      self: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/5678',
+      },
+      workItemUpdates: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/5678/updates',
+      },
+      workItemRevisions: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/5678/revisions',
+      },
+      workItemComments: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/5678/comments',
+      },
+      html: {
+        href: 'https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/5678',
+      },
     },
   },
 ]
@@ -78,7 +123,7 @@ export const workItemsListHandler = http.get(
 export const workItemsQueryHandler = http.post(
   `${AZURE_DEVOPS_BASE}/wit/wiql`,
   async ({ request }) => {
-    const body = (await request.json()) as any
+    const body = (await request.json()) as { query?: string }
     const query = body.query?.toLowerCase() || ''
 
     // Simple query parsing for tests
@@ -112,7 +157,11 @@ export const createWorkItemHandler = http.post(
   `${AZURE_DEVOPS_BASE}/wit/workitems/$:type`,
   async ({ request, params }) => {
     const type = params.type as string
-    const body = (await request.json()) as any[]
+    const body = (await request.json()) as Array<{
+      op: string
+      path: string
+      value?: unknown
+    }>
 
     // Extract title from PATCH operations
     const titleOp = body.find((op) => op.path === '/fields/System.Title')
@@ -151,7 +200,7 @@ export const updateWorkItemHandler = http.patch(
   `${AZURE_DEVOPS_BASE}/wit/workitems/:id`,
   async ({ request, params }) => {
     const id = parseInt(params.id as string)
-    const body = (await request.json()) as any[]
+    const body = (await request.json()) as PatchOperation[]
 
     const existingItem = mockWorkItems.find((item) => item.id === id)
     if (!existingItem) {
@@ -162,7 +211,7 @@ export const updateWorkItemHandler = http.patch(
     }
 
     // Apply PATCH operations
-    const updatedFields = { ...existingItem.fields }
+    const updatedFields = { ...existingItem.fields } as Record<string, unknown>
     body.forEach((operation) => {
       if (operation.op === 'replace' && operation.path.startsWith('/fields/')) {
         const fieldName = operation.path.replace('/fields/', '')
@@ -185,9 +234,7 @@ export const updateWorkItemHandler = http.patch(
 
 export const workItemCommentsHandler = http.get(
   `${AZURE_DEVOPS_BASE}/wit/workitems/:id/comments`,
-  ({ params }) => {
-    const id = params.id as string
-
+  ({ params: _params }) => {
     return HttpResponse.json({
       totalCount: 2,
       count: 2,
@@ -237,7 +284,7 @@ export const createRateLimitHandler = () =>
   )
 
 // Factory for creating custom handlers
-export const createCustomWorkItemHandler = (workItem: any) =>
+export const createCustomWorkItemHandler = (workItem: AzureDevOpsWorkItem) =>
   http.get(`${AZURE_DEVOPS_BASE}/wit/workitems/:id`, ({ params }) => {
     if (params.id === workItem.id.toString()) {
       return HttpResponse.json(workItem)
@@ -248,7 +295,7 @@ export const createCustomWorkItemHandler = (workItem: any) =>
     )
   })
 
-export const createWorkItemsHandler = (workItems: any[]) =>
+export const createWorkItemsHandler = (workItems: AzureDevOpsWorkItem[]) =>
   http.get(`${AZURE_DEVOPS_BASE}/wit/workitems`, () =>
     HttpResponse.json({
       count: workItems.length,

@@ -1,6 +1,8 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
+import type { AzureDevOpsWorkItem } from '../types/azure-devops-api.js'
+
 const execAsync = promisify(exec)
 
 export interface FieldAnalysisResult {
@@ -19,7 +21,9 @@ export class FieldDiscoveryService {
   /**
    * Fetch a single work item with all expanded fields using --expand all flag
    */
-  async fetchWorkItemWithAllFields(workItemId: number): Promise<any> {
+  async fetchWorkItemWithAllFields(
+    workItemId: number,
+  ): Promise<AzureDevOpsWorkItem> {
     const command = `az boards work-item show --id ${workItemId} --expand all --output json`
 
     try {
@@ -39,7 +43,7 @@ export class FieldDiscoveryService {
   /**
    * Analyze a work item to categorize and type all its fields
    */
-  analyzeFields(workItem: any): FieldAnalysisResult {
+  analyzeFields(workItem: AzureDevOpsWorkItem): FieldAnalysisResult {
     const systemFields: string[] = []
     const vstsFields: string[] = []
     const customFields: string[] = []
@@ -47,18 +51,25 @@ export class FieldDiscoveryService {
     const fieldTypes: Record<string, string> = {}
 
     // Process top-level metadata fields (id, rev, url, relations, _links)
-    const metadataKeys = ['id', 'rev', 'url', 'relations', '_links']
+    const metadataKeys = ['id', 'rev', 'url', 'relations', '_links'] as const
     metadataKeys.forEach((key) => {
-      if (workItem.hasOwnProperty(key) && workItem[key] !== undefined) {
+      if (
+        Object.prototype.hasOwnProperty.call(workItem, key) &&
+        workItem[key] !== undefined
+      ) {
         metadataFields.push(key)
-        fieldTypes[key] = this.detectFieldType(workItem[key])
+        fieldTypes[key] = this.detectFieldType(
+          (workItem as unknown as Record<string, unknown>)[key],
+        )
       }
     })
 
     // Process fields object
     if (workItem.fields) {
       Object.keys(workItem.fields).forEach((fieldName) => {
-        const value = workItem.fields[fieldName]
+        const value = (workItem.fields as unknown as Record<string, unknown>)[
+          fieldName
+        ]
         fieldTypes[fieldName] = this.detectFieldType(value)
 
         if (fieldName.startsWith('System.')) {
@@ -84,7 +95,7 @@ export class FieldDiscoveryService {
   /**
    * Detect the type of a field value
    */
-  private detectFieldType(value: any): string {
+  private detectFieldType(value: unknown): string {
     if (value === null) return 'null'
     if (value === undefined) return 'undefined'
     if (Array.isArray(value)) return 'array'
@@ -260,14 +271,16 @@ No fields discovered from the analysis.
     // Add failed fetch info to documentation if any failed
     if (failedFetches > 0) {
       const summarySection = documentation.split('## Summary')[1]
-      const updatedSummary = summarySection.replace(
-        /(\*\*Total Work Items Analyzed:\*\* \d+)/,
-        `$1\n**Failed to Fetch:** ${failedFetches}`,
-      )
-      return documentation.replace(
-        '## Summary' + summarySection,
-        '## Summary' + updatedSummary,
-      )
+      if (summarySection) {
+        const updatedSummary = summarySection.replace(
+          /(\*\*Total Work Items Analyzed:\*\* \d+)/,
+          `$1\n**Failed to Fetch:** ${failedFetches}`,
+        )
+        return documentation.replace(
+          '## Summary' + summarySection,
+          '## Summary' + updatedSummary,
+        )
+      }
     }
 
     return documentation

@@ -226,3 +226,34 @@ Focus testing efforts on areas that would break core functionality (data corrupt
 
 - Higher risk of regressions in untested areas
 - Requires more careful manual testing
+
+---
+
+## 2025-08-23: Database Testing Cleanup
+
+**ID:** DEC-006
+**Status:** Accepted  
+**Category:** Technical
+**Related Spec:** @.agent-os/specs/2025-08-23-database-testing-cleanup/
+
+### Decision
+
+Remove all database mocking infrastructure and complex Prisma client mocking in favor of future in-memory SQLite testing for database operations.
+
+### Context
+
+Current testing setup includes over 3,800 lines of complex database mocking code that provides false confidence and requires extensive maintenance. Tests pass with mocks but real database operations might fail in production.
+
+### Consequences
+
+**Positive:**
+
+- Eliminates ~3,800 lines of complex mocking code
+- Removes false confidence from tests that don't test real database behavior
+- Reduces test maintenance overhead significantly
+- Establishes foundation for reliable in-memory SQLite testing
+
+**Negative:**
+
+- Temporary reduction in database operation test coverage
+- Will need to implement in-memory SQLite testing for future database coverage

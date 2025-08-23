@@ -1,5 +1,7 @@
+import type { WorkItem } from '@prisma/client'
+
 import { exec } from 'child_process'
-import { readFile, writeFile } from 'fs/promises'
+import { writeFile } from 'fs/promises'
 import path from 'path'
 import { promisify } from 'util'
 
@@ -12,6 +14,7 @@ export interface SchemaValidationResult {
   hasWorkItemModel: boolean
   existingFields: string[]
   missingFields: string[]
+  newFields: string[]
   errors: string[]
 }
 
@@ -114,6 +117,17 @@ export class SchemaMigrationService {
 
       // Extract field names from the model
       const modelContent = workItemModelMatch[1]
+      if (!modelContent) {
+        errors.push('WorkItem model content not found in schema')
+        return {
+          errors,
+          newFields: [],
+          missingFields: [],
+          isValid: false,
+          hasWorkItemModel: false,
+          existingFields: [],
+        }
+      }
       const fieldMatches = modelContent.matchAll(/(\w+)\s+\w+/g)
       for (const match of fieldMatches) {
         if (match[1] && !match[1].startsWith('@@')) {
@@ -156,6 +170,7 @@ export class SchemaMigrationService {
       hasWorkItemModel,
       existingFields,
       missingFields,
+      newFields: [],
       errors,
     }
   }
@@ -372,7 +387,7 @@ model WorkItemComment {
   /**
    * Test migration by applying and rolling back
    */
-  async testMigration(migrationSql: string): Promise<MigrationTestResult> {
+  async testMigration(_migrationSql: string): Promise<MigrationTestResult> {
     let migrationApplied = false
     let rollbackSuccessful = false
 
@@ -419,8 +434,8 @@ model WorkItemComment {
    * Validate data integrity after migration
    */
   validateDataIntegrity(
-    preMigrationData: any[],
-    postMigrationData: any[],
+    preMigrationData: WorkItem[],
+    postMigrationData: WorkItem[],
   ): DataIntegrityResult {
     const missingRecords: number[] = []
     const corruptedRecords: number[] = []
@@ -438,7 +453,10 @@ model WorkItemComment {
       // Check for corrupted data (core fields should remain intact)
       const coreFields = ['id', 'title', 'state', 'type', 'rawJson']
       const isCorrupted = coreFields.some((field) => {
-        return preRecord[field] !== postRecord[field]
+        return (
+          (preRecord as Record<string, unknown>)[field] !==
+          (postRecord as Record<string, unknown>)[field]
+        )
       })
 
       if (isCorrupted) {

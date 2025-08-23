@@ -30,15 +30,15 @@ The following foundational features have been implemented:
 - [x] **Full Data Sync** - Use `az boards work-item show --expand all` for complete metadata
 - [x] **Comment Storage** - Sync all work item comments to separate table `MEDIUM`
 - [ ] **Always-On Service** - PM2 process management for 24/7 availability `HIGH`
-- [x] **Simplified MCP Tools** - Reduce to essential tools `MEDIUM`
-- **wit_force_sync_work_items**: Retrieve a list of work items relevant to the authenticated user.
-- **wit_my_work_items**: Retrieve a list of work items relevant to the authenticated user.
-- **wit_get_work_item**: Get a single work item by ID.
-- **wit_get_work_items_batch_by_ids**: Retrieve a list of work items by IDs in batch.
-- **wit_list_work_item_comments**: Retrieve a list of comments for a work item by ID.
-- **wit_get_work_items_for_iteration**: Retrieve a list of work items for a specified iteration.
-- **wit_add_work_item_comment**: Add a comment to a work item by ID.
-- **wit_link_work_item_to_pull_request**: Link a single work item to an existing pull request.
+- [x] **Simplified MCP Tools** - Reduce to essential tools `MEDIUM` ✅ **COMPLETED**
+  - [x] **wit_force_sync_work_items**: Retrieve a list of work items relevant to the authenticated user.
+  - [x] **wit_my_work_items**: Retrieve a list of work items relevant to the authenticated user.
+  - [x] **wit_get_work_item**: Get a single work item by ID.
+  - [x] **wit_get_work_items_batch_by_ids**: Retrieve a list of work items by IDs in batch.
+  - [x] **wit_list_work_item_comments**: Retrieve a list of comments for a work item by ID.
+  - [x] **wit_get_work_items_for_iteration**: Retrieve a list of work items for a specified iteration.
+  - [x] **wit_add_work_item_comment**: Add a comment to a work item by ID. ✅ **NEWLY COMPLETED**
+  - [x] **wit_link_work_item_to_pull_request**: Link a single work item to an existing pull request. ✅ **NEWLY COMPLETED**
 
 ### Should-Have Features
 

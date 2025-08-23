@@ -45,6 +45,8 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        URL: 'readonly',
+        NodeJS: 'readonly',
       },
     },
     plugins: {
@@ -101,6 +103,7 @@ export default [
       '**/node_modules/**',
       '**/coverage/**',
       'prisma/migrations/**',
+      'vitest.workspace.ts',
     ],
   },
 ]

@@ -53,3 +53,10 @@ As a developer, I want to add comments and link work items to pull requests, so 
 1. All 8 MCP tools implemented with proper TypeScript interfaces and error handling
 2. Complete removal of legacy tools (get_work_items, query_work, sync_data, get_work_item_url)
 3. Database queries optimized for sub-100ms response times with proper indexing
+
+## Spec Documentation
+
+- Tasks: @.agent-os/specs/2025-08-22-simplified-mcp-tools/tasks.md
+- Technical Specification: @.agent-os/specs/2025-08-22-simplified-mcp-tools/sub-specs/technical-spec.md
+- Database Schema: @.agent-os/specs/2025-08-22-simplified-mcp-tools/sub-specs/database-schema.md
+- Tests Specification: @.agent-os/specs/2025-08-22-simplified-mcp-tools/sub-specs/tests.md

@@ -308,7 +308,7 @@ export class DatabaseService {
         await this.prisma.$transaction(
           batch.map((comment) => {
             return this.prisma.workItemComment.upsert({
-              where: { id: comment.id },
+              where: { id: parseInt(comment.id, 10) },
               update: {
                 text: comment.text,
                 createdBy: comment.createdBy,
@@ -317,7 +317,7 @@ export class DatabaseService {
                 modifiedDate: comment.modifiedDate,
               },
               create: {
-                id: comment.id,
+                id: parseInt(comment.id, 10),
                 workItemId: comment.workItemId,
                 text: comment.text,
                 createdBy: comment.createdBy,
@@ -420,6 +420,61 @@ export class DatabaseService {
     }
 
     return changedDate > lastSyncTime
+  }
+
+  async getWorkItemById(id: number) {
+    try {
+      return await this.prisma.workItem.findUnique({
+        where: { id },
+      })
+    } catch (error) {
+      console.error(`Failed to retrieve work item by ID ${id}:`, error)
+      throw new Error(
+        `Database query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async getWorkItemsByIds(ids: number[]) {
+    try {
+      if (!ids || ids.length === 0) {
+        return []
+      }
+
+      return await this.prisma.workItem.findMany({
+        where: {
+          id: {
+            in: ids,
+          },
+        },
+        orderBy: { lastUpdatedAt: 'desc' },
+      })
+    } catch (error) {
+      console.error(
+        `Failed to retrieve work items by IDs [${ids.join(', ')}]:`,
+        error,
+      )
+      throw new Error(
+        `Database query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async getWorkItemsByIteration(iterationPath: string) {
+    try {
+      return await this.prisma.workItem.findMany({
+        where: { iterationPath },
+        orderBy: { lastUpdatedAt: 'desc' },
+      })
+    } catch (error) {
+      console.error(
+        `Failed to retrieve work items by iteration '${iterationPath}':`,
+        error,
+      )
+      throw new Error(
+        `Database query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
   }
 
   async close(): Promise<void> {

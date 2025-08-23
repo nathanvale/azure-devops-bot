@@ -18,5 +18,12 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'dist/', 'tests/', '**/*.d.ts'],
     },
+    // Future: Configure in-memory SQLite for database testing
+    // pool: 'threads',
+    // poolOptions: {
+    //   threads: {
+    //     singleThread: true,
+    //   },
+    // },
   },
 })

@@ -9,6 +9,17 @@ import { spawn } from 'child_process'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
+// Tool argument types based on MCP server definitions
+type ToolArguments =
+  | { id?: number; emails?: string[] } // get_work_items, wit_get_work_item, etc.
+  | { query?: string; emails?: string[] } // query_work
+  | { id: number } // get_work_item_url, wit_get_work_item
+  | { workItemId: number; text: string } // wit_add_work_item_comment
+  | { workItemId: number; pullRequestId: number } // wit_link_work_item_to_pull_request
+  | { iterationPath: string; emails?: string[] } // wit_get_work_items_for_iteration
+  | { ids: number[] } // wit_get_work_items_batch_by_ids
+  | Record<string, unknown> // fallback for any other arguments
+
 export class TestMCPClient {
   private client: Client
   private transport: StdioClientTransport | null = null
@@ -26,10 +37,10 @@ export class TestMCPClient {
     )
   }
 
-  async connect(serverPath: string, args: string[] = []): Promise<void> {
+  async connect(command: string, args: string[] = []): Promise<void> {
     return new Promise((resolve, reject) => {
       // Spawn the MCP server process
-      this.process = spawn('node', [serverPath, ...args], {
+      this.process = spawn(command, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env, NODE_ENV: 'test' },
       })
@@ -59,9 +70,9 @@ export class TestMCPClient {
 
       // Create transport
       this.transport = new StdioClientTransport({
-        readable: this.process.stdout,
-        writable: this.process.stdin,
-      })
+        readable: this.process.stdout!,
+        writable: this.process.stdin!,
+      } as unknown as ConstructorParameters<typeof StdioClientTransport>[0])
 
       // Connect client
       this.client
@@ -85,12 +96,16 @@ export class TestMCPClient {
     }
   }
 
-  async callTool(name: string, args: any = {}): Promise<CallToolResult> {
+  async callTool(
+    name: string,
+    args: ToolArguments = {},
+  ): Promise<CallToolResult> {
     try {
-      return await this.client.callTool({
+      const result = await this.client.callTool({
         name,
         arguments: args,
       })
+      return result as CallToolResult
     } catch (error) {
       throw new Error(
         `Failed to call tool '${name}': ${error instanceof Error ? error.message : String(error)}`,
@@ -155,7 +170,7 @@ export async function createTestMCPClient(
 export async function callToolWithTimeout(
   client: TestMCPClient,
   toolName: string,
-  args: any = {},
+  args: ToolArguments = {},
   timeoutMs = 10000,
 ): Promise<CallToolResult> {
   return new Promise((resolve, reject) => {
@@ -191,7 +206,7 @@ export async function waitForServerReady(
         await client.listTools()
         return // Server is ready
       }
-    } catch (error) {
+    } catch {
       // Server not ready yet, continue waiting
     }
 

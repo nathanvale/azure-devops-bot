@@ -1,3 +1,5 @@
+import type { WorkItem } from '@prisma/client'
+
 import type { DatabaseService } from './database.js'
 
 export class QueryEngine {
@@ -179,7 +181,7 @@ export class QueryEngine {
         ? await this.db.getWorkItemsForUsers(userEmails)
         : await this.db.getAllWorkItems()
     const historicalItems = allItems.filter(
-      (item: any) =>
+      (item: WorkItem) =>
         ['Closed', 'Resolved', 'Done', 'Completed'].includes(item.state) &&
         (item.closedDate || item.resolvedDate),
     )
@@ -191,14 +193,14 @@ export class QueryEngine {
     const stats = {
       total: historicalItems.length,
       byType: historicalItems.reduce(
-        (acc: Record<string, number>, item: any) => {
+        (acc: Record<string, number>, item: WorkItem) => {
           acc[item.type] = (acc[item.type] || 0) + 1
           return acc
         },
         {} as Record<string, number>,
       ),
       byState: historicalItems.reduce(
-        (acc: Record<string, number>, item: any) => {
+        (acc: Record<string, number>, item: WorkItem) => {
           acc[item.state] = (acc[item.state] || 0) + 1
           return acc
         },
@@ -220,13 +222,13 @@ export class QueryEngine {
     // Show most recent 10 historical items
     const recentItems = historicalItems
       .sort(
-        (a: any, b: any) =>
+        (a: WorkItem, b: WorkItem) =>
           new Date(b.lastUpdatedAt).getTime() -
           new Date(a.lastUpdatedAt).getTime(),
       )
       .slice(0, 10)
 
-    recentItems.forEach((item: any) => {
+    recentItems.forEach((item: WorkItem) => {
       result += `• [${item.id}] ${item.title} - ${item.state}\n`
       if (item.description) {
         result += `  📝 ${item.description.substring(0, 100)}${item.description.length > 100 ? '...' : ''}\n`
@@ -250,7 +252,7 @@ export class QueryEngine {
     return this.formatWorkItems(allItems, "Here's your backlog summary:")
   }
 
-  private formatWorkItems(items: any[], title: string): string {
+  private formatWorkItems(items: WorkItem[], title: string): string {
     let result = `${title}\n\n`
 
     items.forEach((item) => {

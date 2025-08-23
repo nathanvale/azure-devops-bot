@@ -1,3 +1,5 @@
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+
 import path from 'path'
 
 import { http, HttpResponse } from 'msw'
@@ -11,9 +13,21 @@ import {
   createAzureWorkItem,
 } from '../utils/test-helpers'
 
+// Helper function to safely extract text content from tool results
+function expectTextContent(result: CallToolResult): string {
+  expect(result.content).toHaveLength(1)
+  expect(result.content[0]).toBeDefined()
+  expect(result.content[0]?.type).toBe('text')
+
+  const firstContent = result.content[0]
+  if (!firstContent || firstContent.type !== 'text') {
+    throw new Error('Expected text content')
+  }
+  return firstContent.text
+}
+
 describe('Azure DevOps MCP Server Integration', () => {
   let client: TestMCPClient
-  const serverPath = path.resolve(__dirname, '../../dist/mcp-server.js')
 
   beforeAll(async () => {
     client = new TestMCPClient()
@@ -43,13 +57,15 @@ describe('Azure DevOps MCP Server Integration', () => {
     it('should list all available tools', async () => {
       const tools = await client.listTools()
 
-      expect(tools.tools).toHaveLength(4)
+      expect(tools.tools).toHaveLength(6)
 
       const toolNames = tools.tools.map((t) => t.name)
       expect(toolNames).toContain('get_work_items')
       expect(toolNames).toContain('query_work')
       expect(toolNames).toContain('sync_data')
       expect(toolNames).toContain('get_work_item_url')
+      expect(toolNames).toContain('wit_add_work_item_comment')
+      expect(toolNames).toContain('wit_link_work_item_to_pull_request')
     })
 
     it('should have properly defined tool schemas', async () => {
@@ -82,9 +98,14 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_items')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].type).toBe('text')
+      expect(result.content[0]).toBeDefined()
+      expect(result.content[0]?.type).toBe('text')
 
-      const workItems = JSON.parse(result.content[0].text)
+      const firstContent = result.content[0]
+      if (!firstContent || firstContent.type !== 'text') {
+        throw new Error('Expected text content')
+      }
+      const workItems = JSON.parse(firstContent.text)
       expect(Array.isArray(workItems)).toBe(true)
       expect(workItems).toHaveLength(2)
     })
@@ -109,7 +130,7 @@ describe('Azure DevOps MCP Server Integration', () => {
       })
 
       expect(result.content).toHaveLength(1)
-      const workItems = JSON.parse(result.content[0].text)
+      const workItems = JSON.parse(expectTextContent(result))
       expect(workItems).toHaveLength(1)
       expect(workItems[0].fields['System.State']).toBe('Active')
     })
@@ -124,7 +145,7 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_items')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error')
+      expect(expectTextContent(result)).toContain('Error')
     })
   })
 
@@ -135,16 +156,16 @@ describe('Azure DevOps MCP Server Integration', () => {
       })
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].type).toBe('text')
-      expect(result.content[0].text).toBeTypeOf('string')
+      expect(result.content[0]?.type).toBe('text')
+      expect(expectTextContent(result)).toBeTypeOf('string')
     })
 
     it('should require a query parameter', async () => {
       const result = await client.callTool('query_work', {})
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error')
-      expect(result.content[0].text).toContain('Query is required')
+      expect(expectTextContent(result)).toContain('Error')
+      expect(expectTextContent(result)).toContain('Query is required')
     })
   })
 
@@ -153,16 +174,16 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('get_work_item_url', { id: 1234 })
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('https://dev.azure.com')
-      expect(result.content[0].text).toContain('1234')
+      expect(expectTextContent(result)).toContain('https://dev.azure.com')
+      expect(expectTextContent(result)).toContain('1234')
     })
 
     it('should require an id parameter', async () => {
       const result = await client.callTool('get_work_item_url', {})
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Error')
-      expect(result.content[0].text).toContain('Work item ID is required')
+      expect(expectTextContent(result)).toContain('Error')
+      expect(expectTextContent(result)).toContain('Work item ID is required')
     })
   })
 
@@ -178,7 +199,147 @@ describe('Azure DevOps MCP Server Integration', () => {
       const result = await client.callTool('sync_data')
 
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].text).toContain('Successfully synced')
+      expect(expectTextContent(result)).toContain('Successfully synced')
+    })
+  })
+
+  describe('wit_add_work_item_comment Tool', () => {
+    it('should add comment successfully', async () => {
+      // Mock successful Azure CLI response for adding comment
+      server.use(
+        http.post('https://management.azure.com/subscriptions/*', () =>
+          HttpResponse.json({ text: 'Test comment' }, { status: 201 }),
+        ),
+      )
+
+      // Mock sync response to show updated data
+      server.use(
+        http.get('https://dev.azure.com/*/wit/workitems', () =>
+          HttpResponse.json(createWorkItemsResponse([])),
+        ),
+      )
+
+      const result = await client.callTool('wit_add_work_item_comment', {
+        id: 1234,
+        comment: 'Test comment from integration test',
+      })
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0]?.type).toBe('text')
+      expect(expectTextContent(result)).toContain(
+        'Successfully added comment to work item 1234',
+      )
+    })
+
+    it('should require work item ID', async () => {
+      const result = await client.callTool('wit_add_work_item_comment', {
+        comment: 'Test comment',
+      })
+
+      expect(result.content).toHaveLength(1)
+      expect(expectTextContent(result)).toContain('Error')
+      expect(expectTextContent(result)).toContain('Work item ID is required')
+    })
+
+    it('should require comment text', async () => {
+      const result = await client.callTool('wit_add_work_item_comment', {
+        id: 1234,
+      })
+
+      expect(result.content).toHaveLength(1)
+      expect(expectTextContent(result)).toContain('Error')
+      expect(expectTextContent(result)).toContain('Comment text is required')
+    })
+
+    it('should handle API errors gracefully', async () => {
+      server.use(
+        http.post('https://management.azure.com/*', () =>
+          HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+        ),
+      )
+
+      const result = await client.callTool('wit_add_work_item_comment', {
+        id: 1234,
+        comment: 'Test comment',
+      })
+
+      expect(result.content).toHaveLength(1)
+      expect(expectTextContent(result)).toContain('Error')
+    })
+  })
+
+  describe('wit_link_work_item_to_pull_request Tool', () => {
+    it('should link work item to pull request successfully', async () => {
+      // Mock successful Azure CLI response for linking
+      server.use(
+        http.patch('https://management.azure.com/subscriptions/*', () =>
+          HttpResponse.json({ id: 1234 }, { status: 200 }),
+        ),
+      )
+
+      const result = await client.callTool(
+        'wit_link_work_item_to_pull_request',
+        {
+          id: 1234,
+          pullRequestUrl: 'https://github.com/user/repo/pull/123',
+        },
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0]?.type).toBe('text')
+      expect(expectTextContent(result)).toContain(
+        'Successfully linked work item 1234 to pull request',
+      )
+      expect(expectTextContent(result)).toContain(
+        'https://github.com/user/repo/pull/123',
+      )
+    })
+
+    it('should require work item ID', async () => {
+      const result = await client.callTool(
+        'wit_link_work_item_to_pull_request',
+        {
+          pullRequestUrl: 'https://github.com/user/repo/pull/123',
+        },
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(expectTextContent(result)).toContain('Error')
+      expect(expectTextContent(result)).toContain('Work item ID is required')
+    })
+
+    it('should require pull request URL', async () => {
+      const result = await client.callTool(
+        'wit_link_work_item_to_pull_request',
+        {
+          id: 1234,
+        },
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(expectTextContent(result)).toContain('Error')
+      expect(expectTextContent(result)).toContain(
+        'Pull request URL is required',
+      )
+    })
+
+    it('should handle API errors gracefully', async () => {
+      server.use(
+        http.patch('https://management.azure.com/*', () =>
+          HttpResponse.json({ message: 'Conflict' }, { status: 409 }),
+        ),
+      )
+
+      const result = await client.callTool(
+        'wit_link_work_item_to_pull_request',
+        {
+          id: 1234,
+          pullRequestUrl: 'https://github.com/user/repo/pull/123',
+        },
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(expectTextContent(result)).toContain('Error')
     })
   })
 
@@ -200,7 +361,7 @@ describe('Azure DevOps MCP Server Integration', () => {
 
       // Should not throw, but might return filtered results or handle gracefully
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].type).toBe('text')
+      expect(result.content[0]?.type).toBe('text')
     })
   })
 })

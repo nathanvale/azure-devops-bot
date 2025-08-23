@@ -4,7 +4,7 @@ import { AzureAuth } from '../auth'
 
 describe('AzureAuth', () => {
   let auth: AzureAuth
-  let mockExecAsync: any
+  let mockExecAsync: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.resetAllMocks()
@@ -159,9 +159,9 @@ describe('AzureAuth', () => {
     })
 
     it('should handle checkAuth errors', async () => {
-      const checkAuthSpy = vi
-        .spyOn(auth, 'checkAuth')
-        .mockRejectedValue(new Error('Check auth failed'))
+      vi.spyOn(auth, 'checkAuth').mockRejectedValue(
+        new Error('Check auth failed'),
+      )
 
       await expect(auth.ensureAuth()).rejects.toThrow('Check auth failed')
     })
@@ -225,7 +225,7 @@ describe('AzureAuth', () => {
 
   describe('error scenarios', () => {
     it('should handle Azure CLI returning error codes', async () => {
-      const error: any = new Error('Command failed')
+      const error = new Error('Command failed') as Error & { code: number }
       error.code = 1
       mockExecAsync.mockRejectedValue(error)
 
@@ -235,7 +235,7 @@ describe('AzureAuth', () => {
     })
 
     it('should handle timeout errors', async () => {
-      const error: any = new Error('Command timed out')
+      const error = new Error('Command timed out') as Error & { code: string }
       error.code = 'TIMEOUT'
       mockExecAsync.mockRejectedValue(error)
 
@@ -245,7 +245,7 @@ describe('AzureAuth', () => {
     })
 
     it('should handle permission errors', async () => {
-      const error: any = new Error('Permission denied')
+      const error = new Error('Permission denied') as Error & { code: string }
       error.code = 'EACCES'
       mockExecAsync.mockRejectedValue(error)
 
