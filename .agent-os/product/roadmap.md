@@ -9,11 +9,11 @@
 The following foundational features have been implemented:
 
 - [x] **Basic MCP Server** - Model Context Protocol server with stdio transport
-- [x] **Azure DevOps Integration** - Basic work item fetching via Azure CLI
+- [x] **Azure DevOps Integration** - Basic work item fetching via REST API
 - [x] **SQLite Database** - Local storage with Prisma ORM
 - [x] **Work Item Storage** - Core work item fields (title, state, type, assignedTo)
 - [x] **Background Sync** - Configurable sync interval (default 5 minutes)
-- [x] **Authentication** - Azure CLI SSO integration
+- [x] **Authentication** - PAT (Personal Access Token) integration
 - [x] **Basic Query Tools** - get_work_items, query_work, sync_data, get_work_item_url
 - [x] **Email Validation** - User email validation against Azure DevOps
 - [x] **Test Infrastructure** - Vitest setup with MSW mocking
@@ -28,7 +28,7 @@ The following foundational features have been implemented:
 ### Must-Have Features
 
 - [x] **Comprehensive Schema** - Expanded database to capture ALL Azure DevOps fields
-- [x] **Full Data Sync** - Use `az boards work-item show --expand all` for complete metadata
+- [x] **Full Data Sync** - Use REST API with comprehensive field expansion for complete metadata
 - [x] **Comment Storage** - Sync all work item comments to separate table `MEDIUM`
 - [x] **Always-On Service** - PM2 process management for 24/7 availability `HIGH` ✅ **COMPLETED**
 - [x] **Simplified MCP Tools** - Reduce to essential tools `MEDIUM` ✅ **COMPLETED**
@@ -45,11 +45,11 @@ The following foundational features have been implemented:
 
 - [ ] **Raw JSON Backup** - Store complete Azure DevOps response for data completeness `LOW`
 - [ ] **Batch Processing** - Parallel work item fetching for faster sync `MEDIUM`
-- [ ] **Error Recovery** - Robust handling of Azure CLI failures `MEDIUM`
+- [ ] **Error Recovery** - Robust handling of REST API failures `MEDIUM`
 
 ### Dependencies
 
-- Azure CLI must be installed and authenticated
+- Azure DevOps Personal Access Token (PAT) must be configured
 - PM2 must be installed globally for process management
 
 ## Phase 2: Production Hardening (Next Sprint)
@@ -121,7 +121,7 @@ The following foundational features have been implemented:
 
 ### Success Metrics
 
-- **Sync Speed**: Complete project sync in under 5 minutes
+- **Sync Speed**: Complete project sync in under 30 seconds
 - **Query Speed**: Work item queries under 100ms
 - **Uptime**: 99.9% availability with automatic restart
 - **Data Completeness**: 100% of Azure DevOps fields captured
@@ -130,7 +130,7 @@ The following foundational features have been implemented:
 
 ### High Risk
 
-- **Azure CLI Changes**: Microsoft could change CLI output format
+- **Azure REST API Changes**: Microsoft could change REST API response format
 - **Rate Limiting**: Aggressive syncing could hit Azure DevOps limits
 
 ### Medium Risk

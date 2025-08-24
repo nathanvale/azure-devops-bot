@@ -5,6 +5,8 @@ import { writeFile } from 'fs/promises'
 import path from 'path'
 import { promisify } from 'util'
 
+import type { AzureDevOpsRestClient } from '../packages/azure-devops-client/dist/index.js'
+
 import { FieldDiscoveryService } from './field-discovery.js'
 
 const execAsync = promisify(exec)
@@ -51,8 +53,8 @@ export interface FullMigrationResult {
 export class SchemaMigrationService {
   private fieldDiscoveryService: FieldDiscoveryService
 
-  constructor() {
-    this.fieldDiscoveryService = new FieldDiscoveryService()
+  constructor(client: AzureDevOpsRestClient) {
+    this.fieldDiscoveryService = new FieldDiscoveryService(client)
   }
 
   /**

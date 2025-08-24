@@ -46,7 +46,7 @@ Local MCP server provides the fastest possible access (SQLite queries), guarante
 - Sub-100ms query response times
 - 24/7 availability regardless of network status
 - Complete data ownership and control
-- Zero authentication complexity (uses system Azure CLI)
+- Simple authentication using Personal Access Token (PAT)
 - Perfect for AI agent consumption
 
 **Negative:**
@@ -274,6 +274,7 @@ Replace Azure CLI subprocess-based integration with direct Azure DevOps REST API
 ### Context
 
 Current Azure CLI approach is fundamentally flawed for bulk operations:
+
 - 1,056 subprocess spawns cause 3-5 minute sync times and constant rate limiting
 - Circuit breakers constantly trigger due to Azure Resource Manager's 12,000 requests/hour limit
 - No batch operations support requiring individual API calls per work item
@@ -300,6 +301,7 @@ Direct REST API approach solves all current reliability issues while providing a
 ### Consequences
 
 **Positive:**
+
 - 30x performance improvement (3-5 minutes → 10-30 seconds)
 - Eliminates circuit breaker failures and rate limiting issues
 - Creates reusable Azure DevOps REST client for future projects
@@ -307,6 +309,7 @@ Direct REST API approach solves all current reliability issues while providing a
 - Repository-ready package structure for easy extraction
 
 **Negative:**
+
 - Requires Personal Access Token (PAT) instead of Azure CLI SSO
 - Initial development effort to implement abstracted package
 - Need to maintain REST API compatibility as Azure DevOps evolves

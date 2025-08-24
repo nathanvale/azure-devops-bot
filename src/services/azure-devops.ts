@@ -1,92 +1,15 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import type { AzureDevOpsPerson } from '../types/azure-devops-api.js'
 
 import {
-  ProductionResilienceAdapter,
-  type ResiliencePolicy,
-} from '@orchestr8/resilience'
+  AzureDevOpsProvider,
+  type WorkItemData as RestWorkItemData,
+  type CommentData as RestCommentData,
+  type AzureDevOpsClientConfig,
+} from '../packages/azure-devops-client/dist/index.js'
 
-import type {
-  AzureDevOpsWorkItem,
-  AzureDevOpsWorkItemComment,
-  AzureDevOpsCommentsResponse,
-  AzureDevOpsWiqlResult,
-  AzureDevOpsPerson,
-  AzureDevOpsWorkItemRelation,
-} from '../types/azure-devops-api.js'
-
-const execAsync = promisify(exec)
-
-// Resilience policies for Azure CLI operations
-const listPolicy: ResiliencePolicy = {
-  retry: {
-    maxAttempts: 3,
-    initialDelay: 500,
-    maxDelay: 2000,
-    backoffStrategy: 'exponential',
-    jitterStrategy: 'full-jitter',
-  },
-  timeout: 10000, // 10 seconds
-  circuitBreaker: {
-    key: 'azure-devops-list',
-    failureThreshold: 3,
-    recoveryTime: 30000,
-    sampleSize: 5,
-    halfOpenPolicy: 'single-probe',
-  },
-}
-
-const detailPolicy: ResiliencePolicy = {
-  retry: {
-    maxAttempts: 5,
-    initialDelay: 200,
-    maxDelay: 5000,
-    backoffStrategy: 'exponential',
-    jitterStrategy: 'full-jitter',
-  },
-  timeout: 15000, // 15 seconds for expanded data
-  circuitBreaker: {
-    key: 'azure-devops-detail',
-    failureThreshold: 5,
-    recoveryTime: 45000,
-    sampleSize: 10,
-    halfOpenPolicy: 'single-probe',
-  },
-}
-
-const commentPolicy: ResiliencePolicy = {
-  retry: {
-    maxAttempts: 3,
-    initialDelay: 300,
-    maxDelay: 3000,
-    backoffStrategy: 'exponential',
-    jitterStrategy: 'full-jitter',
-  },
-  timeout: 10000, // 10 seconds for comment fetching
-  circuitBreaker: {
-    key: 'azure-devops-comments',
-    failureThreshold: 3,
-    recoveryTime: 30000,
-    sampleSize: 5,
-    halfOpenPolicy: 'single-probe',
-  },
-}
-
-// Create resilience adapter with logging
-const resilience = new ProductionResilienceAdapter()
-
-// Add circuit breaker monitoring
-const logCircuitBreakerEvent = (
-  event: string,
-  key: string,
-  details?: Record<string, unknown>,
-) => {
-  const timestamp = new Date().toISOString()
-  console.log(
-    `🔥 Circuit Breaker [${timestamp}] - ${event} for key '${key}'`,
-    details ? JSON.stringify(details) : '',
-  )
-}
+// Configuration constants
+const ORGANIZATION = 'fwcdev'
+const PROJECT = 'Customer Services Platform'
 
 export interface WorkItemCommentData {
   id: string
@@ -165,9 +88,42 @@ export interface WorkItemData {
 }
 
 export class AzureDevOpsClient {
-  private static readonly ORGANIZATION = 'fwcdev'
-  private static readonly PROJECT = 'Customer Services Platform'
+  private static readonly ORGANIZATION = ORGANIZATION
+  private static readonly PROJECT = PROJECT
   private static userEmails: string[] = []
+  private restProvider: AzureDevOpsProvider
+
+  constructor() {
+    // Validate required environment variables
+    const pat = process.env.AZURE_DEVOPS_PAT
+    if (!pat || pat.trim().length === 0) {
+      throw new Error(
+        'AZURE_DEVOPS_PAT environment variable is required.\n\n' +
+          'Please create a Personal Access Token:\n' +
+          '1. Go to https://dev.azure.com/' +
+          ORGANIZATION +
+          '/_usersSettings/tokens\n' +
+          '2. Create a new token with "Work items (read & write)" permission\n' +
+          '3. Set environment variable: export AZURE_DEVOPS_PAT="your-token-here"\n' +
+          '4. Restart the service',
+      )
+    }
+
+    // Initialize REST provider with validated configuration
+    const config: AzureDevOpsClientConfig = {
+      organization: ORGANIZATION,
+      project: PROJECT,
+      pat: pat,
+      apiVersion: '7.0',
+      rateLimit: {
+        maxConcurrent: 10,
+        requestsPerSecond: 100,
+        respectHeaders: true,
+      },
+    }
+
+    this.restProvider = new AzureDevOpsProvider(config)
+  }
 
   static setUserEmails(emails: string[]): void {
     this.userEmails = emails
@@ -177,127 +133,38 @@ export class AzureDevOpsClient {
     return this.userEmails
   }
 
-  private static buildEmailFilter(emails: string[]): string {
-    if (!emails || emails.length === 0) return ''
-    return emails
-      .map((email) => `[System.AssignedTo] = '${email}'`)
-      .join(' OR ')
-  }
-
-  private static buildCompletedWorkFilter(emails: string[]): string {
-    if (!emails || emails.length === 0) return ''
-    return emails
-      .map(
-        (email) =>
-          `([System.AssignedTo] = '${email}' AND [System.State] IN ('Closed', 'Resolved', 'Done', 'Completed'))`,
-      )
-      .join(' OR ')
-  }
-
-  private static buildComprehensiveWiqlQuery(): string {
-    return `
-      SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.AssignedTo], [System.ChangedDate], [System.CreatedDate], [System.Description],
-             [System.IterationPath], [System.AreaPath], [System.BoardColumn], [System.BoardColumnDone], [Microsoft.VSTS.Common.Priority], 
-             [Microsoft.VSTS.Common.Severity], [System.Tags], [Microsoft.VSTS.Common.ClosedDate], [Microsoft.VSTS.Common.ResolvedDate],
-             [Microsoft.VSTS.Common.ActivatedDate], [Microsoft.VSTS.Common.StateChangeDate], [System.CreatedBy], [System.ChangedBy],
-             [Microsoft.VSTS.Common.ClosedBy], [Microsoft.VSTS.Common.ResolvedBy], [Microsoft.VSTS.Scheduling.StoryPoints],
-             [Microsoft.VSTS.Scheduling.Effort], [Microsoft.VSTS.Scheduling.RemainingWork], [Microsoft.VSTS.Scheduling.CompletedWork],
-             [Microsoft.VSTS.Scheduling.OriginalEstimate], [Microsoft.VSTS.Common.AcceptanceCriteria], [System.Parent],
-             [System.Rev], [System.Reason], [System.Watermark], [System.CommentCount], [System.TeamProject], [System.AreaId],
-             [System.IterationId], [Microsoft.VSTS.Common.StackRank], [Microsoft.VSTS.Common.ValueArea]
-      FROM WorkItems 
-      WHERE [System.WorkItemType] IN ('User Story','Product Backlog Item','Bug','Task') 
-      AND [System.State] <> 'Removed'
-      ORDER BY [System.ChangedDate] DESC
-    `
+  /**
+   * Get the underlying REST client for advanced operations
+   */
+  getRestClient() {
+    return this.restProvider.getClient()
   }
 
   async fetchWorkItems(): Promise<WorkItemData[]> {
-    // First get work item IDs with comprehensive query using resilience
-    const wiqlCommand = `az boards query --wiql "${AzureDevOpsClient.buildComprehensiveWiqlQuery()}" --output json`
-
     try {
-      const { stdout: wiqlStdout } = await resilience.applyPolicy(async () => {
-        try {
-          return await execAsync(wiqlCommand, { maxBuffer: 10 * 1024 * 1024 })
-        } catch (error) {
-          logCircuitBreakerEvent('FAILURE', 'azure-devops-list', {
-            error: error instanceof Error ? error.message : error,
-          })
-          throw error
-        }
-      }, listPolicy)
-      const wiqlResult = JSON.parse(wiqlStdout)
-
-      if (!wiqlResult || wiqlResult.length === 0) {
-        return []
+      // Use REST provider to fetch all work items with comprehensive query
+      const query = {
+        filters: {
+          type: ['User Story', 'Product Backlog Item', 'Bug', 'Task'],
+          state: [], // Will exclude removed items by default
+        },
+        orderBy: 'changedDate',
+        orderDirection: 'desc' as const,
       }
 
-      // Extract work item IDs - CLI returns array directly, not wrapped in workItems property
-      const workItemIds = (wiqlResult as AzureDevOpsWorkItem[])
-        .map((item) => item.id)
-
-      // Fetch detailed work items one by one (CLI doesn't support batch IDs)
-      const workItems: AzureDevOpsWorkItem[] = []
-      
-      // Process in smaller batches to avoid overwhelming the system
-      const batchSize = 50
-      for (let i = 0; i < workItemIds.length; i += batchSize) {
-        const batchIds = workItemIds.slice(i, i + batchSize)
-        console.log(`Fetching work items batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(workItemIds.length / batchSize)} (${batchIds.length} items)`)
-        
-        const batchPromises = batchIds.map(async (id) => {
-          const expandCommand = `az boards work-item show --id ${id} --expand all --output json`
-          
-          const { stdout: expandStdout } = await resilience.applyPolicy(
-            async () => {
-              try {
-                return await execAsync(expandCommand, {
-                  maxBuffer: 10 * 1024 * 1024,
-                })
-              } catch (error) {
-                logCircuitBreakerEvent('FAILURE', 'azure-devops-detail', {
-                  error: error instanceof Error ? error.message : error,
-                  workItemId: id,
-                })
-                console.warn(`Failed to fetch work item ${id}: ${error}`)
-                return null
-              }
-            },
-            detailPolicy,
-          )
-          
-          if (expandStdout) {
-            try {
-              return JSON.parse(expandStdout) as AzureDevOpsWorkItem
-            } catch (parseError) {
-              console.warn(`Failed to parse work item ${id}: ${parseError}`)
-              return null
-            }
-          }
-          return null
-        })
-        
-        const batchResults = await Promise.all(batchPromises)
-        const validResults = batchResults.filter((item): item is AzureDevOpsWorkItem => item !== null)
-        workItems.push(...validResults)
-      }
-
-      return workItems.map((item: AzureDevOpsWorkItem) =>
-        this.mapWorkItemData(item),
-      )
+      const restWorkItems = await this.restProvider.fetchWorkItems(query)
+      return restWorkItems.map((item) => this.transformRestWorkItem(item))
     } catch (error) {
       console.error('Failed to fetch work items:', error)
 
       // Provide actionable error messages based on error type
       if (error instanceof Error) {
-        if (error.message.includes('az: command not found')) {
+        if (
+          error.message.includes('401') ||
+          error.message.includes('Unauthorized')
+        ) {
           throw new Error(
-            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
-          )
-        } else if (error.message.includes("Please run 'az login'")) {
-          throw new Error(
-            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+            'Azure DevOps authentication failed. Please check your AZURE_DEVOPS_PAT environment variable.',
           )
         } else if (
           error.message.includes('rate limit') ||
@@ -332,29 +199,10 @@ export class AzureDevOpsClient {
   async fetchWorkItemComments(
     workItemId: number,
   ): Promise<WorkItemCommentData[]> {
-    const command = `az rest --method GET --uri "https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${AzureDevOpsClient.PROJECT}/_apis/wit/workItems/${workItemId}/comments?api-version=7.0" --output json`
-
     try {
-      const { stdout } = await resilience.applyPolicy(async () => {
-        try {
-          return await execAsync(command, { maxBuffer: 10 * 1024 * 1024 })
-        } catch (error) {
-          logCircuitBreakerEvent('FAILURE', 'azure-devops-comments', {
-            error: error instanceof Error ? error.message : error,
-            workItemId,
-          })
-          throw error
-        }
-      }, commentPolicy)
-      const commentsResponse = JSON.parse(stdout)
-
-      if (!commentsResponse || !commentsResponse.value) {
-        return []
-      }
-
-      return (commentsResponse as AzureDevOpsCommentsResponse).value.map(
-        (comment: AzureDevOpsWorkItemComment) =>
-          this.mapCommentData(comment, workItemId),
+      const restComments = await this.restProvider.getComments(workItemId)
+      return restComments.map((comment) =>
+        this.transformRestComment(comment, workItemId),
       )
     } catch (error) {
       console.error(
@@ -364,13 +212,12 @@ export class AzureDevOpsClient {
 
       // Provide actionable error messages based on error type
       if (error instanceof Error) {
-        if (error.message.includes('az: command not found')) {
+        if (
+          error.message.includes('401') ||
+          error.message.includes('Unauthorized')
+        ) {
           throw new Error(
-            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
-          )
-        } else if (error.message.includes("Please run 'az login'")) {
-          throw new Error(
-            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+            'Azure DevOps authentication failed. Please check your AZURE_DEVOPS_PAT environment variable.',
           )
         } else if (
           error.message.includes('rate limit') ||
@@ -403,39 +250,25 @@ export class AzureDevOpsClient {
   }
 
   async fetchSingleWorkItem(id: number): Promise<WorkItemData> {
-    const command = `az boards work-item show --id ${id} --expand all --output json`
-
     try {
-      const { stdout } = await resilience.applyPolicy(async () => {
-        try {
-          return await execAsync(command, { maxBuffer: 50 * 1024 * 1024 })
-        } catch (error) {
-          logCircuitBreakerEvent('FAILURE', 'azure-devops-detail', {
-            error: error instanceof Error ? error.message : error,
-            workItemId: id,
-          })
-          throw error
-        }
-      }, detailPolicy)
-      const workItem = JSON.parse(stdout)
+      const restWorkItem = await this.restProvider.getWorkItem(id)
 
-      if (!workItem || workItem === null) {
+      if (!restWorkItem) {
         throw new Error(`Work item ${id} not found or returned null`)
       }
 
-      return this.mapWorkItemData(workItem)
+      return this.transformRestWorkItem(restWorkItem)
     } catch (error) {
       console.error(`Failed to fetch work item ${id}:`, error)
 
       // Provide actionable error messages based on error type
       if (error instanceof Error) {
-        if (error.message.includes('az: command not found')) {
+        if (
+          error.message.includes('401') ||
+          error.message.includes('Unauthorized')
+        ) {
           throw new Error(
-            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
-          )
-        } else if (error.message.includes("Please run 'az login'")) {
-          throw new Error(
-            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+            'Azure DevOps authentication failed. Please check your AZURE_DEVOPS_PAT environment variable.',
           )
         } else if (
           error.message.includes('rate limit') ||
@@ -515,42 +348,23 @@ export class AzureDevOpsClient {
       throw new Error('Comment text cannot be empty')
     }
 
-    // Escape JSON content for Azure CLI
-    const escapedComment = trimmedComment
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-
-    const command = `az rest --method POST --uri "https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${AzureDevOpsClient.PROJECT}/_apis/wit/workItems/${workItemId}/comments?api-version=7.0" --body '{"text":"${escapedComment}"}' --headers "Content-Type=application/json"`
-
     console.log(`💬 Adding comment to work item ${workItemId}`)
 
     try {
-      await resilience.applyPolicy(async () => {
-        try {
-          return await execAsync(command, { maxBuffer: 10 * 1024 * 1024 })
-        } catch (error) {
-          logCircuitBreakerEvent('FAILURE', 'azure-devops-comments', {
-            error: error instanceof Error ? error.message : error,
-            workItemId,
-            operation: 'addComment',
-          })
-          throw error
-        }
-      }, commentPolicy)
-
+      const restClient = this.restProvider.getClient()
+      await restClient.addWorkItemComment(workItemId, trimmedComment)
       console.log(`✅ Successfully added comment to work item ${workItemId}`)
     } catch (error) {
       console.error(`Failed to add comment to work item ${workItemId}:`, error)
 
       // Provide actionable error messages based on error type
       if (error instanceof Error) {
-        if (error.message.includes('az: command not found')) {
+        if (
+          error.message.includes('401') ||
+          error.message.includes('Unauthorized')
+        ) {
           throw new Error(
-            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
-          )
-        } else if (error.message.includes("Please run 'az login'")) {
-          throw new Error(
-            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+            'Azure DevOps authentication failed. Please check your AZURE_DEVOPS_PAT environment variable.',
           )
         } else if (
           error.message.includes('rate limit') ||
@@ -581,57 +395,15 @@ export class AzureDevOpsClient {
     workItemId: number,
     pullRequestUrl: string,
   ): Promise<void> {
-    // Validate pull request URL
     const trimmedUrl = pullRequestUrl.trim()
-    if (!trimmedUrl) {
-      throw new Error('Pull request URL cannot be empty')
-    }
-
-    // Basic URL format validation
-    try {
-      new URL(trimmedUrl)
-    } catch {
-      throw new Error('Invalid pull request URL format')
-    }
-
-    // Escape JSON content for Azure CLI
-    const escapedUrl = trimmedUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-
-    // JSON patch format for Azure DevOps API
-    const patchBody = JSON.stringify([
-      {
-        op: 'add',
-        path: '/relations/-',
-        value: {
-          rel: 'Hyperlink',
-          url: escapedUrl,
-          attributes: {
-            comment: 'Pull Request',
-          },
-        },
-      },
-    ])
-
-    const command = `az rest --method PATCH --uri "https://dev.azure.com/${AzureDevOpsClient.ORGANIZATION}/${AzureDevOpsClient.PROJECT}/_apis/wit/workItems/${workItemId}?api-version=7.0" --body '${patchBody}' --headers "Content-Type=application/json-patch+json"`
 
     console.log(
       `🔗 Linking work item ${workItemId} to pull request: ${trimmedUrl}`,
     )
 
     try {
-      await resilience.applyPolicy(async () => {
-        try {
-          return await execAsync(command, { maxBuffer: 10 * 1024 * 1024 })
-        } catch (error) {
-          logCircuitBreakerEvent('FAILURE', 'azure-devops-comments', {
-            error: error instanceof Error ? error.message : error,
-            workItemId,
-            operation: 'linkToPR',
-            pullRequestUrl: trimmedUrl,
-          })
-          throw error
-        }
-      }, commentPolicy)
+      const restClient = this.restProvider.getClient()
+      await restClient.linkWorkItemToPullRequest(workItemId, trimmedUrl)
 
       console.log(
         `✅ Successfully linked work item ${workItemId} to pull request`,
@@ -644,13 +416,12 @@ export class AzureDevOpsClient {
 
       // Provide actionable error messages based on error type
       if (error instanceof Error) {
-        if (error.message.includes('az: command not found')) {
+        if (
+          error.message.includes('401') ||
+          error.message.includes('Unauthorized')
+        ) {
           throw new Error(
-            'Azure CLI is not installed. Please install Azure CLI and run "az login" to authenticate.',
-          )
-        } else if (error.message.includes("Please run 'az login'")) {
-          throw new Error(
-            'Azure CLI authentication required. Please run "az login" and authenticate with your Azure DevOps account.',
+            'Azure DevOps authentication failed. Please check your AZURE_DEVOPS_PAT environment variable.',
           )
         } else if (
           error.message.includes('rate limit') ||
@@ -681,118 +452,156 @@ export class AzureDevOpsClient {
     }
   }
 
-  private mapCommentData(
-    comment: AzureDevOpsWorkItemComment,
-    workItemId: number,
-  ): WorkItemCommentData {
-    return {
-      id: comment.id || '',
-      workItemId: workItemId,
-      text: comment.text || '',
-      createdBy: this.extractPersonName(comment.createdBy),
-      createdDate: this.parseDate(comment.createdDate) || new Date(),
-      modifiedBy: comment.modifiedBy
-        ? this.extractPersonName(comment.modifiedBy)
-        : null,
-      modifiedDate: comment.modifiedDate
-        ? this.parseDate(comment.modifiedDate) || null
-        : null,
-    }
-  }
+  /**
+   * Transforms REST provider WorkItemData to the existing WorkItemData format
+   */
+  private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
+    const rawData = restWorkItem.raw as any
 
-  private mapWorkItemData(item: AzureDevOpsWorkItem): WorkItemData {
     return {
-      id: item.id,
-      title: item.fields?.['System.Title'] || '',
-      state: item.fields?.['System.State'] || '',
-      type: item.fields?.['System.WorkItemType'] || '',
-      assignedTo: this.extractPersonName(item.fields?.['System.AssignedTo']),
-      lastUpdatedAt: new Date(
-        item.fields?.['System.ChangedDate'] ||
-          item.fields?.['System.CreatedDate'] ||
-          new Date(),
-      ),
-      description: item.fields?.['System.Description'] || '',
+      id:
+        typeof restWorkItem.id === 'string'
+          ? parseInt(restWorkItem.id, 10)
+          : restWorkItem.id,
+      title: restWorkItem.title,
+      state: restWorkItem.state,
+      type: restWorkItem.type,
+      assignedTo: restWorkItem.assignedTo || 'Unassigned',
+      lastUpdatedAt: new Date(restWorkItem.changedDate),
+      description: restWorkItem.description || '',
 
       // Sprint/Board Info
-      iterationPath: item.fields?.['System.IterationPath'],
-      areaPath: item.fields?.['System.AreaPath'],
-      boardColumn: item.fields?.['System.BoardColumn'],
-      boardColumnDone: item.fields?.['System.BoardColumnDone'] === true,
+      iterationPath: rawData['System.IterationPath'],
+      areaPath: rawData['System.AreaPath'],
+      boardColumn: rawData['System.BoardColumn'],
+      boardColumnDone: rawData['System.BoardColumnDone'] === true,
 
       // Priority/Tags
-      priority: item.fields?.['Microsoft.VSTS.Common.Priority'],
-      severity: item.fields?.['Microsoft.VSTS.Common.Severity'],
-      tags: item.fields?.['System.Tags'] || undefined,
+      priority: rawData['Microsoft.VSTS.Common.Priority'],
+      severity: rawData['Microsoft.VSTS.Common.Severity'],
+      tags: rawData['System.Tags'],
 
       // All the dates
-      createdDate: this.parseDate(item.fields?.['System.CreatedDate']),
-      changedDate: this.parseDate(item.fields?.['System.ChangedDate']),
-      closedDate: this.parseDate(item.fields?.['System.ClosedDate']),
-      resolvedDate: this.parseDate(
-        item.fields?.['Microsoft.VSTS.Common.ResolvedDate'],
-      ),
-      activatedDate: this.parseDate(
-        item.fields?.['Microsoft.VSTS.Common.ActivatedDate'],
-      ),
-      stateChangeDate: this.parseDate(
-        item.fields?.['Microsoft.VSTS.Common.StateChangeDate'],
-      ),
+      createdDate: rawData['System.CreatedDate']
+        ? new Date(rawData['System.CreatedDate'])
+        : undefined,
+      changedDate: new Date(restWorkItem.changedDate),
+      closedDate: rawData['Microsoft.VSTS.Common.ClosedDate']
+        ? new Date(rawData['Microsoft.VSTS.Common.ClosedDate'])
+        : undefined,
+      resolvedDate: rawData['Microsoft.VSTS.Common.ResolvedDate']
+        ? new Date(rawData['Microsoft.VSTS.Common.ResolvedDate'])
+        : undefined,
+      activatedDate: rawData['Microsoft.VSTS.Common.ActivatedDate']
+        ? new Date(rawData['Microsoft.VSTS.Common.ActivatedDate'])
+        : undefined,
+      stateChangeDate: rawData['Microsoft.VSTS.Common.StateChangeDate']
+        ? new Date(rawData['Microsoft.VSTS.Common.StateChangeDate'])
+        : undefined,
 
       // People
-      createdBy: this.extractPersonName(item.fields?.['System.CreatedBy']),
-      changedBy: this.extractPersonName(item.fields?.['System.ChangedBy']),
-      closedBy: this.extractPersonName(
-        item.fields?.['Microsoft.VSTS.Common.ClosedBy'],
+      createdBy: this.extractPersonNameFromRaw(rawData['System.CreatedBy']),
+      changedBy: this.extractPersonNameFromRaw(rawData['System.ChangedBy']),
+      closedBy: this.extractPersonNameFromRaw(
+        rawData['Microsoft.VSTS.Common.ClosedBy'],
       ),
-      resolvedBy: this.extractPersonName(
-        item.fields?.['Microsoft.VSTS.Common.ResolvedBy'],
+      resolvedBy: this.extractPersonNameFromRaw(
+        rawData['Microsoft.VSTS.Common.ResolvedBy'],
       ),
 
       // Work tracking
       storyPoints: this.parseFloat(
-        item.fields?.['Microsoft.VSTS.Scheduling.StoryPoints'],
+        rawData['Microsoft.VSTS.Scheduling.StoryPoints'],
       ),
-      effort: this.parseFloat(
-        item.fields?.['Microsoft.VSTS.Scheduling.Effort'],
-      ),
+      effort: this.parseFloat(rawData['Microsoft.VSTS.Scheduling.Effort']),
       remainingWork: this.parseFloat(
-        item.fields?.['Microsoft.VSTS.Scheduling.RemainingWork'],
+        rawData['Microsoft.VSTS.Scheduling.RemainingWork'],
       ),
       completedWork: this.parseFloat(
-        item.fields?.['Microsoft.VSTS.Scheduling.CompletedWork'],
+        rawData['Microsoft.VSTS.Scheduling.CompletedWork'],
       ),
       originalEstimate: this.parseFloat(
-        item.fields?.['Microsoft.VSTS.Scheduling.OriginalEstimate'],
+        rawData['Microsoft.VSTS.Scheduling.OriginalEstimate'],
       ),
 
       // Content
-      acceptanceCriteria:
-        item.fields?.['Microsoft.VSTS.Common.AcceptanceCriteria'],
-      reproSteps: item.fields?.['Microsoft.VSTS.TCM.ReproSteps'],
-      systemInfo: item.fields?.['Microsoft.VSTS.TCM.SystemInfo'],
+      acceptanceCriteria: rawData['Microsoft.VSTS.Common.AcceptanceCriteria'],
+      reproSteps: rawData['Microsoft.VSTS.TCM.ReproSteps'],
+      systemInfo: rawData['Microsoft.VSTS.TCM.SystemInfo'],
 
-      // Related items (extracted from relations)
-      parentId: this.extractParentId(item.relations || []),
+      // Related items (extract from relations in raw data)
+      parentId: this.extractParentIdFromRaw(rawData.relations || []),
 
-      // Additional Azure DevOps fields from expanded response
-      rev: item.rev,
-      reason: item.fields?.['System.Reason'],
-      watermark: item.fields?.['System.Watermark'],
-      url: item.url,
-      commentCount: item.fields?.['System.CommentCount'] || 0,
-      hasAttachments: this.hasAttachments(item.relations || []),
-      teamProject: item.fields?.['System.TeamProject'],
-      areaId: item.fields?.['System.AreaId'],
-      nodeId: item.fields?.['System.IterationId'],
-      stackRank: this.parseFloat(
-        item.fields?.['Microsoft.VSTS.Common.StackRank'],
-      ),
-      valueArea: item.fields?.['Microsoft.VSTS.Common.ValueArea'],
+      // Additional Azure DevOps fields
+      rev: rawData.rev,
+      reason: rawData['System.Reason'],
+      watermark: rawData['System.Watermark'],
+      url: rawData.url,
+      commentCount: rawData['System.CommentCount'] || 0,
+      hasAttachments: this.hasAttachmentsFromRaw(rawData.relations || []),
+      teamProject: rawData['System.TeamProject'],
+      areaId: rawData['System.AreaId'],
+      nodeId: rawData['System.IterationId'],
+      stackRank: this.parseFloat(rawData['Microsoft.VSTS.Common.StackRank']),
+      valueArea: rawData['Microsoft.VSTS.Common.ValueArea'],
 
       // Store complete raw JSON for backup
-      rawJson: JSON.stringify(item),
+      rawJson: JSON.stringify(rawData),
     }
+  }
+
+  /**
+   * Transforms REST provider CommentData to the existing WorkItemCommentData format
+   */
+  private transformRestComment(
+    restComment: RestCommentData,
+    workItemId: number,
+  ): WorkItemCommentData {
+    return {
+      id: restComment.id,
+      workItemId: workItemId,
+      text: restComment.text,
+      createdBy: restComment.author || 'Unknown',
+      createdDate: new Date(restComment.createdDate),
+      modifiedBy: restComment.raw.modifiedBy
+        ? typeof restComment.raw.modifiedBy === 'object' &&
+          restComment.raw.modifiedBy.displayName
+          ? restComment.raw.modifiedBy.displayName
+          : restComment.raw.modifiedBy
+        : null,
+      modifiedDate: restComment.modifiedDate
+        ? new Date(restComment.modifiedDate)
+        : null,
+    }
+  }
+
+  /**
+   * Helper methods for data extraction from raw REST data
+   */
+  private extractPersonNameFromRaw(person: any): string {
+    if (!person) return 'Unassigned'
+    if (typeof person === 'string') return person
+    return person.uniqueName || person.displayName || 'Unassigned'
+  }
+
+  private extractParentIdFromRaw(relations: any[]): number | undefined {
+    if (!relations || !Array.isArray(relations)) return undefined
+
+    const parentRelation = relations.find(
+      (rel) => rel.rel === 'System.LinkTypes.Hierarchy-Reverse',
+    )
+
+    if (parentRelation && parentRelation.url) {
+      const match = parentRelation.url.match(/\/(\d+)$/)
+      return match && match[1] ? parseInt(match[1], 10) : undefined
+    }
+
+    return undefined
+  }
+
+  private hasAttachmentsFromRaw(relations: any[]): boolean {
+    if (!relations || !Array.isArray(relations)) return false
+    return relations.some((rel) => rel.rel === 'AttachedFile')
   }
 
   static buildWorkItemUrl(id: number): string {
@@ -820,31 +629,6 @@ export class AzureDevOpsClient {
     return isNaN(parsed) ? undefined : parsed
   }
 
-  private extractParentId(
-    relations: AzureDevOpsWorkItemRelation[] | undefined,
-  ): number | undefined {
-    if (!relations || !Array.isArray(relations)) return undefined
-
-    const parentRelation = relations.find(
-      (rel) => rel.rel === 'System.LinkTypes.Hierarchy-Reverse',
-    )
-
-    if (parentRelation && parentRelation.url) {
-      const match = parentRelation.url.match(/\/(\d+)$/)
-      return match && match[1] ? parseInt(match[1], 10) : undefined
-    }
-
-    return undefined
-  }
-
-  private hasAttachments(
-    relations: AzureDevOpsWorkItemRelation[] | undefined,
-  ): boolean {
-    if (!relations || !Array.isArray(relations)) return false
-
-    return relations.some((rel) => rel.rel === 'AttachedFile')
-  }
-
   async validateUserEmails(
     emails: string[],
   ): Promise<{ valid: string[]; invalid: string[] }> {
@@ -853,31 +637,21 @@ export class AzureDevOpsClient {
 
     for (const email of emails) {
       try {
-        const command = `az boards query --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = '${email}' OR [System.CreatedBy] = '${email}' OR [System.ChangedBy] = '${email}'" --output json`
-        const { stdout } = await resilience.applyPolicy(
-          () => execAsync(command, { maxBuffer: 1024 * 1024 }),
-          listPolicy,
-        )
-        const result = JSON.parse(stdout)
+        // Use REST client to query work items for this user
+        const wiql = `SELECT [System.Id] FROM WorkItems WHERE [System.AssignedTo] = '${email}' OR [System.CreatedBy] = '${email}' OR [System.ChangedBy] = '${email}'`
+        const restClient = this.restProvider.getClient()
+        const result = await restClient.queryWorkItems(wiql)
 
-        if (result && result.length > 0) {
+        if (result && result.workItems.length > 0) {
           valid.push(email)
         } else {
-          // Try to find the user in the organization
-          const userCommand = `az devops user show --user "${email}" --output json 2>/dev/null || echo "[]"`
-          const { stdout: userStdout } = await resilience.applyPolicy(
-            () => execAsync(userCommand, { maxBuffer: 1024 * 1024 }),
-            listPolicy,
-          )
-          const userResult = JSON.parse(userStdout)
-
-          if (userResult && userResult.principalName) {
-            valid.push(email)
-          } else {
-            invalid.push(email)
-          }
+          // If no work items found, assume the email is invalid
+          // Note: We can't easily validate users via REST API without additional permissions
+          invalid.push(email)
         }
-      } catch {
+      } catch (error) {
+        // If query fails, mark as invalid
+        console.warn(`Failed to validate email ${email}:`, error)
         invalid.push(email)
       }
     }

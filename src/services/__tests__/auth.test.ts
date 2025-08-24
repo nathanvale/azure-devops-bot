@@ -1,134 +1,170 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+import { PATAuth } from '../../packages/azure-devops-client/src/auth/pat-auth.js'
 import { AzureAuth } from '../auth'
+
+// Mock the PATAuth class
+vi.mock('../../packages/azure-devops-client/src/auth/pat-auth.js', () => ({
+  PATAuth: vi.fn().mockImplementation(() => ({
+    isValidPATFormat: vi.fn(),
+    validateAuthentication: vi.fn(),
+  })),
+}))
 
 describe('AzureAuth', () => {
   let auth: AzureAuth
-  let mockExecAsync: ReturnType<typeof vi.fn>
+  let mockPATAuth: any
 
   beforeEach(() => {
     vi.resetAllMocks()
 
-    // Create a mock execAsync function
-    mockExecAsync = vi.fn()
-
-    // Pass the mock function to the constructor
-    auth = new AzureAuth(mockExecAsync)
+    // Clear environment variables
+    delete process.env.AZURE_DEVOPS_PAT
 
     // Mock console methods
     vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    // Create mock PATAuth instance
+    mockPATAuth = {
+      isValidPATFormat: vi.fn(),
+      validateAuthentication: vi.fn(),
+    }
+
+    // Make the PATAuth constructor return our mock
+    ;(PATAuth as any).mockImplementation(() => mockPATAuth)
   })
 
   describe('checkAuth', () => {
-    it('should return true when authenticated', async () => {
-      const mockAccountInfo = {
-        environmentName: 'AzureCloud',
-        id: 'subscription-id',
-        isDefault: true,
-        name: 'Test Subscription',
-      }
+    it('should return false when PAT is not set', async () => {
+      auth = new AzureAuth()
 
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockAccountInfo),
-      })
+      const result = await auth.checkAuth()
 
+      expect(result).toBe(false)
+    })
+
+    it('should return false when PAT format is invalid', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'invalid-pat'
+      mockPATAuth.isValidPATFormat.mockReturnValue(false)
+
+      auth = new AzureAuth()
+      const result = await auth.checkAuth()
+
+      expect(result).toBe(false)
+      expect(mockPATAuth.isValidPATFormat).toHaveBeenCalled()
+    })
+
+    it('should return true when PAT is valid and authentication succeeds', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'valid-pat-token'
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockResolvedValue(true)
+
+      auth = new AzureAuth()
       const result = await auth.checkAuth()
 
       expect(result).toBe(true)
-      expect(mockExecAsync).toHaveBeenCalledWith('az account show')
+      expect(mockPATAuth.isValidPATFormat).toHaveBeenCalled()
+      expect(mockPATAuth.validateAuthentication).toHaveBeenCalled()
     })
 
-    it('should return true when account info has content', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '{"id": "test"}' })
+    it('should return false when PAT validation fails', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'expired-pat-token'
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockResolvedValue(false)
 
+      auth = new AzureAuth()
+      const result = await auth.checkAuth()
+
+      expect(result).toBe(false)
+    })
+
+    it('should handle PAT validation errors gracefully', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'problematic-pat'
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockRejectedValue(
+        new Error('Network error'),
+      )
+
+      auth = new AzureAuth()
+      const result = await auth.checkAuth()
+
+      expect(result).toBe(false)
+    })
+
+    it('should handle PAT with whitespace correctly', async () => {
+      process.env.AZURE_DEVOPS_PAT = '  valid-pat-token  '
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockResolvedValue(true)
+
+      auth = new AzureAuth()
       const result = await auth.checkAuth()
 
       expect(result).toBe(true)
-    })
-
-    it('should return false when not authenticated', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Please run az login'))
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
-    })
-
-    it('should return false when stdout is empty', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '' })
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
-    })
-
-    it('should return false when stdout is whitespace only', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '   \n\t  ' })
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
-    })
-
-    it('should return false when command execution fails', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Command not found'))
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
-    })
-
-    it('should handle Azure CLI not installed', async () => {
-      mockExecAsync.mockRejectedValue(new Error('az: command not found'))
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
-    })
-
-    it('should handle network errors', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Network error'))
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
+      expect(PATAuth).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pat: 'valid-pat-token', // Should be trimmed
+        }),
+      )
     })
   })
 
   describe('login', () => {
-    it('should provide authentication instructions and throw error', async () => {
+    it('should provide PAT setup instructions when PAT is not set', async () => {
+      auth = new AzureAuth()
+
       await expect(auth.login()).rejects.toThrow(
-        'Azure CLI authentication required',
+        'AZURE_DEVOPS_PAT environment variable is required',
       )
 
       expect(console.log).toHaveBeenCalledWith(
-        '❌ Not authenticated with Azure CLI',
+        '❌ AZURE_DEVOPS_PAT environment variable is not set',
       )
       expect(console.log).toHaveBeenCalledWith(
-        '🔗 Please sign in at: https://dev.azure.com/fwcdev',
+        '🔗 Please create a Personal Access Token at: https://dev.azure.com/fwcdev/_usersSettings/tokens',
       )
-      expect(console.log).toHaveBeenCalledWith('💡 Then run: az login')
+      expect(console.log).toHaveBeenCalledWith(
+        '💡 Steps to set up PAT authentication:',
+      )
     })
 
-    it('should use correct SSO URL', async () => {
+    it('should provide PAT troubleshooting when authentication fails', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'invalid-or-expired-pat'
+      auth = new AzureAuth()
+
+      await expect(auth.login()).rejects.toThrow(
+        'Azure DevOps PAT authentication failed',
+      )
+
+      expect(console.log).toHaveBeenCalledWith('❌ PAT authentication failed')
+      expect(console.log).toHaveBeenCalledWith(
+        '🔑 Your Personal Access Token may be invalid or expired',
+      )
+    })
+
+    it('should handle empty PAT string', async () => {
+      process.env.AZURE_DEVOPS_PAT = '   '
+      auth = new AzureAuth()
+
+      await expect(auth.login()).rejects.toThrow(
+        'AZURE_DEVOPS_PAT environment variable is required',
+      )
+    })
+
+    it('should always throw when called', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'some-pat'
+      auth = new AzureAuth()
+
       await expect(auth.login()).rejects.toThrow()
-
-      expect(console.log).toHaveBeenCalledWith(
-        '🔗 Please sign in at: https://dev.azure.com/fwcdev',
-      )
-    })
-
-    it('should always throw authentication required error', async () => {
-      await expect(auth.login()).rejects.toThrow(
-        'Azure CLI authentication required',
-      )
     })
   })
 
   describe('ensureAuth', () => {
     it('should not call login when already authenticated', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '{"id": "test"}' })
+      process.env.AZURE_DEVOPS_PAT = 'valid-pat'
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockResolvedValue(true)
 
+      auth = new AzureAuth()
       const loginSpy = vi.spyOn(auth, 'login')
 
       await auth.ensureAuth()
@@ -137,28 +173,33 @@ describe('AzureAuth', () => {
     })
 
     it('should call login when not authenticated', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Not authenticated'))
+      auth = new AzureAuth() // No PAT set
 
       const loginSpy = vi
         .spyOn(auth, 'login')
-        .mockRejectedValue(new Error('Azure CLI authentication required'))
+        .mockRejectedValue(
+          new Error('AZURE_DEVOPS_PAT environment variable is required'),
+        )
 
       await expect(auth.ensureAuth()).rejects.toThrow(
-        'Azure CLI authentication required',
+        'AZURE_DEVOPS_PAT environment variable is required',
       )
 
       expect(loginSpy).toHaveBeenCalledTimes(1)
     })
 
     it('should propagate login errors', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Not authenticated'))
+      auth = new AzureAuth() // No PAT set
 
       await expect(auth.ensureAuth()).rejects.toThrow(
-        'Azure CLI authentication required',
+        'AZURE_DEVOPS_PAT environment variable is required',
       )
     })
 
     it('should handle checkAuth errors', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'problematic-pat'
+      auth = new AzureAuth()
+
       vi.spyOn(auth, 'checkAuth').mockRejectedValue(
         new Error('Check auth failed'),
       )
@@ -167,37 +208,78 @@ describe('AzureAuth', () => {
     })
   })
 
-  describe('static constants', () => {
-    it('should have correct SSO URL', () => {
-      expect(AzureAuth['SSO_URL']).toBe('https://dev.azure.com/fwcdev')
+  describe('connection info', () => {
+    it('should return correct connection information', () => {
+      auth = new AzureAuth()
+
+      const connectionInfo = auth.getConnectionInfo()
+
+      expect(connectionInfo).toEqual({
+        organization: 'fwcdev',
+        project: 'Customer Services Platform',
+        azureDevOpsUrl: 'https://dev.azure.com/fwcdev',
+      })
     })
 
-    it('should use the same organization as other services', () => {
-      // This ensures consistency across the application
-      expect(AzureAuth['SSO_URL']).toContain('fwcdev')
+    it('should provide consistent organization across methods', () => {
+      auth = new AzureAuth()
+
+      const connectionInfo = auth.getConnectionInfo()
+      expect(connectionInfo.organization).toBe('fwcdev')
+    })
+  })
+
+  describe('PAT auth integration', () => {
+    it('should return PAT auth instance when available', () => {
+      process.env.AZURE_DEVOPS_PAT = 'valid-pat'
+      auth = new AzureAuth()
+
+      const patAuth = auth.getPATAuth()
+
+      expect(patAuth).toBe(mockPATAuth)
+    })
+
+    it('should return null when PAT is not configured', () => {
+      auth = new AzureAuth()
+
+      const patAuth = auth.getPATAuth()
+
+      expect(patAuth).toBeNull()
+    })
+
+    it('should handle PAT auth initialization errors gracefully', () => {
+      process.env.AZURE_DEVOPS_PAT = 'problematic-pat'
+      // Make PATAuth constructor throw
+      ;(PATAuth as any).mockImplementation(() => {
+        throw new Error('PAT initialization failed')
+      })
+
+      // Should not throw during construction
+      expect(() => new AzureAuth()).not.toThrow()
     })
   })
 
   describe('authentication flow integration', () => {
-    it('should handle complete authentication flow', async () => {
-      // First check fails (not authenticated)
-      mockExecAsync.mockRejectedValueOnce(new Error('Not authenticated'))
+    it('should handle complete authentication failure flow', async () => {
+      // No PAT set
+      auth = new AzureAuth()
 
-      // Ensure auth should fail when not authenticated (this will call the real login method)
+      // Ensure auth should fail when not authenticated
       await expect(auth.ensureAuth()).rejects.toThrow(
-        'Azure CLI authentication required',
+        'AZURE_DEVOPS_PAT environment variable is required',
       )
 
       expect(console.log).toHaveBeenCalledWith(
-        '❌ Not authenticated with Azure CLI',
+        '❌ AZURE_DEVOPS_PAT environment variable is not set',
       )
     })
 
-    it('should handle successful authentication check', async () => {
-      // Mock successful authentication
-      mockExecAsync.mockResolvedValue({
-        stdout: '{"id": "subscription-id", "name": "Test Subscription"}',
-      })
+    it('should handle successful authentication flow', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'valid-pat'
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockResolvedValue(true)
+
+      auth = new AzureAuth()
 
       const checkResult = await auth.checkAuth()
       expect(checkResult).toBe(true)
@@ -206,49 +288,24 @@ describe('AzureAuth', () => {
       await expect(auth.ensureAuth()).resolves.toBeUndefined()
     })
 
-    it('should handle edge case where az account show returns empty object', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '{}' })
+    it('should handle PAT format validation edge cases', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'edge-case-pat'
+      mockPATAuth.isValidPATFormat.mockReturnValue(false)
 
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(true) // Empty object still has content
-    })
-
-    it('should handle malformed JSON from az account show', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: 'malformed json' })
-
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(true) // Any non-empty string counts as authenticated
-    })
-  })
-
-  describe('error scenarios', () => {
-    it('should handle Azure CLI returning error codes', async () => {
-      const error = new Error('Command failed') as Error & { code: number }
-      error.code = 1
-      mockExecAsync.mockRejectedValue(error)
-
+      auth = new AzureAuth()
       const result = await auth.checkAuth()
 
       expect(result).toBe(false)
     })
 
-    it('should handle timeout errors', async () => {
-      const error = new Error('Command timed out') as Error & { code: string }
-      error.code = 'TIMEOUT'
-      mockExecAsync.mockRejectedValue(error)
+    it('should handle network connectivity issues during validation', async () => {
+      process.env.AZURE_DEVOPS_PAT = 'network-test-pat'
+      mockPATAuth.isValidPATFormat.mockReturnValue(true)
+      mockPATAuth.validateAuthentication.mockRejectedValue(
+        new Error('Network timeout'),
+      )
 
-      const result = await auth.checkAuth()
-
-      expect(result).toBe(false)
-    })
-
-    it('should handle permission errors', async () => {
-      const error = new Error('Permission denied') as Error & { code: string }
-      error.code = 'EACCES'
-      mockExecAsync.mockRejectedValue(error)
-
+      auth = new AzureAuth()
       const result = await auth.checkAuth()
 
       expect(result).toBe(false)

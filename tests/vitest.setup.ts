@@ -27,6 +27,7 @@ afterAll(() => {
 vi.stubEnv('NODE_ENV', 'test')
 vi.stubEnv('AZURE_DEVOPS_ORG', 'fwcdev')
 vi.stubEnv('AZURE_DEVOPS_PROJECT', 'Customer Services Platform')
+vi.stubEnv('AZURE_DEVOPS_PAT', 'test-pat-token-for-integration-testing')
 
 // Global test utilities
 global.consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
