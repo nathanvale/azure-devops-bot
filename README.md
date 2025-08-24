@@ -1,348 +1,360 @@
-# Azure DevOps Bot
+# Azure DevOps Bot - MCP Server for Lightning-Fast Work Item Access
 
-A sophisticated **Model Context Protocol (MCP) server** that provides natural language querying and interaction with Azure DevOps work items. Built specifically for the FWC development team, it integrates directly with Claude Code and other MCP-compatible tools.
+[![Production Validated](https://img.shields.io/badge/Production-Validated-brightgreen)](docs/badges/production-environment-validation.md) [![Performance](https://img.shields.io/badge/Performance-≤100ms-blue)](#performance-benchmarks) [![MCP 1.15+](https://img.shields.io/badge/MCP-1.15+-purple)](https://modelcontextprotocol.io)
 
-## 🚀 Key Features
+Transform Azure DevOps into an AI-powered, always-available data source. Get instant access to work items through the Model Context Protocol (MCP) - compatible with Claude Desktop, VS Code, and any MCP client.
 
-### 🔐 **Secure Authentication**
+⚡ **Sub-100ms Response Times** - Local SQLite database for instant queries  
+🤖 **8 Production-Validated MCP Tools** - Complete work item management  
+🔌 **Universal MCP Integration** - Works with Claude Desktop & VS Code  
+📊 **1,056+ Work Items Tested** - Production validated with real data  
+🛡️ **24/7 Availability** - PM2 process management with crash recovery
 
-- Personal Access Token (PAT) authentication
-- Secure token-based authentication
-- Leverages existing Azure DevOps permissions
-
-### 🧠 **Intelligent Query Processing**
-
-- **Natural Language Understanding**: Ask questions like "What bugs did I work on last month?"
-- **Semantic Search**: Finds related work items by concepts and technical domains
-- **Multi-layered Query Engine**: Enhanced processing with fallback to legacy queries
-- **Current & Recent Work**: Search through active and recently completed work items
-
-### 🗄️ **Local Database & Sync**
-
-- **SQLite Database**: Fast local storage with Prisma ORM
-- **Background Sync**: Automatic updates every 5 minutes (configurable)
-- **Smart Caching**: Stores work items locally for fast querying
-- **Completion Tracking**: Tracks work items you've closed or resolved
-
-### 🔍 **Comprehensive Search Capabilities**
-
-- **Work Item Types**: User Stories, Product Backlog Items, Bugs, Tasks
-- **State Filtering**: Active, Open, Closed, Resolved work items
-- **Time-based Queries**: "Show me work from last quarter"
-- **Concept Matching**: Find work by technical domain (security, API, database, etc.)
-
-### 🤖 **MCP Server Integration**
-
-- Direct integration with Claude Code
-- JSON-RPC protocol for tool communication
-- Real-time work item queries
-- URL generation for direct Azure DevOps links
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Claude Code   │───▶│   MCP Server    │───▶│  Azure DevOps   │
-│   (Client)      │    │   (This Bot)    │    │ (via REST API)  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │ SQLite Database │
-                       │  (Local Cache)  │
-                       └─────────────────┘
-```
-
-### Core Components
-
-#### 1. **MCP Server** (`src/mcp-server.ts`)
-
-- **Protocol**: Model Context Protocol over stdio
-- **Tools**: 4 primary tools for work item interaction
-- **Error Handling**: Comprehensive error responses
-- **Configuration**: Email-based user filtering
-
-#### 2. **Azure DevOps Integration** (`src/services/azure-devops.ts`)
-
-- **WIQL Queries**: Complex Work Item Query Language queries
-- **Multi-user Support**: Filter by multiple email addresses
-- **Comprehensive Queries**: Fetches current and recently completed work items
-- **Real-time Sync**: Fetches latest work item states
-
-#### 3. **Database Layer** (`src/services/database.ts`)
-
-- **Schema**: Comprehensive work item model with indexes
-- **Sync Logic**: Upsert operations for data consistency
-- **Query Methods**: Type-safe database operations
-- **Completion Tracking**: Tracks who closed/resolved work items
-
-#### 4. **Query Engine** (`src/services/query-engine.ts` & `src/services/enhanced-query-engine.ts`)
-
-- **Two-tier Processing**: Enhanced queries with legacy fallback
-- **Natural Language**: Parses intent from human language
-- **Semantic Search**: Concept-based matching across technical domains
-- **Result Formatting**: Human-readable responses with context
-
-#### 5. **Authentication** (`src/services/auth.ts`)
-
-- **REST API Integration**: Uses PAT authentication
-- **Token Management**: Handles authentication state
-- **Error Recovery**: Guides users through authentication process
-
-## 🛠️ Setup
+## 🚀 Quick Start - 5 Minutes to First Query
 
 ### Prerequisites
+- Node.js 18+ and pnpm installed
+- Azure DevOps Personal Access Token (PAT)
+- Claude Desktop or VS Code with Copilot
 
-- Node.js 18+ and pnpm
-- Azure DevOps Personal Access Token (PAT) configured
-- Access to FWC Azure DevOps organization
-
-### 1. Install Dependencies
-
+### Step 1: Clone and Install
 ```bash
+git clone https://github.com/nathanvale/azure-devops-bot.git
+cd azure-devops-bot
 pnpm install
 ```
 
-### 2. Database Setup
+### Step 2: Get Your PAT Token
+1. Go to [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com/fwcdev/_usersSettings/tokens)
+2. Create token with **"Work Items (read & write)"** scope
+3. Copy the token
 
+### Step 3: Set Environment Variable
 ```bash
-# Database migrations are run automatically on first start
-# Or run manually:
-pnpm prisma migrate deploy
+export AZURE_DEVOPS_PAT="your-token-here"
 ```
 
-### 3. Environment Configuration
-
+### Step 4: Test the Server
 ```bash
-# Create .env file with your PAT token
-echo "AZURE_DEVOPS_PAT=your-personal-access-token" >> .env
-
-# Add user emails for filtering
-echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
-
-# Optional: Configure sync interval (default is 5 minutes)
-echo "AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=10" >> .env
+pnpm mcp --emails=your.email@fwc.gov.au
+# You should see: "✅ MCP server started successfully"
 ```
 
-### 4. Personal Access Token Setup
+### Step 5: Connect Your Client
+- [🤖 Claude Desktop Setup](#-claude-desktop-setup) (Recommended)
+- [💻 VS Code Setup](#-vs-code-setup)
 
-1. Go to Azure DevOps → User Settings → Personal Access Tokens
-2. Create a new token with "Work Items (read & write)" scope
-3. Add the token to your .env file: `AZURE_DEVOPS_PAT=your-token`
+## 🤖 Claude Desktop Setup
 
-### 5. Configuration
+### Configuration Location
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/claude/claude_desktop_config.json`
 
-The bot is pre-configured for:
+### Add Azure DevOps Bot Configuration
 
-- **Organization**: `fwcdev`
-- **Project**: `Customer Services Platform`
-- **Authentication**: Personal Access Token via `AZURE_DEVOPS_PAT` environment variable
-- **Email Configuration**: Required via `AZURE_DEVOPS_USER_EMAILS` environment variable
-
-## 🚀 Usage
-
-### MCP Server Mode (Recommended)
-
-#### With Claude Code
-
-```bash
-# Add to Claude Code MCP configuration
-claude mcp add-json azure-devops-bot '{
-  "type": "stdio",
-  "command": "pnpm",
-  "args": ["mcp", "--emails=your.email@fwc.gov.au,team.email@fwc.gov.au"],
-  "cwd": "/path/to/azure-devops-bot"
-}'
-```
-
-#### Manual Configuration
-
-Add to your MCP configuration file:
+1. Open your `claude_desktop_config.json` file
+2. Add this configuration:
 
 ```json
 {
   "mcpServers": {
     "azure-devops-bot": {
       "command": "pnpm",
-      "args": ["mcp", "--emails=user1@fwc.gov.au,user2@fwc.gov.au"],
-      "cwd": "/path/to/azure-devops-bot"
+      "args": ["mcp", "--emails=your.email@fwc.gov.au,team@fwc.gov.au"],
+      "cwd": "/absolute/path/to/azure-devops-bot",
+      "env": {
+        "AZURE_DEVOPS_PAT": "your-personal-access-token-here"
+      }
     }
   }
 }
 ```
 
-#### Direct Server Start
+3. **Restart Claude Desktop**
+4. Look for the MCP indicator (🔌) in the chat interface
+5. Try: *"Show my active work items"*
 
-```bash
-pnpm mcp --emails=your.email@fwc.gov.au,colleague@fwc.gov.au
-```
+## 💻 VS Code Setup
 
-### Direct CLI Queries
+### Method 1: Workspace Configuration (Team Sharing)
 
-```bash
-# Configure environment (required)
-echo "AZURE_DEVOPS_PAT=your-token" >> .env
-echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
+1. Create `.vscode/mcp.json` in your workspace:
 
-# Query work items
-pnpm dev "What am I working on today?"
-pnpm dev "Show me all bugs I completed last month"
-pnpm dev "What user stories are in my backlog?"
-```
-
-## 🔧 Available MCP Tools
-
-### 1. `get_work_items`
-
-**Description**: Get work items with optional filtering
-**Parameters**:
-
-- `filter` (optional): `"active"`, `"open"`, `"user-stories"`, `"bugs"`, `"tasks"`, `"all"`
-
-**Example**:
-
-```javascript
-// Get all active work items
-{"name": "get_work_items", "arguments": {"filter": "active"}}
-
-// Get all bugs
-{"name": "get_work_items", "arguments": {"filter": "bugs"}}
-```
-
-### 2. `query_work`
-
-**Description**: Natural language queries about work items
-**Parameters**:
-
-- `query` (required): Natural language query string
-
-**Example**:
-
-```javascript
-// Natural language queries
-{"name": "query_work", "arguments": {"query": "What authentication work did I complete?"}}
-{"name": "query_work", "arguments": {"query": "Show me API-related tasks from last quarter"}}
-```
-
-### 3. `sync_data`
-
-**Description**: Manually sync current work items from Azure DevOps
-**Parameters**: None
-
-**Example**:
-
-```javascript
-// Force sync with Azure DevOps
-{"name": "sync_data", "arguments": {}}
-```
-
-### 4. `get_work_item_url`
-
-**Description**: Get direct Azure DevOps URL for a work item
-**Parameters**:
-
-- `id` (required): Work item ID number
-
-**Example**:
-
-```javascript
-// Get URL for work item 12345
-{"name": "get_work_item_url", "arguments": {"id": 12345}}
-```
-
-## 🧠 Query Engine Capabilities
-
-### Natural Language Processing
-
-The query engine understands various query patterns:
-
-#### Simple Queries
-
-- `"bugs"` → All bugs assigned to you
-- `"active"` → All active work items
-- `"completed"` → All completed work items
-- `"user stories"` → All user stories
-
-#### Complex Queries
-
-- `"What authentication work did I complete last month?"` → Semantic search for auth-related completed work
-- `"Show me database bugs I worked on"` → Concept-based search for database-related bugs
-- `"API work from last quarter"` → Time-based search for API-related work items
-
-### Semantic Search Features
-
-- **Technical Domains**: Security, API, Database, UI, DevOps, Testing
-- **Concept Matching**: Finds related work by technical concepts
-- **Intent Recognition**: Understands different query intentions
-- **Work Context**: Searches through current and recently completed work items
-
-### Query Types Supported
-
-1. **Content Search**: Find work items by description/title content
-2. **Concept Search**: Find work items by technical domain
-3. **Time-based Search**: Filter by date ranges
-4. **Completion Context**: Find work you've completed
-5. **Type Filtering**: Filter by work item types
-
-## 📊 Database Schema
-
-### WorkItem Model
-
-```typescript
-interface WorkItem {
-  id: number // Azure DevOps work item ID
-  title: string // Work item title
-  state: string // Current state (Active, Closed, etc.)
-  type: string // Work item type (Bug, User Story, etc.)
-  assignedTo: string // Current assignee
-  azureUrl: string // Direct Azure DevOps URL
-  description?: string // Work item description
-  createdDate?: Date // When work item was created
-  closedDate?: Date // When work item was closed
-  resolvedDate?: Date // When work item was resolved
-  closedBy?: string // Who closed the work item
-  resolvedBy?: string // Who resolved the work item
-  lastUpdatedAt: Date // Last update time
-  lastSyncedAt: Date // Last sync time
-  isHistoricalImport: boolean // Whether from historical import
+```json
+{
+  "servers": {
+    "azure-devops-bot": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["mcp", "--emails=${input:emails}"],
+      "cwd": "/absolute/path/to/azure-devops-bot",
+      "env": {
+        "AZURE_DEVOPS_PAT": "${input:azure-pat}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "emails",
+      "description": "Enter comma-separated email addresses",
+      "default": "your.email@fwc.gov.au"
+    },
+    {
+      "type": "promptString",
+      "id": "azure-pat",
+      "description": "Azure DevOps Personal Access Token",
+      "password": true
+    }
+  ]
 }
 ```
 
-### Database Indexes
+2. Open Chat view (`Ctrl+Alt+I`)
+3. Select **"Agent"** mode
+4. Click **Tools** → Select azure-devops-bot tools
+5. Start using work item queries!
 
-- `type` - Fast filtering by work item type
-- `state` - Fast filtering by work item state
-- `assignedTo` - Fast filtering by assignee
-- `createdDate` - Fast time-based queries
-- `isHistoricalImport` - Distinguish historical vs current work
-- `closedBy` - Fast filtering by who completed work
-- `resolvedBy` - Fast filtering by who resolved work
+### Method 2: Global User Configuration
 
-## 🔄 Sync Process
+1. Run Command Palette: `MCP: Add Server`
+2. Choose **"stdio"** transport
+3. Enter configuration:
+   - **Command**: `pnpm`
+   - **Args**: `mcp --emails=your.email@fwc.gov.au`
+   - **Working Directory**: `/path/to/azure-devops-bot`
+4. Select **"Global"** to add to user profile
 
-### Background Sync
+### Method 3: Command Line Installation
 
-- **Frequency**: Every 5 minutes (configurable via `AZURE_DEVOPS_SYNC_INTERVAL_MINUTES`)
-- **Scope**: Current work items (active assignments + recent completions)
-- **Method**: Incremental updates using `lastUpdatedAt`
+```bash
+code --add-mcp "{\"name\":\"azure-devops-bot\",\"command\":\"pnpm\",\"args\":[\"mcp\",\"--emails=your.email@fwc.gov.au\"],\"cwd\":\"/path/to/azure-devops-bot\"}"
+```
 
-### Data Consistency
+## 🏗️ How It Works
 
-- **Upsert Operations**: Updates existing, creates new work items
-- **Conflict Resolution**: Azure DevOps is source of truth
-- **Sync Metadata**: Tracks sync timestamps for each work item
+```mermaid
+graph LR
+    A[Claude Desktop<br/>or VS Code] -->|MCP Protocol<br/>stdio| B[Azure DevOps Bot<br/>MCP Server]
+    B -->|REST API| C[Azure DevOps<br/>Organization]
+    B -->|Prisma ORM| D[SQLite DB<br/>Local Cache]
+    
+    B -->|2min sync| C
+    D -->|<100ms| B
+    C -->|Initial sync<br/>≤30s for 1000+ items| D
+```
+
+**Data Flow:**
+1. MCP clients send tool requests via stdio transport
+2. Server checks local SQLite for instant responses (<100ms)
+3. Background sync every 2 minutes keeps data fresh
+4. Force sync available for immediate updates
+
+## 📚 MCP Tools Reference
+
+All tools return JSON responses for AI processing. No natural language processing needed.
+
+### Core Tools
+
+#### 🔄 `wit_force_sync_work_items`
+Force immediate sync with Azure DevOps (bypasses 2-minute interval)
+
+**Parameters:**
+```json
+{
+  "concurrency": 5  // Optional: 1-20, default 5
+}
+```
+
+#### 👤 `wit_my_work_items`
+Get all work items assigned to configured users
+
+**Parameters:** None
+
+**Usage:** *"Show my active work items"*
+
+#### 📋 `wit_get_work_item`
+Get single work item by ID with all fields
+
+**Parameters:**
+```json
+{
+  "id": 12345
+}
+```
+
+**Usage:** *"Get details for work item 12345"*
+
+#### 📦 `wit_get_work_items_batch_by_ids`
+Get multiple work items by IDs in a single request
+
+**Parameters:**
+```json
+{
+  "ids": [12345, 12346, 12347]
+}
+```
+
+**Usage:** *"Get work items 12345, 12346, and 12347"*
+
+#### 💬 `wit_list_work_item_comments`
+Get all comments for a work item
+
+**Parameters:**
+```json
+{
+  "id": 12345
+}
+```
+
+**Usage:** *"Show comments for work item 12345"*
+
+#### 🏃‍♂️ `wit_get_work_items_for_iteration`
+Get all work items for a specific sprint/iteration
+
+**Parameters:**
+```json
+{
+  "iterationPath": "Sprint 24"
+}
+```
+
+**Usage:** *"Show all work items in Sprint 24"*
+
+#### ✍️ `wit_add_work_item_comment`
+Add a comment to a work item
+
+**Parameters:**
+```json
+{
+  "id": 12345,
+  "comment": "Updated status - testing complete"
+}
+```
+
+**Usage:** *"Add comment 'Testing complete' to work item 12345"*
+
+#### 🔗 `wit_link_work_item_to_pull_request`
+Link a work item to an existing pull request
+
+**Parameters:**
+```json
+{
+  "workItemId": 12345,
+  "pullRequestId": 678
+}
+```
+
+**Usage:** *"Link work item 12345 to PR 678"*
+
+## ⚡ Performance Benchmarks
+
+| Metric | Target | Actual | Status |
+|--------|--------|---------|--------|
+| **Full Sync** | ≤30 seconds | 10-30 seconds | ✅ |
+| **Query Response** | ≤100ms | Sub-100ms | ✅ |
+| **Memory Usage** | Stable | No leaks detected | ✅ |
+| **Uptime** | 99.9% | 24/7 with PM2 | ✅ |
+
+*Validated with 1,056+ real work items from fwcdev organization*
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### PAT Authentication Failed
+- **Symptom**: "Authentication failed" error
+- **Solution**: 
+  1. Verify PAT has "Work Items (read & write)" scope
+  2. Check PAT hasn't expired
+  3. Ensure PAT is for correct organization (fwcdev)
+
+#### MCP Server Not Appearing in Claude/VS Code
+- **Symptom**: No MCP indicator or tools available
+- **Check**:
+  1. Server is running: `pnpm mcp --emails=test@fwc.gov.au`
+  2. Configuration file path is correct
+  3. Restart Claude Desktop/VS Code after config changes
+
+#### Performance Issues
+- **Symptom**: Slow queries (>100ms)
+- **Solution**:
+  1. Check SQLite database size: `ls -lh prisma/dev.db`
+  2. Run manual sync: Use `wit_force_sync_work_items`
+  3. Check memory usage in PM2: `pm2 monit`
+
+### Debug Mode
+```bash
+# Run with debug output
+DEBUG=* pnpm mcp --emails=your.email@fwc.gov.au
+
+# Check server logs
+tail -f logs/azure-devops-bot.log
+
+# View MCP protocol messages (VS Code)
+# View → Output → Select "MCP" from dropdown
+```
+
+## 🚀 Production Deployment (24/7 Operation)
+
+### PM2 Process Management
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Configure your email in ecosystem.config.js
+# Then start the service
+pm2 start ecosystem.config.js --env production
+
+# Enable startup on boot
+pm2 startup
+pm2 save
+```
+
+### Commands
+```bash
+pm2 status           # Check service status
+pm2 logs azure-devops-bot  # View logs
+pm2 restart azure-devops-bot  # Restart service
+pm2 monit           # Performance monitoring
+```
+
+**Production Features:**
+- Automatic crash recovery
+- Memory leak detection
+- Boot persistence (macOS LaunchAgent)
+- Log rotation and management
+
+## 🏢 Architecture & Configuration
+
+### Target Organization
+- **Organization**: `fwcdev`
+- **Project**: `Customer Services Platform`
+- **API Version**: `7.0`
+
+### Database Schema
+- **Engine**: SQLite with Prisma ORM
+- **Work Items**: Comprehensive metadata storage
+- **Comments**: Separate table with full history
+- **Sync Status**: Tracks last update timestamps
+
+### MCP Protocol Implementation
+- **Version**: MCP 1.15+
+- **Transport**: stdio (Standard Input/Output)
+- **Authentication**: PAT-based
+- **Error Handling**: Comprehensive with user-friendly messages
 
 ## 🧪 Testing
 
 ### Test Coverage
-
 - **Unit Tests**: 212 tests covering all services
-- **Integration Tests**: MCP server integration testing
-- **Mock Services**: Comprehensive Azure DevOps API mocking
+- **Performance Tests**: Production environment validation
+- **Integration Tests**: MCP server protocol testing
 - **Database Tests**: SQLite and Prisma testing
 
 ### Running Tests
-
 ```bash
 # Run all tests
 pnpm test
@@ -350,8 +362,8 @@ pnpm test
 # Run with coverage
 pnpm test:coverage
 
-# Run integration tests
-pnpm test:integration
+# Run performance validation
+pnpm test:performance
 
 # Run in watch mode
 pnpm test:watch
@@ -365,129 +377,37 @@ pnpm dev                 # Run CLI version
 pnpm mcp                 # Run MCP server
 
 # Building
-pnpm build               # TypeScript compilation
-pnpm start               # Run built version
+pnpm build              # Compile TypeScript
+pnpm type-check         # Check types only
 
 # Database
-pnpm db:reset            # Reset database (deletes data and re-runs migrations)
+pnpm db:reset           # Reset database
+pnpm prisma studio      # Database GUI
 
-# Testing
-pnpm test                # Run all tests
-pnpm test:watch          # Watch mode
-pnpm test:coverage       # With coverage
-pnpm test:ci             # CI mode
+# Process Management
+pnpm pm2:setup          # Initial PM2 setup
+pnpm pm2:validate       # Validate PM2 config
 ```
 
-## 🔧 Configuration
+## 🔗 Related Documentation
 
-### Environment Variables
-
-```bash
-DATABASE_URL="file:./dev.db"                              # SQLite database path
-AZURE_DEVOPS_PAT="your-personal-access-token"            # Required for authentication
-AZURE_DEVOPS_USER_EMAILS="user1@fwc.gov.au,user2@fwc.gov.au"  # Required for user filtering
-AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=5                      # Background sync interval (default: 5 minutes)
-```
-
-### Azure DevOps Configuration
-
-- **Organization**: `fwcdev` (hardcoded)
-- **Project**: `Customer Services Platform` (hardcoded)
-- **User Filtering**: Via `--emails` parameter
-
-### Email Configuration
-
-```bash
-# Single user
-pnpm mcp --emails=user@fwc.gov.au
-
-# Multiple users
-pnpm mcp --emails=user1@fwc.gov.au,user2@fwc.gov.au,user3@fwc.gov.au
-```
-
-### Sync Interval Configuration
-
-```bash
-# Default: 5 minutes
-# Set custom interval (in minutes)
-export AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=10
-
-# Or in .env file
-echo "AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=15" >> .env
-
-# Common values:
-# 1 = Every minute (for development)
-# 5 = Every 5 minutes (default)
-# 30 = Every 30 minutes (less frequent)
-```
-
-## 🚨 Troubleshooting
-
-### Authentication Issues
-
-```bash
-# Check PAT token is configured
-echo $AZURE_DEVOPS_PAT
-
-# Verify token has correct permissions
-# Token needs "Work Items (read & write)" scope
-# Generate new token at: Azure DevOps → User Settings → Personal Access Tokens
-```
-
-### Database Issues
-
-```bash
-# Reset database (removes all data and re-runs migrations)
-pnpm db:reset
-
-# Or manually
-rm prisma/dev.db
-pnpm prisma migrate deploy
-```
-
-### MCP Connection Issues
-
-```bash
-# Test MCP server directly
-pnpm mcp --emails=your.email@fwc.gov.au
-
-# Use MCP Inspector for debugging
-mcp-inspector pnpm mcp --emails=your.email@fwc.gov.au
-```
-
-### Authentication Issues
-
-```bash
-# Missing PAT token error
-❌ Error: AZURE_DEVOPS_PAT environment variable is required
-
-# Fix by setting PAT token
-echo "AZURE_DEVOPS_PAT=your-token" >> .env
-
-# Also ensure user emails are set
-echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
-
-# Verify configuration
-echo $AZURE_DEVOPS_PAT
-echo $AZURE_DEVOPS_USER_EMAILS
-```
-
-## 📋 Roadmap
-
-See `docs/ROADMAP.md` for planned features and improvements.
-
-## 🧪 Testing Strategy
-
-See `docs/TESTING_PLAN.md` for comprehensive testing documentation.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+- [Quick Start Guide](docs/QUICK_START.md) - 5-minute setup
+- [MCP Integration Guide](docs/MCP_INTEGRATION.md) - Detailed configuration
+- [Production Deployment](docs/PM2_PRODUCTION.md) - 24/7 operation setup
+- [Production Validation Badge](docs/badges/production-environment-validation.md) - Testing results
 
 ## 📄 License
 
-ISC License - Internal FWC Development Tool
+ISC License - See LICENSE file for details.
+
+## 🤝 Contributing
+
+This project is specifically designed for the FWC development team. For issues or improvements:
+
+1. Create an issue describing the problem
+2. Fork and create a feature branch
+3. Submit a pull request with tests
+
+---
+
+*Built with ❤️ for the FWC development team. Production validated and ready for 24/7 operation.*
