@@ -15,8 +15,8 @@ export default {
       script: './src/mcp-server.ts',
       interpreter: 'tsx',
 
-      // Email configuration - MUST be set before starting
-      args: '--emails=YOUR_EMAIL@domain.com',
+      // Email configuration for production
+      args: '--emails=nathan.vale@fwc.gov.au,ITEX-NV@fwc.gov.au',
 
       // Process management
       instances: 1, // Single instance for stdio transport compatibility
@@ -32,9 +32,10 @@ export default {
       // Environment
       env: {
         NODE_ENV: 'production',
-        // Azure DevOps PAT authentication - set via .env file or system env
-        // AZURE_DEVOPS_PAT: 'your-personal-access-token',
-        // AZURE_DEVOPS_USER_EMAILS: 'user1@domain.com,user2@domain.com'
+        // Azure DevOps configuration for fwcdev organization
+        AZURE_DEVOPS_USER_EMAILS: 'nathan.vale@fwc.gov.au,ITEX-NV@fwc.gov.au',
+        // AZURE_DEVOPS_PAT must be set via environment or .env file
+        // Use: export AZURE_DEVOPS_PAT="your-personal-access-token"
       },
 
       // Logging
@@ -64,15 +65,15 @@ export default {
   ],
 
   deploy: {
-    // Optional: deployment configuration for remote servers
+    // Local production deployment configuration
     production: {
-      user: 'node',
+      user: process.env.USER || 'nathanvale',
       host: 'localhost',
       ref: 'origin/main',
-      repo: 'git@github.com:your-org/azure-devops-bot.git',
-      path: '/var/www/azure-devops-bot',
+      repo: 'git@github.com:nathanvale/azure-devops-bot.git',
+      path: process.env.HOME + '/code/azure-devops-bot',
       'post-deploy':
-        'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
+        'pnpm install && pnpm run build && pm2 reload ecosystem.config.js --env production',
     },
   },
 }

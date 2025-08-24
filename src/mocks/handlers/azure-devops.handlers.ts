@@ -453,6 +453,46 @@ export const addWorkItemCommentHandler = http.post(
   },
 )
 
+// Projects API handler - for configuration and validation requests
+export const projectsHandler = http.get(
+  'https://dev.azure.com/:org/_apis/projects',
+  ({ params }) => {
+    const org = params.org as string
+    return HttpResponse.json({
+      count: 1,
+      value: [
+        {
+          id: 'test-project-id',
+          name: 'Customer Services Platform',
+          description: 'Test project for Azure DevOps Bot',
+          url: `https://dev.azure.com/${org}/_apis/projects/test-project-id`,
+          state: 'wellFormed',
+          revision: 1,
+          visibility: 'private',
+        }
+      ]
+    })
+  }
+)
+
+// Also handle any generic projects API requests
+export const genericProjectsHandler = http.get(
+  'https://dev.azure.com/:org/:project/_apis/projects',
+  ({ params }) => {
+    const org = params.org as string
+    const project = params.project as string
+    return HttpResponse.json({
+      id: 'test-project-id',
+      name: decodeURIComponent(project),
+      description: 'Test project for Azure DevOps Bot',
+      url: `https://dev.azure.com/${org}/_apis/projects/test-project-id`,
+      state: 'wellFormed',
+      revision: 1,
+      visibility: 'private',
+    })
+  }
+)
+
 // Default handlers export
 export const azureDevOpsHandlers = [
   workItemsListHandler,
@@ -462,4 +502,6 @@ export const azureDevOpsHandlers = [
   updateWorkItemHandler,
   workItemCommentsHandler,
   addWorkItemCommentHandler,
+  projectsHandler,
+  genericProjectsHandler,
 ]

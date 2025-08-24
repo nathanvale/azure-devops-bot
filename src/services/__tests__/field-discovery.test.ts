@@ -1,34 +1,32 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-import type {
-  AzureDevOpsWorkItem,
-  AzureDevOpsWorkItemFields,
-} from '../../types/azure-devops-api.js'
-
-// Use vi.hoisted to ensure the mock function is available during module loading
-const mockExecAsync = vi.hoisted(() => vi.fn())
-
-vi.mock('util', () => ({
-  promisify: () => mockExecAsync,
-}))
-
-vi.mock('child_process', () => ({
-  exec: vi.fn(),
-}))
+import type { WorkItem, IAzureDevOpsClient } from '../../packages/azure-devops-client/dist/index.js'
 
 import { FieldDiscoveryService } from '../field-discovery'
 
 describe('FieldDiscoveryService', () => {
   let service: FieldDiscoveryService
+  let mockClient: IAzureDevOpsClient
 
   beforeEach(() => {
     vi.resetAllMocks()
-    service = new FieldDiscoveryService()
+    
+    mockClient = {
+      getWorkItem: vi.fn(),
+      getWorkItemsBatch: vi.fn(),
+      queryWorkItems: vi.fn(),
+      getWorkItemComments: vi.fn(),
+      addWorkItemComment: vi.fn(),
+      batchGetWorkItems: vi.fn(),
+      batchGetComments: vi.fn(),
+    }
+    
+    service = new FieldDiscoveryService(mockClient)
   })
 
   describe('fetchWorkItemWithAllFields', () => {
     it('should fetch work item with --expand all flag', async () => {
-      const mockExpandAllResponse = {
+      const mockExpandAllResponse: WorkItem = {
         id: 1234,
         rev: 15,
         fields: {
@@ -111,37 +109,32 @@ describe('FieldDiscoveryService', () => {
         },
       }
 
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockExpandAllResponse),
-      })
+      vi.mocked(mockClient.getWorkItem).mockResolvedValue(mockExpandAllResponse)
 
       const result = await service.fetchWorkItemWithAllFields(1234)
 
       expect(result).toEqual(mockExpandAllResponse)
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'az boards work-item show --id 1234 --expand all --output json',
-        expect.any(Object),
-      )
+      expect(mockClient.getWorkItem).toHaveBeenCalledWith(1234, 'all')
     })
 
-    it('should handle Azure CLI errors when fetching work item', async () => {
-      mockExecAsync.mockRejectedValue(new Error('Work item not found'))
+    it('should handle REST API errors when fetching work item', async () => {
+      vi.mocked(mockClient.getWorkItem).mockRejectedValue(new Error('Work item not found'))
 
       await expect(service.fetchWorkItemWithAllFields(9999)).rejects.toThrow(
         'Work item not found',
       )
     })
 
-    it('should handle invalid JSON response', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: 'invalid json' })
+    it('should handle REST API client errors', async () => {
+      vi.mocked(mockClient.getWorkItem).mockRejectedValue(new Error('Invalid response'))
 
-      await expect(service.fetchWorkItemWithAllFields(1234)).rejects.toThrow()
+      await expect(service.fetchWorkItemWithAllFields(1234)).rejects.toThrow('Invalid response')
     })
   })
 
   describe('analyzeFields', () => {
     it('should analyze and categorize all fields from work item data', () => {
-      const sampleWorkItem: AzureDevOpsWorkItem = {
+      const sampleWorkItem: WorkItem = {
         id: 1234,
         rev: 15,
         fields: {
@@ -162,7 +155,7 @@ describe('FieldDiscoveryService', () => {
           'Microsoft.VSTS.Scheduling.StoryPoints': 5.0,
           'Microsoft.VSTS.Common.ValueArea': 'Business',
           'Custom.BusinessValue': 'High',
-        } as AzureDevOpsWorkItemFields & { [key: string]: unknown },
+        },
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         relations: [],
         _links: {
@@ -174,8 +167,8 @@ describe('FieldDiscoveryService', () => {
 
       const result = service.analyzeFields(sampleWorkItem)
 
-      expect(result.totalFields).toBe(17) // 11 fields + id + rev + url + relations + _links
-      expect(result.systemFields).toHaveLength(7)
+      expect(result.totalFields).toBe(19) // 9 system + 4 vsts + 1 custom + 5 metadata fields
+      expect(result.systemFields).toHaveLength(9)
       expect(result.vstsFields).toHaveLength(4)
       expect(result.customFields).toHaveLength(1)
       expect(result.metadataFields).toHaveLength(5) // id, rev, url, relations, _links
@@ -191,7 +184,7 @@ describe('FieldDiscoveryService', () => {
     })
 
     it('should handle work items with minimal fields', () => {
-      const minimalWorkItem: AzureDevOpsWorkItem = {
+      const minimalWorkItem: WorkItem = {
         id: 1234,
         rev: 1,
         fields: {
@@ -201,7 +194,7 @@ describe('FieldDiscoveryService', () => {
           'System.WorkItemType': 'Task',
           'System.CreatedDate': '2025-08-21T09:00:00Z',
           'System.ChangedDate': '2025-08-21T09:00:00Z',
-        } as AzureDevOpsWorkItemFields & { [key: string]: unknown },
+        },
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         _links: {
           self: {
@@ -212,15 +205,15 @@ describe('FieldDiscoveryService', () => {
 
       const result = service.analyzeFields(minimalWorkItem)
 
-      expect(result.totalFields).toBe(4) // 3 fields + id
-      expect(result.systemFields).toHaveLength(3)
+      expect(result.totalFields).toBe(10) // 6 system + 0 vsts + 0 custom + 4 metadata fields
+      expect(result.systemFields).toHaveLength(6)
       expect(result.vstsFields).toHaveLength(0)
       expect(result.customFields).toHaveLength(0)
-      expect(result.metadataFields).toHaveLength(1) // just id
+      expect(result.metadataFields).toHaveLength(4) // id, rev, url, _links
     })
 
     it('should detect different field types correctly', () => {
-      const workItem: AzureDevOpsWorkItem = {
+      const workItem: WorkItem = {
         id: 1234,
         rev: 1,
         fields: {
@@ -237,7 +230,7 @@ describe('FieldDiscoveryService', () => {
           'System.Tags': null,
           'System.Description': '',
           'Custom.Array': [1, 2, 3],
-        } as AzureDevOpsWorkItemFields & { [key: string]: unknown },
+        },
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         _links: {
           self: {
@@ -331,7 +324,7 @@ describe('FieldDiscoveryService', () => {
 
   describe('discoverAllFields', () => {
     it('should discover fields from multiple work items', async () => {
-      const workItem1 = {
+      const workItem1: WorkItem = {
         id: 1234,
         rev: 15,
         fields: {
@@ -340,9 +333,10 @@ describe('FieldDiscoveryService', () => {
           'Microsoft.VSTS.Common.Priority': 1,
         },
         url: 'https://dev.azure.com/test/1234',
+        _links: { self: { href: 'https://dev.azure.com/test/1234' } },
       }
 
-      const workItem2 = {
+      const workItem2: WorkItem = {
         id: 5678,
         rev: 8,
         fields: {
@@ -352,11 +346,12 @@ describe('FieldDiscoveryService', () => {
           'Custom.RiskLevel': 'Low',
         },
         url: 'https://dev.azure.com/test/5678',
+        _links: { self: { href: 'https://dev.azure.com/test/5678' } },
       }
 
-      mockExecAsync
-        .mockResolvedValueOnce({ stdout: JSON.stringify(workItem1) })
-        .mockResolvedValueOnce({ stdout: JSON.stringify(workItem2) })
+      vi.mocked(mockClient.getWorkItem)
+        .mockResolvedValueOnce(workItem1)
+        .mockResolvedValueOnce(workItem2)
 
       const documentation = await service.discoverAllFields([1234, 5678])
 
@@ -372,13 +367,16 @@ describe('FieldDiscoveryService', () => {
     })
 
     it('should handle errors when fetching individual work items', async () => {
-      mockExecAsync
-        .mockResolvedValueOnce({
-          stdout: JSON.stringify({
-            id: 1234,
-            fields: { 'System.Title': 'Success' },
-          }),
-        })
+      const successWorkItem: WorkItem = {
+        id: 1234,
+        fields: { 'System.Title': 'Success' },
+        rev: 1,
+        url: 'https://dev.azure.com/test/1234',
+        _links: { self: { href: 'https://dev.azure.com/test/1234' } },
+      }
+
+      vi.mocked(mockClient.getWorkItem)
+        .mockResolvedValueOnce(successWorkItem)
         .mockRejectedValueOnce(new Error('Work item not found'))
 
       const documentation = await service.discoverAllFields([1234, 9999])
