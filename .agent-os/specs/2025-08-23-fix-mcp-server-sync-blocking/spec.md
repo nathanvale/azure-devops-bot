@@ -16,7 +16,7 @@ As an AI agent trying to access Azure DevOps work item data, I want to receive i
 
 **Detailed Workflow**: When an AI agent sends a request to the MCP server for work item data, the server should immediately serve data from the local SQLite database (which contains 1,056 work items with 159 relevant to configured users) rather than blocking on Azure DevOps API calls that may fail due to rate limiting or authentication issues.
 
-### Developer Experience 
+### Developer Experience
 
 As a developer using the Azure DevOps Bot, I want the MCP server to start quickly and be immediately available for queries, so that I can get instant access to my work item data without debugging sync issues.
 
@@ -31,7 +31,7 @@ As a system administrator, I want the MCP server to be resilient to Azure DevOps
 ## Spec Scope
 
 1. **Non-Blocking Server Startup** - MCP server starts immediately and serves existing cached data
-2. **Background Sync Separation** - Move initial detailed sync to a background process that doesn't block MCP requests  
+2. **Background Sync Separation** - Move initial detailed sync to a background process that doesn't block MCP requests
 3. **Graceful Sync Failure Handling** - Continue serving cached data when Azure DevOps sync fails
 4. **Fast Response Path** - Ensure MCP tool calls return within 100ms using cached SQLite data
 5. **Sync Status Reporting** - Add optional MCP tool to report background sync status
@@ -39,7 +39,7 @@ As a system administrator, I want the MCP server to be resilient to Azure DevOps
 ## Out of Scope
 
 - Modifying the database schema or data structure
-- Changing the Azure DevOps integration approach  
+- Changing the Azure DevOps integration approach
 - Adding new MCP tools beyond sync status reporting
 - Performance optimizations beyond the blocking issue
 

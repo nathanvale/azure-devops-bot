@@ -6,8 +6,8 @@ A sophisticated **Model Context Protocol (MCP) server** that provides natural la
 
 ### 🔐 **Secure Authentication**
 
-- Azure CLI SSO integration (`az login`)
-- No API keys or tokens required
+- Personal Access Token (PAT) authentication
+- Secure token-based authentication
 - Leverages existing Azure DevOps permissions
 
 ### 🧠 **Intelligent Query Processing**
@@ -43,7 +43,7 @@ A sophisticated **Model Context Protocol (MCP) server** that provides natural la
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Claude Code   │───▶│   MCP Server    │───▶│  Azure DevOps   │
-│   (Client)      │    │   (This Bot)    │    │   (via az CLI)  │
+│   (Client)      │    │   (This Bot)    │    │ (via REST API)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │
                                 ▼
@@ -85,7 +85,7 @@ A sophisticated **Model Context Protocol (MCP) server** that provides natural la
 
 #### 5. **Authentication** (`src/services/auth.ts`)
 
-- **Azure CLI Integration**: Leverages existing authentication
+- **REST API Integration**: Uses PAT authentication
 - **Token Management**: Handles authentication state
 - **Error Recovery**: Guides users through authentication process
 
@@ -94,7 +94,7 @@ A sophisticated **Model Context Protocol (MCP) server** that provides natural la
 ### Prerequisites
 
 - Node.js 18+ and pnpm
-- Azure CLI (`az`) installed and authenticated
+- Azure DevOps Personal Access Token (PAT) configured
 - Access to FWC Azure DevOps organization
 
 ### 1. Install Dependencies
@@ -111,25 +111,24 @@ pnpm install
 pnpm prisma migrate deploy
 ```
 
-### 3. Environment Configuration (CLI Mode)
+### 3. Environment Configuration
 
 ```bash
-# Create .env file with your email addresses
-echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
+# Create .env file with your PAT token
+echo "AZURE_DEVOPS_PAT=your-personal-access-token" >> .env
 
-# For multiple users (team queries)
-echo "AZURE_DEVOPS_USER_EMAILS=user1@fwc.gov.au,user2@fwc.gov.au" >> .env
+# Add user emails for filtering
+echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
 
 # Optional: Configure sync interval (default is 5 minutes)
 echo "AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=10" >> .env
 ```
 
-### 4. Azure Authentication
+### 4. Personal Access Token Setup
 
-```bash
-az login
-# Follow prompts to authenticate with Azure DevOps
-```
+1. Go to Azure DevOps → User Settings → Personal Access Tokens
+2. Create a new token with "Work Items (read & write)" scope
+3. Add the token to your .env file: `AZURE_DEVOPS_PAT=your-token`
 
 ### 5. Configuration
 
@@ -137,9 +136,8 @@ The bot is pre-configured for:
 
 - **Organization**: `fwcdev`
 - **Project**: `Customer Services Platform`
-- **Email Configuration**:
-  - **MCP Mode**: Required via `--emails` parameter
-  - **CLI Mode**: Required via `AZURE_DEVOPS_USER_EMAILS` environment variable
+- **Authentication**: Personal Access Token via `AZURE_DEVOPS_PAT` environment variable
+- **Email Configuration**: Required via `AZURE_DEVOPS_USER_EMAILS` environment variable
 
 ## 🚀 Usage
 
@@ -179,19 +177,14 @@ Add to your MCP configuration file:
 pnpm mcp --emails=your.email@fwc.gov.au,colleague@fwc.gov.au
 ```
 
-### CLI Mode
+### Direct CLI Queries
 
 ```bash
-# First, configure your email addresses (required)
+# Configure environment (required)
+echo "AZURE_DEVOPS_PAT=your-token" >> .env
 echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
 
-# Or set multiple emails
-echo "AZURE_DEVOPS_USER_EMAILS=user1@fwc.gov.au,user2@fwc.gov.au" >> .env
-
-# Or export directly
-export AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au
-
-# Then query work items
+# Query work items
 pnpm dev "What am I working on today?"
 pnpm dev "Show me all bugs I completed last month"
 pnpm dev "What user stories are in my backlog?"
@@ -391,7 +384,8 @@ pnpm test:ci             # CI mode
 
 ```bash
 DATABASE_URL="file:./dev.db"                              # SQLite database path
-AZURE_DEVOPS_USER_EMAILS="user1@fwc.gov.au,user2@fwc.gov.au"  # Required for CLI mode
+AZURE_DEVOPS_PAT="your-personal-access-token"            # Required for authentication
+AZURE_DEVOPS_USER_EMAILS="user1@fwc.gov.au,user2@fwc.gov.au"  # Required for user filtering
 AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=5                      # Background sync interval (default: 5 minutes)
 ```
 
@@ -432,14 +426,12 @@ echo "AZURE_DEVOPS_SYNC_INTERVAL_MINUTES=15" >> .env
 ### Authentication Issues
 
 ```bash
-# Check Azure CLI authentication
-az account show
+# Check PAT token is configured
+echo $AZURE_DEVOPS_PAT
 
-# Re-authenticate
-az login
-
-# Check Azure DevOps extension
-az extension add --name azure-devops
+# Verify token has correct permissions
+# Token needs "Work Items (read & write)" scope
+# Generate new token at: Azure DevOps → User Settings → Personal Access Tokens
 ```
 
 ### Database Issues
@@ -463,19 +455,20 @@ pnpm mcp --emails=your.email@fwc.gov.au
 mcp-inspector pnpm mcp --emails=your.email@fwc.gov.au
 ```
 
-### CLI Mode Issues
+### Authentication Issues
 
 ```bash
-# Missing environment variable error
-❌ Error: AZURE_DEVOPS_USER_EMAILS environment variable is required
+# Missing PAT token error
+❌ Error: AZURE_DEVOPS_PAT environment variable is required
 
-# Fix by setting environment variable
+# Fix by setting PAT token
+echo "AZURE_DEVOPS_PAT=your-token" >> .env
+
+# Also ensure user emails are set
 echo "AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au" >> .env
 
-# Or export directly
-export AZURE_DEVOPS_USER_EMAILS=your.email@fwc.gov.au
-
-# Verify it's set
+# Verify configuration
+echo $AZURE_DEVOPS_PAT
 echo $AZURE_DEVOPS_USER_EMAILS
 ```
 

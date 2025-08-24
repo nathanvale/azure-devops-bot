@@ -10,11 +10,13 @@ This is the tests coverage details for the spec detailed in @.agent-os/specs/202
 ### Unit Tests
 
 **SyncService**
+
 - Test `shouldPerformInitialSync()` logic with various data ages
 - Test background sync starts without blocking
 - Test graceful handling of sync failures
 
 **AzureDevOpsMCPServer**
+
 - Test server startup time under 5 seconds
 - Test MCP tool responses work immediately after startup
 - Test server continues responding during background sync
@@ -22,11 +24,13 @@ This is the tests coverage details for the spec detailed in @.agent-os/specs/202
 ### Integration Tests
 
 **MCP Server Startup Flow**
+
 - Server starts and responds to `tools/list` within 5 seconds
 - Server returns work items data from cache immediately
 - Background sync runs independently without affecting MCP responses
 
 **Data Freshness Logic**
+
 - Fresh data (< 1 hour): Skip initial detailed sync
 - Stale data (> 1 hour): Perform initial sync but don't block MCP
 - Empty database: Perform initial sync but don't block MCP

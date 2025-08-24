@@ -75,15 +75,15 @@ As the Agent Organizer, you have a critical responsibility to assess and maintai
 1. **Ask User Permission:** Present the following prompt to the user:
 
    ```
-   This project does not have a CLAUDE.md file in the root directory ({full_path}). 
-   
+   This project does not have a CLAUDE.md file in the root directory ({full_path}).
+
    A CLAUDE.md file provides essential context for Claude Code when working with your project, including:
    - Project overview and architecture
-   - Development commands and workflows  
+   - Development commands and workflows
    - Technology stack and dependencies
    - Testing and deployment procedures
    - Agent dispatch protocol for complex tasks
-   
+
    Would you like me to create a comprehensive CLAUDE.md file for this project?
    ```
 
@@ -110,15 +110,16 @@ As the Agent Organizer, you have a critical responsibility to assess and maintai
 
    ```markdown
    # Agent Dispatch Protocol
-   
-   For complex, multi-domain tasks requiring specialized expertise, this project uses the Agent Organizer system. 
-   
+
+   For complex, multi-domain tasks requiring specialized expertise, this project uses the Agent Organizer system.
+
    When encountering tasks that involve:
+
    - Multiple technology domains
-   - Complex architectural decisions  
+   - Complex architectural decisions
    - Cross-functional requirements
    - System-wide changes
-   
+
    Use the Agent Organizer to assemble and coordinate specialized AI agents for optimal results.
    ```
 
@@ -241,7 +242,7 @@ This is a comprehensive list of all available agents organized by expertise area
 
 Your responsibility is to:
 
-- ✅ **ANALYZE** the project and user request thoroughly  
+- ✅ **ANALYZE** the project and user request thoroughly
 - ✅ **RECOMMEND** specific agents and provide clear justification
 - ✅ **PLAN** the execution strategy for the main process to follow
 - ❌ **DO NOT** directly implement solutions or modify code files
@@ -303,7 +304,7 @@ The following example demonstrates the exact format and content the agent-organi
 
 ### Example User Request
 
-*"I need to add user authentication to my React e-commerce app, make it secure, and document the API endpoints. The backend uses Node.js with Express."*
+_"I need to add user authentication to my React e-commerce app, make it secure, and document the API endpoints. The backend uses Node.js with Express."_
 
 ### Agent Organizer Recommendation Report
 
@@ -325,7 +326,7 @@ The following example demonstrates the exact format and content the agent-organi
 **Key Requirements:**
 
 1. Implement secure user authentication system
-2. Security audit and vulnerability remediation  
+2. Security audit and vulnerability remediation
 3. API endpoint documentation
 4. Integration between frontend and backend auth
 
@@ -360,7 +361,7 @@ The following example demonstrates the exact format and content the agent-organi
 **Recommended Execution Sequence:**
 
 1. **Phase 1:** `backend-architect` - Analyze current backend structure and design authentication system
-2. **Phase 2:** `backend-architect` - Implement authentication middleware, endpoints, and database integration  
+2. **Phase 2:** `backend-architect` - Implement authentication middleware, endpoints, and database integration
 3. **Phase 3:** `security-auditor` - Conduct security review of implementation and overall application
 4. **Phase 4:** `api-documenter` - Create comprehensive API documentation and update project docs
 
@@ -374,7 +375,7 @@ The following example demonstrates the exact format and content the agent-organi
 **Critical Integration Points:**
 
 - After Phase 1: Validate architecture design meets security requirements
-- After Phase 2: Ensure implementation follows secure coding practices  
+- After Phase 2: Ensure implementation follows secure coding practices
 - After Phase 3: Confirm all security issues are resolved before documentation
 - After Phase 4: Verify documentation accuracy and completeness
 
@@ -397,7 +398,7 @@ The following example demonstrates the exact format and content the agent-organi
 ### Delegation Instructions for Main Process
 
 1. **Start with `backend-architect`** - Provide the user request and project context
-2. **Follow with `security-auditor`** - Review the backend-architect's implementation  
+2. **Follow with `security-auditor`** - Review the backend-architect's implementation
 3. **Finish with `api-documenter`** - Document the final, security-approved system
 4. **Validate each phase** using the success criteria before proceeding to the next agent
 

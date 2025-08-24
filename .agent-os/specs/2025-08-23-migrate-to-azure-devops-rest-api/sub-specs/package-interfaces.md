@@ -8,24 +8,28 @@ This defines the clean interfaces for the abstracted Azure DevOps REST API packa
 ## Core Interface Design
 
 ### Main Client Interface
+
 ```typescript
 export interface IAzureDevOpsClient {
   // Work Item Operations
   getWorkItemsBatch(ids?: number[], options?: BatchOptions): Promise<WorkItem[]>
   getWorkItem(id: number, expand?: WorkItemExpand): Promise<WorkItem>
   queryWorkItems(wiql: string): Promise<WorkItemQueryResult>
-  
-  // Comment Operations  
+
+  // Comment Operations
   getWorkItemComments(workItemId: number): Promise<WorkItemComment[]>
   addWorkItemComment(workItemId: number, text: string): Promise<WorkItemComment>
-  
+
   // Batch Operations
   batchGetWorkItems(ids: number[]): Promise<WorkItem[]>
-  batchGetComments(workItemIds: number[]): Promise<Map<number, WorkItemComment[]>>
+  batchGetComments(
+    workItemIds: number[],
+  ): Promise<Map<number, WorkItemComment[]>>
 }
 ```
 
 ### Configuration Interface
+
 ```typescript
 export interface AzureDevOpsClientConfig {
   organization: string
@@ -52,6 +56,7 @@ export interface RetryConfig {
 ```
 
 ### Work Item Type Definitions
+
 ```typescript
 export interface WorkItem {
   id: number
@@ -86,6 +91,7 @@ export interface WorkItemComment {
 ```
 
 ### Operation Result Types
+
 ```typescript
 export interface WorkItemQueryResult {
   queryType: 'flat' | 'tree' | 'oneHop'
@@ -109,13 +115,14 @@ export type WorkItemExpand = 'all' | 'fields' | 'links' | 'relations'
 ## Provider Abstraction Layer
 
 ### Generic Work Item Provider Interface
+
 ```typescript
 export interface IWorkItemProvider {
   // Core operations that any work item system should support
   fetchWorkItems(query?: WorkItemQuery): Promise<WorkItemData[]>
   getWorkItem(id: string | number): Promise<WorkItemData | null>
   getComments(workItemId: string | number): Promise<CommentData[]>
-  
+
   // Provider metadata
   getProviderInfo(): ProviderInfo
 }
@@ -132,20 +139,21 @@ export interface ProviderInfo {
 ```
 
 ### Azure DevOps Provider Implementation
+
 ```typescript
 export class AzureDevOpsProvider implements IWorkItemProvider {
   private client: IAzureDevOpsClient
-  
+
   constructor(config: AzureDevOpsClientConfig) {
     this.client = new AzureDevOpsRestClient(config)
   }
-  
+
   async fetchWorkItems(query?: WorkItemQuery): Promise<WorkItemData[]> {
     // Convert generic query to WIQL
     // Use batch operations for performance
     // Transform Azure DevOps format to generic format
   }
-  
+
   getProviderInfo(): ProviderInfo {
     return {
       name: 'Azure DevOps',
@@ -153,8 +161,8 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       supports: {
         batchOperations: true,
         realTimeUpdates: false,
-        customFields: true
-      }
+        customFields: true,
+      },
     }
   }
 }
@@ -163,6 +171,7 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
 ## Package Export Structure
 
 ### Main Package Exports
+
 ```typescript
 // src/packages/azure-devops-client/src/index.ts
 export { AzureDevOpsRestClient } from './client'
@@ -178,10 +187,10 @@ export type { IAzureDevOpsClient } from './interfaces/client'
 export type { IWorkItemProvider } from './interfaces/provider'
 
 // Configuration
-export type { 
+export type {
   AzureDevOpsClientConfig,
   RateLimitConfig,
-  RetryConfig 
+  RetryConfig,
 } from './types/config'
 
 // Utilities (if needed externally)
@@ -190,27 +199,28 @@ export { RateLimiter } from './utils/rate-limiter'
 ```
 
 ### Clean Integration Pattern
+
 ```typescript
 // In main project: src/services/azure-devops.ts
-import { 
+import {
   AzureDevOpsProvider,
   type IWorkItemProvider,
-  type AzureDevOpsClientConfig 
+  type AzureDevOpsClientConfig,
 } from '../packages/azure-devops-client'
 
 export class AzureDevOpsClient {
   private provider: IWorkItemProvider
-  
+
   constructor() {
     const config: AzureDevOpsClientConfig = {
       organization: process.env.AZURE_DEVOPS_ORG!,
       project: process.env.AZURE_DEVOPS_PROJECT!,
       pat: process.env.AZURE_DEVOPS_PAT!,
     }
-    
+
     this.provider = new AzureDevOpsProvider(config)
   }
-  
+
   // Existing interface remains unchanged
   async fetchWorkItems(): Promise<WorkItemData[]> {
     return this.provider.fetchWorkItems()
@@ -221,12 +231,14 @@ export class AzureDevOpsClient {
 ## Future Extensibility
 
 ### Pluggable Architecture Benefits
+
 1. **Easy Provider Swapping**: Replace Azure DevOps with Jira, GitHub Issues, etc.
 2. **A/B Testing**: Compare different implementations
 3. **Multi-Provider Support**: Aggregate data from multiple sources
 4. **Mock Implementations**: Easy testing with fake providers
 
 ### Package Extraction Readiness
+
 1. **Zero Dependencies**: No imports from parent project
 2. **Complete Documentation**: README, API docs, examples
 3. **Independent Testing**: Full test suite within package

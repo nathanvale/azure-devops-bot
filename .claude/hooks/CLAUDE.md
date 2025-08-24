@@ -15,7 +15,7 @@ cp CLAUDE.md /path/to/your/project/CLAUDE.md
 **Why Project-Scope?**
 
 - **Targeted Orchestration**: Only activates for complex projects that need multi-agent coordination
-- **Prevents Over-Engineering**: Avoids automatic orchestration for simple tasks and quick questions  
+- **Prevents Over-Engineering**: Avoids automatic orchestration for simple tasks and quick questions
 - **Token Efficiency**: Selective usage prevents unnecessary token consumption on casual coding
 - **Optimal Results**: Best suited for comprehensive development workflows requiring expert coordination
 
@@ -131,9 +131,9 @@ graph TD
     G -- NO --> D
     G -- YES --> H[Handle directly without sub-agents]
     E -- YES ---> F[Use subset of previous team<br/>Max 3 agents]
-    
+
     style D fill:#dcedc8,stroke:#333,stroke-width:2px
-    style F fill:#fff3e0,stroke:#333,stroke-width:2px  
+    style F fill:#fff3e0,stroke:#333,stroke-width:2px
     style H fill:#e8f5e8,stroke:#333,stroke-width:2px
 ```
 
@@ -254,8 +254,8 @@ The context-manager uses a standardized communication protocol:
   "briefing": {
     "summary": "Concise project context summary",
     "relevant_paths": ["/path/to/relevant/files"],
-    "file_purposes": {"directory": "purpose description"},
-    "related_activity": [{"agent": "name", "summary": "recent work"}]
+    "file_purposes": { "directory": "purpose description" },
+    "related_activity": [{ "agent": "name", "summary": "recent work" }]
   }
 }
 ```
@@ -263,7 +263,7 @@ The context-manager uses a standardized communication protocol:
 ### Benefits for Complex Projects
 
 - **🎯 Targeted Context**: Agents receive only relevant information for their specific tasks
-- **⚡ Performance**: Incremental updates prevent redundant scanning of large codebases  
+- **⚡ Performance**: Incremental updates prevent redundant scanning of large codebases
 - **🔄 Consistency**: All agents work from the same, synchronized understanding of the project
 - **📊 Visibility**: Track what changes were made by which agents and when
 - **🧠 Memory**: Persistent project knowledge that survives across sessions

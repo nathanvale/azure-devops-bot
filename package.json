@@ -34,7 +34,8 @@
     "pm2:logs": "pm2 logs azure-devops-bot",
     "pm2:status": "pm2 status",
     "pm2:monitor": "pm2 monit",
-    "pm2:validate": "tsx scripts/pm2-validate.ts"
+    "pm2:validate": "tsx scripts/pm2-validate.ts",
+    "test:auth": "tsx scripts/test-pat-auth.ts"
   },
   "keywords": [],
   "author": "",

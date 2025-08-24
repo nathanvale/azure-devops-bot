@@ -1,9 +1,9 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import type {
+  AzureDevOpsRestClient} from '../packages/azure-devops-client/dist/index.js';
 
-import type { AzureDevOpsWorkItem } from '../types/azure-devops-api.js'
-
-const execAsync = promisify(exec)
+import {
+  type WorkItem,
+} from '../packages/azure-devops-client/dist/index.js'
 
 export interface FieldAnalysisResult {
   totalFields: number
@@ -15,25 +15,21 @@ export interface FieldAnalysisResult {
 }
 
 export class FieldDiscoveryService {
-  private static readonly ORGANIZATION = 'fwcdev'
-  private static readonly PROJECT = 'Customer Services Platform'
+  private client: AzureDevOpsRestClient
+
+  constructor(client: AzureDevOpsRestClient) {
+    this.client = client
+  }
 
   /**
-   * Fetch a single work item with all expanded fields using --expand all flag
+   * Fetch a single work item with all expanded fields
    */
-  async fetchWorkItemWithAllFields(
-    workItemId: number,
-  ): Promise<AzureDevOpsWorkItem> {
-    const command = `az boards work-item show --id ${workItemId} --expand all --output json`
-
+  async fetchWorkItemWithAllFields(workItemId: number): Promise<WorkItem> {
     try {
-      const { stdout } = await execAsync(command, {
-        maxBuffer: 10 * 1024 * 1024,
-      })
-      return JSON.parse(stdout)
+      return await this.client.getWorkItem(workItemId, 'all')
     } catch (error) {
       console.error(
-        `Failed to fetch work item ${workItemId} with --expand all:`,
+        `Failed to fetch work item ${workItemId} with full expansion:`,
         error,
       )
       throw error
@@ -43,7 +39,7 @@ export class FieldDiscoveryService {
   /**
    * Analyze a work item to categorize and type all its fields
    */
-  analyzeFields(workItem: AzureDevOpsWorkItem): FieldAnalysisResult {
+  analyzeFields(workItem: WorkItem): FieldAnalysisResult {
     const systemFields: string[] = []
     const vstsFields: string[] = []
     const customFields: string[] = []

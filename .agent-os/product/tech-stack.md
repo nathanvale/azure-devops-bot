@@ -19,7 +19,7 @@
 
 ## External Integrations
 
-- **Azure DevOps**: Azure CLI (`az boards`) for authentication and data access
+- **Azure DevOps**: REST API with PAT authentication for direct data access
 - **Protocol**: Model Context Protocol (MCP) 1.15+
 - **Transport**: stdio for MCP communication
 
@@ -52,10 +52,10 @@
 
 ## Security
 
-- **Authentication**: Azure CLI SSO (inherited from system)
-- **Network**: No network exposure (local stdio only)
+- **Authentication**: PAT (Personal Access Token) for Azure DevOps API access
+- **Network**: HTTPS communication with Azure DevOps REST API, local stdio only for MCP protocol
 - **Permissions**: User-level file system access only
-- **Data**: All data stored locally, no external transmission
+- **Data**: All data stored locally, HTTPS transmission only to Azure DevOps for sync operations
 
 ## Performance Strategy
 
@@ -80,15 +80,15 @@
 
 ## API Integration Details
 
-- **Azure DevOps**: Command-line interface via `az boards`
-- **Work Item Queries**: WIQL (Work Item Query Language)
-- **Batch Processing**: Parallel fetching with configurable concurrency
-- **Rate Limiting**: Respects Azure DevOps CLI rate limits
+- **Azure DevOps**: REST API via azure-devops-client package
+- **Work Item Queries**: WIQL (Work Item Query Language) via POST /wit/wiql endpoint
+- **Batch Processing**: Native batch operations with GET /wit/workitems/{ids} endpoint
+- **Rate Limiting**: X-RateLimit-Remaining headers with exponential backoff
 
 ## Data Flow Architecture
 
-1. **Input**: Azure CLI commands with JSON output
-2. **Processing**: TypeScript parsing and field extraction
+1. **Input**: HTTPS REST API calls to Azure DevOps with JSON responses
+2. **Processing**: TypeScript parsing and field extraction via azure-devops-client
 3. **Storage**: Prisma ORM to SQLite database
 4. **Output**: MCP protocol JSON responses
 5. **Transport**: stdio pipes for MCP communication

@@ -29,6 +29,7 @@ async function main() {
 
   // Parse arguments
   let sampleWorkItemIds: number[] = []
+  let client: AzureDevOpsClient
 
   if (args.length === 0) {
     console.log('❌ No work item IDs provided. Usage:')
@@ -46,7 +47,7 @@ async function main() {
     )
 
     // Fetch some work items to get their IDs
-    const client = new AzureDevOpsClient()
+    client = new AzureDevOpsClient()
     const workItems = await client.fetchWorkItems()
     sampleWorkItemIds = workItems.slice(0, sampleCount).map((item) => item.id)
 
@@ -56,12 +57,16 @@ async function main() {
       .map((arg) => parseInt(arg))
       .filter((id) => !isNaN(id))
     console.log(`🎯 Analyzing work items: ${sampleWorkItemIds.join(', ')}\n`)
+
+    // Initialize client for direct work item ID usage
+    client = new AzureDevOpsClient()
   }
 
   try {
     // Step 1: Field Discovery
     console.log('🔎 Step 1: Discovering fields from Azure DevOps work items...')
-    const fieldDiscoveryService = new FieldDiscoveryService()
+    const restClient = client.getRestClient()
+    const fieldDiscoveryService = new FieldDiscoveryService(restClient)
 
     console.log(
       `   Fetching ${sampleWorkItemIds.length} work items with --expand all...`,
@@ -82,7 +87,7 @@ async function main() {
 
     // Step 2: Schema Migration
     console.log('🏗️  Step 2: Generating comprehensive database schema...')
-    const migrationService = new SchemaMigrationService()
+    const migrationService = new SchemaMigrationService(restClient)
 
     const result =
       await migrationService.fullMigrationWorkflow(sampleWorkItemIds)

@@ -350,7 +350,7 @@ Each subagent follows a standardized structure for consistent behavior and optim
 ---
 name: subagent-name
 description: When this subagent should be invoked
-tools: tool1, tool2  # Optional - defaults to all tools
+tools: tool1, tool2 # Optional - defaults to all tools
 ---
 
 # Subagent Name
@@ -360,6 +360,7 @@ tools: tool1, tool2  # Optional - defaults to all tools
 **Expertise**: Specific technologies, frameworks, and domain knowledge
 
 **Key Capabilities**:
+
 - Capability 1: Description
 - Capability 2: Description
 - Capability 3: Description
@@ -386,7 +387,7 @@ System prompt defining the subagent's specialized behavior, decision-making patt
 Claude Code automatically coordinates agents using these patterns:
 
 - **Sequential**: `architect → implement → test → review` for dependent tasks
-- **Parallel**: `performance-engineer + database-optimizer` for independent analysis  
+- **Parallel**: `performance-engineer + database-optimizer` for independent analysis
 - **Validation**: `primary-agent → security-auditor` for critical components
 - **Iterative**: `review → refine → validate` for optimization tasks
 
@@ -394,48 +395,48 @@ Claude Code automatically coordinates agents using these patterns:
 
 ### 🏗️ Planning & Architecture
 
-| Agent | Best For | Example Use Cases |
-|-------|----------|-------------------|
-| **[backend-architect](development/backend-architect.md)** | API design, system architecture | RESTful APIs, microservices, database schemas |
-| **[frontend-developer](development/frontend-developer.md)** | UI/UX planning, component design | React components, responsive layouts, state management |
-| **[cloud-architect](infrastructure/cloud-architect.md)** | Infrastructure design, scalability | AWS/Azure/GCP architecture, cost optimization |
-| **[graphql-architect](data-ai/graphql-architect.md)** | GraphQL system design | Schema design, resolvers, federation |
+| Agent                                                       | Best For                           | Example Use Cases                                      |
+| ----------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------ |
+| **[backend-architect](development/backend-architect.md)**   | API design, system architecture    | RESTful APIs, microservices, database schemas          |
+| **[frontend-developer](development/frontend-developer.md)** | UI/UX planning, component design   | React components, responsive layouts, state management |
+| **[cloud-architect](infrastructure/cloud-architect.md)**    | Infrastructure design, scalability | AWS/Azure/GCP architecture, cost optimization          |
+| **[graphql-architect](data-ai/graphql-architect.md)**       | GraphQL system design              | Schema design, resolvers, federation                   |
 
-### 💻 Implementation & Development  
+### 💻 Implementation & Development
 
-| Agent | Best For | Example Use Cases |
-|-------|----------|-------------------|
-| **[python-pro](development/python-pro.md)** | Python development | Django/FastAPI apps, data processing, async programming |
-| **[golang-pro](development/golang-pro.md)** | Go development | Microservices, concurrent systems, CLI tools |
-| **[typescript-pro](development/typescript-pro.md)** | TypeScript development | Type-safe applications, advanced TS features |
-| **[react-pro](development/react-pro.md)** | React expertise | Hooks, performance optimization, advanced patterns |
-| **[nextjs-pro](development/nextjs-pro.md)** | Next.js applications | SSR/SSG, full-stack React, routing |
+| Agent                                               | Best For               | Example Use Cases                                       |
+| --------------------------------------------------- | ---------------------- | ------------------------------------------------------- |
+| **[python-pro](development/python-pro.md)**         | Python development     | Django/FastAPI apps, data processing, async programming |
+| **[golang-pro](development/golang-pro.md)**         | Go development         | Microservices, concurrent systems, CLI tools            |
+| **[typescript-pro](development/typescript-pro.md)** | TypeScript development | Type-safe applications, advanced TS features            |
+| **[react-pro](development/react-pro.md)**           | React expertise        | Hooks, performance optimization, advanced patterns      |
+| **[nextjs-pro](development/nextjs-pro.md)**         | Next.js applications   | SSR/SSG, full-stack React, routing                      |
 
 ### ☁️ Operations & Maintenance
 
-| Agent | Best For | Example Use Cases |
-|-------|----------|-------------------|
+| Agent                                                                        | Best For                       | Example Use Cases                                   |
+| ---------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------- |
 | **[devops-incident-responder](infrastructure/devops-incident-responder.md)** | Production issues, deployments | Log analysis, deployment failures, system debugging |
-| **[incident-responder](infrastructure/incident-responder.md)** | Critical outages | Immediate response, crisis management, escalation |
-| **[deployment-engineer](infrastructure/deployment-engineer.md)** | CI/CD, containerization | Docker, Kubernetes, pipeline configuration |
-| **[database-optimizer](data-ai/database-optimizer.md)** | Database performance | Query optimization, indexing, migration strategies |
+| **[incident-responder](infrastructure/incident-responder.md)**               | Critical outages               | Immediate response, crisis management, escalation   |
+| **[deployment-engineer](infrastructure/deployment-engineer.md)**             | CI/CD, containerization        | Docker, Kubernetes, pipeline configuration          |
+| **[database-optimizer](data-ai/database-optimizer.md)**                      | Database performance           | Query optimization, indexing, migration strategies  |
 
 ### 📊 Analysis & Optimization
 
-| Agent | Best For | Example Use Cases |
-|-------|----------|-------------------|
-| **[performance-engineer](infrastructure/performance-engineer.md)** | Application performance | Bottleneck analysis, caching strategies, optimization |
-| **[security-auditor](security/security-auditor.md)** | Security assessment | Vulnerability scanning, OWASP compliance, threat modeling |
-| **[data-scientist](data-ai/data-scientist.md)** | Data analysis | SQL queries, BigQuery, insights and reporting |
-| **[code-reviewer](quality-testing/code-reviewer.md)** | Code quality | Best practices, maintainability, architectural review |
+| Agent                                                              | Best For                | Example Use Cases                                         |
+| ------------------------------------------------------------------ | ----------------------- | --------------------------------------------------------- |
+| **[performance-engineer](infrastructure/performance-engineer.md)** | Application performance | Bottleneck analysis, caching strategies, optimization     |
+| **[security-auditor](security/security-auditor.md)**               | Security assessment     | Vulnerability scanning, OWASP compliance, threat modeling |
+| **[data-scientist](data-ai/data-scientist.md)**                    | Data analysis           | SQL queries, BigQuery, insights and reporting             |
+| **[code-reviewer](quality-testing/code-reviewer.md)**              | Code quality            | Best practices, maintainability, architectural review     |
 
 ### 🧪 Quality Assurance
 
-| Agent | Best For | Example Use Cases |
-|-------|----------|-------------------|
-| **[test-automator](quality-testing/test-automator.md)** | Testing strategy | Unit tests, integration tests, E2E test suites |
-| **[debugger](quality-testing/debugger.md)** | Bug investigation | Error analysis, test failures, troubleshooting |
-| **[architect-reviewer](quality-testing/architect-review.md)** | Design validation | Architectural consistency, pattern compliance |
+| Agent                                                         | Best For          | Example Use Cases                              |
+| ------------------------------------------------------------- | ----------------- | ---------------------------------------------- |
+| **[test-automator](quality-testing/test-automator.md)**       | Testing strategy  | Unit tests, integration tests, E2E test suites |
+| **[debugger](quality-testing/debugger.md)**                   | Bug investigation | Error analysis, test failures, troubleshooting |
+| **[architect-reviewer](quality-testing/architect-review.md)** | Design validation | Architectural consistency, pattern compliance  |
 
 ## 📚 Best Practices
 
@@ -613,7 +614,7 @@ Both examples include actual token counts, execution times, and deliverable qual
 **Design Deliverables**:
 
 - Complete TypeScript interfaces for Workspace, WorkspaceGroup, and configurations
-- IndexedDB storage strategy with migration from localStorage  
+- IndexedDB storage strategy with migration from localStorage
 - Discord-inspired UI specifications with drag-and-drop functionality
 - Auto-save mechanisms with conflict resolution and backup strategy
 - 5-phase implementation plan with quality gates
@@ -630,7 +631,7 @@ Both examples include actual token counts, execution times, and deliverable qual
 - 🏗️ **Backend Architecture**: IndexedDB schema, <200ms startup, migration framework, auto-save strategy
 - 🎨 **Frontend Components**: Discord-inspired design, Material-UI integration, progressive enhancement
 - ⚡ **Electron Integration**: IPC architecture, security model, performance optimization
-- 🎭 **UX Design**: A+ UX Score (92/100), zero disruption, user journey validation  
+- 🎭 **UX Design**: A+ UX Score (92/100), zero disruption, user journey validation
 - ✅ **Testing Strategy**: 99.5% migration success, 4-layer testing pyramid, quality gates
 
 #### Complete Implementation Results
@@ -640,7 +641,7 @@ Both examples include actual token counts, execution times, and deliverable qual
 **Full 5-Phase Implementation**:
 
 - **Phase 1**: Assessment & Current State Analysis ✅
-- **Phase 2**: Architecture Finalization & Infrastructure ✅  
+- **Phase 2**: Architecture Finalization & Infrastructure ✅
 - **Phase 3**: Core Implementation ✅
 - **Phase 4**: Integration & Migration ✅
 - **Phase 5**: Quality Assurance & Finalization ✅
@@ -688,11 +689,11 @@ Both examples include actual token counts, execution times, and deliverable qual
 ### Key Multi-Agent Benefits
 
 - **🧠 Intelligent Orchestration**: agent-organizer coordinated 5+ agents across complex 5-phase implementation
-- **🔧 Nested Agent Support**: Error resolution through coordinated sub-agent delegation within workflows  
+- **🔧 Nested Agent Support**: Error resolution through coordinated sub-agent delegation within workflows
 - **📊 Enterprise-Scale Quality**: 850K tokens of comprehensive analysis, design, and implementation
 - **⚡ Rapid Error Recovery**: Build errors resolved in <8 minutes through specialized agent coordination
 - **🎯 Domain Expertise**: Each agent contributed specialized knowledge (storage architecture, UX design, TypeScript fixes)
 
 ---
 
-*Happy coding with your AI specialist team! 🚀*
+_Happy coding with your AI specialist team! 🚀_

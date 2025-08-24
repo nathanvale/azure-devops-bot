@@ -88,6 +88,7 @@ args: '--emails=john.doe@company.com,j.doe@company.com'
 ## 📋 Available Commands
 
 ### Process Management
+
 ```bash
 pnpm run pm2:start      # Start the service
 pnpm run pm2:stop       # Stop the service
@@ -97,6 +98,7 @@ pnpm run pm2:status     # Check process status
 ```
 
 ### Monitoring & Debugging
+
 ```bash
 pnpm run pm2:logs       # View live logs
 pnpm run pm2:monitor    # Launch monitoring dashboard
@@ -104,6 +106,7 @@ pnpm run pm2:validate   # Validate PM2 setup
 ```
 
 ### Manual PM2 Commands
+
 ```bash
 pm2 logs azure-devops-bot --lines 100  # Last 100 log lines
 pm2 describe azure-devops-bot           # Detailed process info
@@ -148,6 +151,7 @@ pnpm run pm2:validate
 ### Common Issues
 
 **Process Won't Start**
+
 ```bash
 # Check configuration
 pnpm run pm2:validate
@@ -160,22 +164,25 @@ nano ecosystem.config.js
 ```
 
 **stdio Transport Not Working**
+
 - Ensure `exec_mode: 'fork'` (not cluster mode)
 - Ensure `instances: 1` (not multiple instances)
 - Check that logs show MCP server startup messages
 
 **High Restart Count**
+
 ```bash
 # Check what's causing crashes
 pm2 logs azure-devops-bot --err --lines 50
 
 # Common causes:
 # - Email configuration missing/invalid
-# - Azure CLI authentication expired
+# - PAT authentication expired/invalid
 # - Database corruption
 ```
 
 **Service Not Starting on Boot**
+
 ```bash
 # Reconfigure startup
 pm2 unstartup
@@ -193,6 +200,7 @@ pnpm run pm2:validate
 ```
 
 This checks:
+
 - ✅ PM2 installation
 - ✅ Process status
 - ✅ Log file creation
@@ -261,12 +269,13 @@ PM2 Process Manager
     ↓ manages
 Azure DevOps MCP Server
     ↓ uses
-Database Service → Sync Service → Azure CLI
+Database Service → Sync Service → Azure REST API
 ```
 
 ### Background Sync Preservation
 
 The existing background sync functionality continues to work:
+
 - 2-5 minute sync intervals are preserved
 - Detailed metadata sync on startup
 - All 8 MCP tools remain functional
@@ -279,7 +288,7 @@ The existing background sync functionality continues to work:
 - **Memory**: ~100-200MB typical, <500MB maximum (auto-restart trigger)
 - **CPU**: <5% idle, brief spikes during Azure DevOps sync
 - **Disk**: SQLite database grows with work item history
-- **Network**: Only outbound to Azure DevOps (via Azure CLI)
+- **Network**: Only outbound to Azure DevOps (via HTTPS REST API)
 
 ### Scaling Considerations
 
@@ -293,14 +302,14 @@ The existing background sync functionality continues to work:
 ### Security Features
 
 - No network exposure (stdio transport only)
-- Inherits Azure CLI authentication (SSO)
+- Uses Personal Access Token (PAT) authentication
 - Local-only data storage
 - Process isolation via PM2
 
 ### Best Practices
 
 1. **Regular Validation**: Run `pnpm run pm2:validate` weekly
-2. **Log Monitoring**: Check logs for authentication issues
+2. **Log Monitoring**: Check logs for PAT authentication issues
 3. **Resource Monitoring**: Watch memory usage trends
 4. **Backup Strategy**: SQLite database can be backed up while running
 5. **Update Process**: Use `pm2:reload` for zero-downtime updates

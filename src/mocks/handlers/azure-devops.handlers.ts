@@ -103,13 +103,62 @@ export const workItemsListHandler = http.get(
 
     if (ids) {
       const requestedIds = ids.split(',').map((id) => parseInt(id))
-      const filteredItems = mockWorkItems.filter((item) =>
-        requestedIds.includes(item.id),
-      )
+      const items: AzureDevOpsWorkItem[] = []
+
+      requestedIds.forEach((id) => {
+        // Check if we have a predefined mock item
+        const existingItem = mockWorkItems.find((item) => item.id === id)
+        if (existingItem) {
+          items.push(existingItem)
+        } else {
+          // Generate mock data for any other ID
+          items.push({
+            id,
+            rev: 1,
+            url: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}`,
+            fields: {
+              'System.Id': id,
+              'System.Title': `Batch Mock Work Item ${id}`,
+              'System.State': ['Active', 'Done', 'New'][id % 3],
+              'System.WorkItemType': ['User Story', 'Bug', 'Task'][id % 3],
+              'System.AssignedTo': {
+                displayName: `Batch User ${id % 5}`,
+                uniqueName: `batch.user${id % 5}@fwc.gov.au`,
+              },
+              'System.CreatedDate': '2025-01-08T10:00:00Z',
+              'System.ChangedDate': '2025-01-08T14:30:00Z',
+              'System.AreaPath': 'Customer Services Platform',
+              'System.IterationPath': 'Customer Services Platform\\Sprint 1',
+              'Microsoft.VSTS.Common.Priority': (id % 4) + 1,
+              'Microsoft.VSTS.Scheduling.StoryPoints': (id % 13) + 1,
+              'System.Description': `Batch mock work item description ${id}`,
+              'System.Tags':
+                id % 2 === 0 ? 'high-priority; feature' : 'bug-fix; urgent',
+            },
+            _links: {
+              self: {
+                href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}`,
+              },
+              workItemUpdates: {
+                href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}/updates`,
+              },
+              workItemRevisions: {
+                href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}/revisions`,
+              },
+              workItemComments: {
+                href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}/comments`,
+              },
+              html: {
+                href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/${id}`,
+              },
+            },
+          })
+        }
+      })
 
       return HttpResponse.json({
-        count: filteredItems.length,
-        value: filteredItems,
+        count: items.length,
+        value: items,
       })
     }
 
@@ -234,28 +283,45 @@ export const updateWorkItemHandler = http.patch(
 
 export const workItemCommentsHandler = http.get(
   `${AZURE_DEVOPS_BASE}/wit/workitems/:id/comments`,
-  ({ params: _params }) => {
+  ({ params }) => {
+    const workItemId = parseInt(params.id as string)
+
     return HttpResponse.json({
       totalCount: 2,
       count: 2,
-      value: [
+      fromRevisionCount: 0,
+      comments: [
         {
-          id: 1,
+          id: '1',
+          workItemId,
           text: 'This work item has been updated with new requirements.',
           createdBy: {
             displayName: 'Nathan Vale',
             uniqueName: 'nathan.vale@example.com',
+            url: 'https://dev.azure.com/_apis/Identities/user-1',
+            id: 'user-1',
+            imageUrl:
+              'https://dev.azure.com/_apis/GraphProfile/MemberAvatars/user-1',
+            descriptor: 'descriptor-1',
           },
           createdDate: '2025-01-07T10:00:00Z',
+          version: 1,
         },
         {
-          id: 2,
+          id: '2',
+          workItemId,
           text: 'Ready for review.',
           createdBy: {
             displayName: 'Nathan Vale',
             uniqueName: 'nathan.vale@example.com',
+            url: 'https://dev.azure.com/_apis/Identities/user-2',
+            id: 'user-2',
+            imageUrl:
+              'https://dev.azure.com/_apis/GraphProfile/MemberAvatars/user-2',
+            descriptor: 'descriptor-2',
           },
           createdDate: '2025-01-08T14:30:00Z',
+          version: 2,
         },
       ],
     })
@@ -303,11 +369,97 @@ export const createWorkItemsHandler = (workItems: AzureDevOpsWorkItem[]) =>
     }),
   )
 
+// Single work item handler - generates mock data for any requested ID
+export const singleWorkItemHandler = http.get(
+  `${AZURE_DEVOPS_BASE}/wit/workitems/:id`,
+  ({ params }) => {
+    const id = parseInt(params.id as string)
+
+    // Return specific mock items for known IDs
+    const existingWorkItem = mockWorkItems.find((item) => item.id === id)
+    if (existingWorkItem) {
+      return HttpResponse.json(existingWorkItem)
+    }
+
+    // Generate mock data for any other ID (for testing purposes)
+    const mockWorkItem: AzureDevOpsWorkItem = {
+      id,
+      rev: 1,
+      url: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}`,
+      fields: {
+        'System.Id': id,
+        'System.Title': `Mock Work Item ${id}`,
+        'System.State': ['Active', 'Done', 'New'][id % 3],
+        'System.WorkItemType': ['User Story', 'Bug', 'Task'][id % 3],
+        'System.AssignedTo': {
+          displayName: 'Mock User',
+          uniqueName: `mock.user${id % 5}@fwc.gov.au`,
+        },
+        'System.CreatedDate': '2025-01-08T10:00:00Z',
+        'System.ChangedDate': '2025-01-08T14:30:00Z',
+        'System.AreaPath': 'Customer Services Platform',
+        'System.IterationPath': 'Customer Services Platform\\Sprint 1',
+        'Microsoft.VSTS.Common.Priority': (id % 4) + 1,
+        'Microsoft.VSTS.Scheduling.StoryPoints': (id % 13) + 1,
+        'System.Description': `Mock work item description ${id}`,
+        'System.Tags':
+          id % 2 === 0 ? 'high-priority; feature' : 'bug-fix; urgent',
+      },
+      _links: {
+        self: {
+          href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}`,
+        },
+        workItemUpdates: {
+          href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}/updates`,
+        },
+        workItemRevisions: {
+          href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}/revisions`,
+        },
+        workItemComments: {
+          href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/workItems/${id}/comments`,
+        },
+        html: {
+          href: `https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_workitems/edit/${id}`,
+        },
+      },
+    }
+
+    return HttpResponse.json(mockWorkItem)
+  },
+)
+
+// Add comment handler - for POST requests to create comments
+export const addWorkItemCommentHandler = http.post(
+  `${AZURE_DEVOPS_BASE}/wit/workitems/:id/comments`,
+  async ({ params, request }) => {
+    const workItemId = parseInt(params.id as string)
+    const body = (await request.json()) as { text: string }
+
+    // Return success response for comment creation
+    return HttpResponse.json(
+      {
+        id: Math.floor(Math.random() * 1000) + 1,
+        workItemId,
+        text: body.text,
+        createdBy: {
+          displayName: 'Nathan Vale',
+          uniqueName: 'nathan.vale@example.com',
+        },
+        createdDate: new Date().toISOString(),
+        modifiedDate: null,
+      },
+      { status: 201 },
+    )
+  },
+)
+
 // Default handlers export
 export const azureDevOpsHandlers = [
   workItemsListHandler,
   workItemsQueryHandler,
+  singleWorkItemHandler,
   createWorkItemHandler,
   updateWorkItemHandler,
   workItemCommentsHandler,
+  addWorkItemCommentHandler,
 ]
