@@ -313,3 +313,37 @@ Direct REST API approach solves all current reliability issues while providing a
 - Requires Personal Access Token (PAT) instead of Azure CLI SSO
 - Initial development effort to implement abstracted package
 - Need to maintain REST API compatibility as Azure DevOps evolves
+
+---
+
+## 2025-08-27: Professional CLI Interface Implementation
+
+**ID:** DEC-008
+**Status:** Accepted
+**Category:** Product
+**Related Spec:** @.agent-os/specs/2025-08-27-cli-enhancement/
+
+### Decision
+
+Transform the Azure DevOps Bot from a basic console-logging tool into a professional CLI application with configurable verbosity levels, multiple output formats, progress indicators, and comprehensive argument parsing.
+
+### Context
+
+Current implementation uses basic console.log output throughout, resulting in verbose, uncontrolled output that doesn't meet professional CLI standards. Users need different levels of detail for different use cases - from quick status checks to comprehensive debugging sessions. The tool also needs machine-readable output formats for AI agent integration.
+
+### Consequences
+
+**Positive:**
+
+- Professional CLI interface with industry-standard argument parsing
+- Configurable output (QUIET, NORMAL, VERBOSE, DEBUG levels)
+- Multiple output formats (text, JSON, markdown) for different use cases
+- Progress indicators for long-running operations improve user experience
+- Enhanced error handling with contextual setup guidance
+- Backward compatibility maintains existing automation and PM2 integration
+
+**Negative:**
+
+- Additional dependency overhead (commander, ora, cli-progress, chalk, boxen)
+- Increased complexity in output management and coordination
+- Learning curve for users who want to use advanced CLI features
