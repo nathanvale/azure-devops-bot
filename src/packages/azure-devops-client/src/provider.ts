@@ -7,6 +7,7 @@ import type {
   WorkItem,
   AzureDevOpsPerson,
 } from './types/work-items.js'
+import type { PersonData, WorkItemDataWithPersons } from './types/person.js'
 
 import { AzureDevOpsRestClient } from './client.js'
 
@@ -22,7 +23,7 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
   }
 
   /**
-   * Fetches work items based on query filters
+   * Fetches work items based on query filters (legacy method)
    */
   async fetchWorkItems(query?: WorkItemQuery): Promise<WorkItemData[]> {
     try {
@@ -60,7 +61,45 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
   }
 
   /**
-   * Gets a single work item by ID
+   * Fetches work items with complete Person data
+   * Per DEC-009: Extract all person fields for normalized storage
+   */
+  async fetchWorkItemsWithPersons(query?: WorkItemQuery): Promise<WorkItemDataWithPersons[]> {
+    try {
+      let workItems: WorkItem[]
+
+      if (query?.filters) {
+        // Build WIQL query from filters
+        const wiql = this.buildWiqlFromQuery(query)
+        const queryResult = await this.client.queryWorkItems(wiql)
+
+        if (queryResult.workItems.length === 0) {
+          return []
+        }
+
+        // Get full work item details with expanded fields
+        const workItemIds = queryResult.workItems.map((wi) => wi.id)
+        workItems = await this.client.batchGetWorkItems(workItemIds, 'all')
+      } else {
+        // For now, return empty array if no query is provided
+        workItems = []
+      }
+
+      return workItems.map((workItem) => this.mapWorkItemToDataWithPersons(workItem))
+    } catch (error) {
+      // Preserve RetryExhaustedError for proper error handling
+      if (error instanceof Error && error.name === 'RetryExhaustedError') {
+        throw error
+      }
+      // Re-throw with additional context for other errors
+      throw new Error(
+        `Failed to fetch work items with persons: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  /**
+   * Gets a single work item by ID (legacy method)
    */
   async getWorkItem(id: string | number): Promise<WorkItemData | null> {
     try {
@@ -83,6 +122,35 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       }
       throw new Error(
         `Failed to get work item ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  /**
+   * Gets a single work item with complete Person data
+   * Per DEC-009: Extract all person fields for normalized storage
+   */
+  async getWorkItemWithPersons(id: string | number): Promise<WorkItemDataWithPersons | null> {
+    try {
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id
+
+      if (isNaN(numericId) || numericId <= 0) {
+        return null
+      }
+
+      const workItem = await this.client.getWorkItem(numericId, 'all')
+      return workItem ? this.mapWorkItemToDataWithPersons(workItem) : null
+    } catch (error) {
+      // If work item doesn't exist, return null instead of throwing
+      if (error instanceof Error && error.message.includes('404')) {
+        return null
+      }
+      // Preserve RetryExhaustedError for proper error handling
+      if (error instanceof Error && error.name === 'RetryExhaustedError') {
+        throw error
+      }
+      throw new Error(
+        `Failed to get work item with persons ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }
@@ -200,7 +268,7 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
   }
 
   /**
-   * Maps Azure DevOps WorkItem to standardized WorkItemData
+   * Maps Azure DevOps WorkItem to standardized WorkItemData (legacy method)
    */
   private mapWorkItemToData(workItem: WorkItem): WorkItemData {
     const fields = workItem.fields
@@ -215,6 +283,60 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       changedDate: fields['System.ChangedDate'] || '',
       description: fields['System.Description'],
       tags: this.parseTags(fields['System.Tags']),
+      raw: {
+        ...fields,
+        _links: workItem._links,
+        relations: workItem.relations,
+        url: workItem.url,
+        rev: workItem.rev,
+      },
+    }
+  }
+
+  /**
+   * Maps Azure DevOps WorkItem to WorkItemData with complete Person objects
+   * Per DEC-009: Extract all person fields for normalized storage
+   */
+  private mapWorkItemToDataWithPersons(workItem: WorkItem): WorkItemDataWithPersons {
+    const fields = workItem.fields
+
+    return {
+      id: workItem.id,
+      title: fields['System.Title'] || '',
+      state: fields['System.State'] || '',
+      type: fields['System.WorkItemType'] || '',
+      
+      // Legacy string fields for backward compatibility
+      assignedTo: this.extractPersonName(fields['System.AssignedTo']),
+      createdBy: this.extractPersonName(fields['System.CreatedBy']),
+      changedBy: this.extractPersonName(fields['System.ChangedBy']),
+      closedBy: this.extractPersonName(fields['Microsoft.VSTS.Common.ClosedBy']),
+      resolvedBy: this.extractPersonName(fields['Microsoft.VSTS.Common.ResolvedBy']),
+      activatedBy: this.extractPersonName(fields['Microsoft.VSTS.Common.ActivatedBy']),
+      authorizedAs: this.extractPersonName(fields['System.AuthorizedAs']),
+      
+      // New Person object fields with complete data
+      assignedToPerson: this.extractPersonData(fields['System.AssignedTo']),
+      createdByPerson: this.extractPersonData(fields['System.CreatedBy']),
+      changedByPerson: this.extractPersonData(fields['System.ChangedBy']),
+      closedByPerson: this.extractPersonData(fields['Microsoft.VSTS.Common.ClosedBy']),
+      resolvedByPerson: this.extractPersonData(fields['Microsoft.VSTS.Common.ResolvedBy']),
+      activatedByPerson: this.extractPersonData(fields['Microsoft.VSTS.Common.ActivatedBy']),
+      authorizedAsPerson: this.extractPersonData(fields['System.AuthorizedAs']),
+      
+      // Date fields
+      createdDate: fields['System.CreatedDate'] || '',
+      changedDate: fields['System.ChangedDate'] || '',
+      closedDate: fields['Microsoft.VSTS.Common.ClosedDate'],
+      resolvedDate: fields['Microsoft.VSTS.Common.ResolvedDate'],
+      activatedDate: fields['Microsoft.VSTS.Common.ActivatedDate'],
+      authorizedDate: fields['Microsoft.VSTS.Common.AuthorizedDate'],
+      
+      // Other fields
+      description: fields['System.Description'],
+      tags: this.parseTags(fields['System.Tags']),
+      
+      // Raw data for future-proofing (per DEC-003)
       raw: {
         ...fields,
         _links: workItem._links,
@@ -248,7 +370,7 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
   }
 
   /**
-   * Extracts display name from Azure DevOps person object
+   * Extracts display name from Azure DevOps person object (legacy method)
    */
   private extractPersonName(
     person: AzureDevOpsPerson | string | undefined,
@@ -256,6 +378,26 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
     if (!person) return undefined
     if (typeof person === 'string') return person
     return person.displayName || person.uniqueName || person.id
+  }
+
+  /**
+   * Extracts complete person data from Azure DevOps person object
+   * Per DEC-003: Store everything from Azure DevOps
+   */
+  private extractPersonData(
+    person: AzureDevOpsPerson | string | undefined,
+  ): PersonData | null {
+    if (!person || typeof person === 'string') return null
+    
+    return {
+      id: person.id,
+      displayName: person.displayName,
+      uniqueName: person.uniqueName,
+      url: person.url,
+      imageUrl: person.imageUrl,
+      descriptor: person.descriptor,
+      inactive: false // Default value - Azure DevOps doesn't always provide this
+    }
   }
 
   /**

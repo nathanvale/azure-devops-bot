@@ -14,12 +14,12 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 1.4 Verify migration rollback capability
   - [x] 1.5 Verify all tests pass for schema changes
 
-- [ ] 2. Update Azure DevOps Provider Data Extraction  
-  - [ ] 2.1 Write tests for complete person data extraction from Azure DevOps responses
-  - [ ] 2.2 Replace extractPersonName() with extractPersonData() method
-  - [ ] 2.3 Update WorkItemData interface to include person objects instead of strings
-  - [ ] 2.4 Update mapWorkItemToData() to extract all person fields
-  - [ ] 2.5 Verify all tests pass for data extraction changes
+- [x] 2. Update Azure DevOps Provider Data Extraction  
+  - [x] 2.1 Write tests for complete person data extraction from Azure DevOps responses
+  - [x] 2.2 Replace extractPersonName() with extractPersonData() method
+  - [x] 2.3 Update WorkItemData interface to include person objects instead of strings
+  - [x] 2.4 Update mapWorkItemToData() to extract all person fields
+  - [x] 2.5 Verify all tests pass for data extraction changes
 
 - [ ] 3. Implement Person Management in Database Service
   - [ ] 3.1 Write tests for Person CRUD operations and email-based queries
