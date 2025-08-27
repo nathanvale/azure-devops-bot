@@ -119,7 +119,7 @@ describe('Performance Benchmarking Test Suite', () => {
   })
 
   describe('Task 3.1: Sync Timing Tests', () => {
-    it.skipIf(!hasProductionPAT)('should complete full sync within 30 seconds for 1,056+ work items', async () => {
+    it.skipIf(!hasProductionPAT)('should complete full sync within 30 seconds for 1,056+ work items', { timeout }, async () => {
       await ensureClientConnected()
       
       // Ensure we have sufficient work items for meaningful testing
@@ -155,9 +155,9 @@ describe('Performance Benchmarking Test Suite', () => {
       // Assert performance requirements
       expect(syncBenchmark.passed).toBe(true)
       expect(syncDuration).toBeLessThan(REQUIREMENTS.MAX_SYNC_TIME_SECONDS * 1000)
-    }, timeout)
+    })
 
-    it.skipIf(!hasProductionPAT)('should maintain consistent sync performance across multiple cycles', async () => {
+    it.skipIf(!hasProductionPAT)('should maintain consistent sync performance across multiple cycles', { timeout }, async () => {
       await ensureClientConnected()
       
       const numCycles = 3
@@ -196,11 +196,11 @@ describe('Performance Benchmarking Test Suite', () => {
       
       // Variance shouldn't be too high (no more than 3x difference)
       expect(maxTime).toBeLessThan(minTime * 3)
-    }, timeout)
+    })
   })
 
   describe('Task 3.2: Query Performance Validation', () => {
-    it.skipIf(!hasProductionPAT)('should achieve sub-100ms query responses consistently', async () => {
+    it.skipIf(!hasProductionPAT)('should achieve sub-100ms query responses consistently', { timeout }, async () => {
       await ensureClientConnected()
       
       const testIds = productionWorkItemIds.slice(0, 50) // Test 50 queries
@@ -235,9 +235,9 @@ describe('Performance Benchmarking Test Suite', () => {
       // Assert performance requirements
       expect(queryBenchmark.passed).toBe(true)
       expect(queryMetrics.p95).toBeLessThan(REQUIREMENTS.MAX_QUERY_TIME_MS)
-    }, timeout)
+    })
 
-    it.skipIf(!hasProductionPAT)('should handle concurrent queries efficiently', async () => {
+    it.skipIf(!hasProductionPAT)('should handle concurrent queries efficiently', { timeout }, async () => {
       await ensureClientConnected()
       
       const testIds = productionWorkItemIds.slice(0, 20) // 20 concurrent queries
@@ -280,9 +280,9 @@ describe('Performance Benchmarking Test Suite', () => {
       // Concurrent execution should be efficient
       expect(queryMetrics.p95).toBeLessThan(REQUIREMENTS.MAX_QUERY_TIME_MS)
       expect(avgConcurrentTime).toBeLessThan(REQUIREMENTS.MAX_QUERY_TIME_MS)
-    }, timeout)
+    })
 
-    it.skipIf(!hasProductionPAT)('should maintain performance across different query types', async () => {
+    it.skipIf(!hasProductionPAT)('should maintain performance across different query types', { timeout }, async () => {
       await ensureClientConnected()
       
       const testId = productionWorkItemIds[0]
@@ -329,11 +329,11 @@ describe('Performance Benchmarking Test Suite', () => {
         // Each query type should meet performance requirements
         expect(metrics.p95).toBeLessThan(REQUIREMENTS.MAX_QUERY_TIME_MS)
       }
-    }, timeout)
+    })
   })
 
   describe('Task 3.3: Memory Usage Monitoring', () => {
-    it.skipIf(!hasProductionPAT)('should detect memory leaks during extended operations', async () => {
+    it.skipIf(!hasProductionPAT)('should detect memory leaks during extended operations', { timeout }, async () => {
       await ensureClientConnected()
       
       console.log(`🧠 Testing memory stability during extended operations`)
@@ -374,9 +374,9 @@ describe('Performance Benchmarking Test Suite', () => {
       // Should not have excessive errors
       const errorRate = loadTestResult.errors.length / loadTestResult.results.length
       expect(errorRate).toBeLessThan(0.05) // Less than 5% error rate
-    }, timeout)
+    })
 
-    it.skipIf(!hasProductionPAT)('should track memory usage during large sync operations', async () => {
+    it.skipIf(!hasProductionPAT)('should track memory usage during large sync operations', { timeout }, async () => {
       await ensureClientConnected()
       
       console.log(`🔄 Monitoring memory during large sync operation`)
@@ -415,11 +415,11 @@ describe('Performance Benchmarking Test Suite', () => {
       // Should return to reasonable memory levels
       const peakToFinalRatio = finalMemory.heapUsed / memoryAnalysis.peakHeap
       expect(peakToFinalRatio).toBeGreaterThan(0.3) // Should not be more than 3x difference
-    }, timeout)
+    })
   })
 
   describe('Task 3.4: Performance Requirements Verification', () => {
-    it.skipIf(!hasProductionPAT)('should validate all performance benchmarks meet production requirements', async () => {
+    it.skipIf(!hasProductionPAT)('should validate all performance benchmarks meet production requirements', { timeout }, async () => {
       await ensureClientConnected()
       
       console.log(`📋 Running comprehensive performance validation`)
@@ -491,9 +491,9 @@ describe('Performance Benchmarking Test Suite', () => {
       expect(syncMemoryAnalysis.possibleLeak).toBe(false)
       
       console.log(`\n🎉 All performance benchmarks passed! System ready for production.`)
-    }, timeout)
+    })
 
-    it.skipIf(!hasProductionPAT)('should provide detailed performance metrics for monitoring', async () => {
+    it.skipIf(!hasProductionPAT)('should provide detailed performance metrics for monitoring', { timeout }, async () => {
       await ensureClientConnected()
       
       console.log(`📊 Collecting detailed performance metrics for monitoring`)
@@ -572,7 +572,7 @@ describe('Performance Benchmarking Test Suite', () => {
       expect(parseFloat(metrics.memory.currentHeapMB)).toBeLessThan(500) // Reasonable heap size
       
       console.log(`\n✅ Performance metrics collection completed successfully`)
-    }, timeout)
+    })
   })
 
   describe('Performance Summary', () => {

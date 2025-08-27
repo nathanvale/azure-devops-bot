@@ -48,7 +48,11 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
 
       return workItems.map((workItem) => this.mapWorkItemToData(workItem))
     } catch (error) {
-      // Re-throw with additional context
+      // Preserve RetryExhaustedError for proper error handling
+      if (error instanceof Error && error.name === 'RetryExhaustedError') {
+        throw error
+      }
+      // Re-throw with additional context for other errors
       throw new Error(
         `Failed to fetch work items: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -72,6 +76,10 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       // If work item doesn't exist, return null instead of throwing
       if (error instanceof Error && error.message.includes('404')) {
         return null
+      }
+      // Preserve RetryExhaustedError for proper error handling
+      if (error instanceof Error && error.name === 'RetryExhaustedError') {
+        throw error
       }
       throw new Error(
         `Failed to get work item ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`,

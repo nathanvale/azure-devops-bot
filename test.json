@@ -1,0 +1,352 @@
+{
+  "id": 7836,
+  "rev": 64,
+  "fields": {
+    "System.Id": 7836,
+    "System.AreaId": 506,
+    "System.AreaPath": "Customer Services Platform\\Customer Services Platform - Stage 3 Team",
+    "System.TeamProject": "Customer Services Platform",
+    "System.NodeName": "Customer Services Platform - Stage 3 Team",
+    "System.AreaLevel1": "Customer Services Platform",
+    "System.AreaLevel2": "Customer Services Platform - Stage 3 Team",
+    "System.Rev": 64,
+    "System.AuthorizedDate": "2025-05-27T06:22:43.957Z",
+    "System.RevisedDate": "9999-01-01T00:00:00Z",
+    "System.IterationId": 519,
+    "System.IterationPath": "Customer Services Platform\\Stage 3\\Past Sprints\\S3-Sprint 03",
+    "System.IterationLevel1": "Customer Services Platform",
+    "System.IterationLevel2": "Stage 3",
+    "System.IterationLevel3": "Past Sprints",
+    "System.IterationLevel4": "S3-Sprint 03",
+    "System.WorkItemType": "User Story",
+    "System.State": "Closed",
+    "System.Reason": "Acceptance tests pass",
+    "System.AssignedTo": {
+      "displayName": "Kanika Goyal",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/fe71887b-c2c7-60bd-8688-00d137e0b5f5",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1"
+        }
+      },
+      "id": "fe71887b-c2c7-60bd-8688-00d137e0b5f5",
+      "uniqueName": "Kanika.Goyal@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1",
+      "descriptor": "aad.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1"
+    },
+    "System.CreatedDate": "2024-12-19T02:29:47.013Z",
+    "System.CreatedBy": {
+      "displayName": "Priyanka Babbar",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/4e566db6-a034-6849-9523-9551250e4866",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.NGU1NjZkYjYtYTAzNC03ODQ5LTk1MjMtOTU1MTI1MGU0ODY2"
+        }
+      },
+      "id": "4e566db6-a034-6849-9523-9551250e4866",
+      "uniqueName": "Priyanka.Babbar@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.NGU1NjZkYjYtYTAzNC03ODQ5LTk1MjMtOTU1MTI1MGU0ODY2",
+      "inactive": true,
+      "descriptor": "aad.NGU1NjZkYjYtYTAzNC03ODQ5LTk1MjMtOTU1MTI1MGU0ODY2"
+    },
+    "System.ChangedDate": "2025-05-27T06:22:43.957Z",
+    "System.ChangedBy": {
+      "displayName": "ITEX-BDS",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/29a6365e-7774-653e-833b-3ae20c39d089",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+        }
+      },
+      "id": "29a6365e-7774-653e-833b-3ae20c39d089",
+      "uniqueName": "ITEX-BDS@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5",
+      "descriptor": "aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+    },
+    "System.AuthorizedAs": {
+      "displayName": "ITEX-BDS",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/29a6365e-7774-653e-833b-3ae20c39d089",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+        }
+      },
+      "id": "29a6365e-7774-653e-833b-3ae20c39d089",
+      "uniqueName": "ITEX-BDS@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5",
+      "descriptor": "aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+    },
+    "System.PersonId": 179705150,
+    "System.Watermark": 89556,
+    "System.CommentCount": 2,
+    "System.Title": "Dashboard - New User",
+    "System.BoardColumn": "5. Done",
+    "System.BoardColumnDone": false,
+    "System.BoardLane": "WIP",
+    "Microsoft.VSTS.Scheduling.StoryPoints": 3,
+    "Microsoft.VSTS.Common.StateChangeDate": "2025-05-27T06:22:43.957Z",
+    "Microsoft.VSTS.Common.ActivatedDate": "2025-02-06T23:10:31.493Z",
+    "Microsoft.VSTS.Common.ActivatedBy": {
+      "displayName": "Priyanka Babbar",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/4e566db6-a034-6849-9523-9551250e4866",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.NGU1NjZkYjYtYTAzNC03ODQ5LTk1MjMtOTU1MTI1MGU0ODY2"
+        }
+      },
+      "id": "4e566db6-a034-6849-9523-9551250e4866",
+      "uniqueName": "Priyanka.Babbar@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.NGU1NjZkYjYtYTAzNC03ODQ5LTk1MjMtOTU1MTI1MGU0ODY2",
+      "inactive": true,
+      "descriptor": "aad.NGU1NjZkYjYtYTAzNC03ODQ5LTk1MjMtOTU1MTI1MGU0ODY2"
+    },
+    "Microsoft.VSTS.Common.ResolvedDate": "2025-02-14T01:55:13.653Z",
+    "Microsoft.VSTS.Common.ResolvedBy": {
+      "displayName": "ITEX-BDS",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/29a6365e-7774-653e-833b-3ae20c39d089",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+        }
+      },
+      "id": "29a6365e-7774-653e-833b-3ae20c39d089",
+      "uniqueName": "ITEX-BDS@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5",
+      "descriptor": "aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+    },
+    "Microsoft.VSTS.Common.ClosedDate": "2025-05-27T06:22:43.957Z",
+    "Microsoft.VSTS.Common.ClosedBy": {
+      "displayName": "ITEX-BDS",
+      "url": "https://spsprodeau1.vssps.visualstudio.com/Accacba53-01ee-4016-9468-d38fe404d8fc/_apis/Identities/29a6365e-7774-653e-833b-3ae20c39d089",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+        }
+      },
+      "id": "29a6365e-7774-653e-833b-3ae20c39d089",
+      "uniqueName": "ITEX-BDS@fwc.gov.au",
+      "imageUrl": "https://dev.azure.com/fwcdev/_apis/GraphProfile/MemberAvatars/aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5",
+      "descriptor": "aad.MjlhNjM2NWUtNzc3NC03NTNlLTgzM2ItM2FlMjBjMzlkMDg5"
+    },
+    "Microsoft.VSTS.Common.Priority": 2,
+    "Microsoft.VSTS.Common.StackRank": 1019530432,
+    "Microsoft.VSTS.Common.ValueArea": "Business",
+    "Microsoft.VSTS.Common.Risk": "2 - Medium",
+    "Microsoft.VSTS.Scheduling.StartDate": "2025-02-11T13:00:00Z",
+    "Microsoft.VSTS.Scheduling.FinishDate": "2025-02-13T13:00:00Z",
+    "WEF_352AABABD92A469BB5F1976D53DB379D_System.ExtensionMarker": true,
+    "WEF_352AABABD92A469BB5F1976D53DB379D_Kanban.Column": "5. Done",
+    "WEF_352AABABD92A469BB5F1976D53DB379D_Kanban.Column.Done": false,
+    "WEF_352AABABD92A469BB5F1976D53DB379D_Kanban.Lane": "WIP",
+    "System.Description": "<div>As a new user on the portal, When I log In for the first time, </div><div>I Want to see a Dashboard as the Home Page, Which gives me direction to various actions I can take </div><div>So that, I can get started Quickly </div><div><br> </div><div><b>Use Cases -&nbsp;&nbsp;</b> </div><div><ol><li>From the Dashboard, as a New User , I am able to see a link to initiate a new lodgement like of type F2,F8 </li><li>From the Dashbboard, I can refer the FAQ's and go to links on website to get more information </li><li>From the Dashboard&gt;FAQ Section , I can initiate a Phone call or Chat Service to Customer Service agents </li><li>From the Dashboard, I can go to &quot;My Lodgments&quot; and &quot;Forms&quot; </li><li>From the &quot;Profile Drop Down&quot; on top right , I can access My Profile to change my personal details </li><li>From the <span style=\"display:inline !important;\">&quot;Profile Drop Down&quot;</span>&nbsp;on top right, I can Logout of the portal. </li><li>From the Dashboard &gt; Notifications, I can see my notifications and alerts around my profile and lodgments. </li><li>User is able to do all the above activities from Mobile as well </li> </ol> </div><div><span style=\"display:inline !important;\"><br></span> </div><div>Design 2 - Approved Designs for <b>Dashboard - New User </b> </div><div><span><a href=\"https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=583-5980\">https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=583-5980</a></span><br> </div><div><br> </div><div><b><span style=\"font-weight:400;display:inline !important;\">Design 1b. Approved Designs for&nbsp;</span>Navigation Behaviour</b> </div><div><a href=\"https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=1045-25160\">https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=1045-25160</a><br> </div><div><br> </div><div><span style=\"box-sizing:border-box;\"><b style=\"font-weight:bold;box-sizing:border-box;\"><span style=\"box-sizing:border-box;font-weight:400;display:inline !important;\">Design 1a. Approved Designs for&nbsp;</span></b><b> Logout-Profile Menu -</b>&nbsp;<a href=\"https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=742-1357\" style=\"box-sizing:border-box;text-decoration:underline;cursor:pointer;\">https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=742-1357</a></span><br> </div><div><br> </div>",
+    "Microsoft.VSTS.Common.AcceptanceCriteria": "<div><div style=\"box-sizing:border-box;\"><span style=\"background-color:rgb(255, 255, 128);\">Design 2 - Approved Designs for</span><span style=\"background-color:rgb(255, 255, 128);\">&nbsp;</span><span style=\"background-color:rgb(255, 255, 128);\"><b style=\"box-sizing:border-box;\">Dashboard - New User</b></span> </div><div style=\"box-sizing:border-box;\"><span style=\"box-sizing:border-box;\"><a href=\"https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=583-5980\" style=\"box-sizing:border-box;text-decoration:underline;cursor:pointer;\"><span style=\"background-color:rgb(255, 255, 128);\">https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=583-5980</span></a></span> </div><br> </div><div><br> </div><div>AC1: <b>DESKTOP</b> : Given a user creates their&nbsp;<span style=\"display:inline !important;\">account for the Portal for the first time and they login</span> </div><div>&nbsp;When they Login </div><div>Then they see the dashboard as it looks in the Approved Designs by using Material UI framework&nbsp;<span style=\"display:inline !important;\">(Mainly test the look and feel)<span>&nbsp;- Based on&nbsp;</span></span> </div><div><br> </div><div><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/6ffc0fc7-504f-447c-8610-8d4078211915?fileName=image.png\" alt=Image style=\"width:640px;\" width=640 height=450><br> </div><div><br> </div><div>AC2: Header will have Dark Green Colour with&nbsp; </div><div><ol><li>FWC Logo in white on Left </li><li>Bell Icon for Notification on Right <span style=\"background-color:rgb(128, 255, 128);\">(UI only)</span> </li><li>Name on Right </li><li>Under the name would be their email address with which they logged in/ Username </li><li>Their Initials in white circle will also act as a button to open the menu with 2 Options (My Profile, Logout) </li> </ol><div>AC3: Bell Icon- Notification&nbsp;<span style=\"text-align:left;background-color:rgb(128, 255, 128);display:inline !important;\">(Cant be tested as part of this ticket - will be tacked in seperate ticket)</span> </div><div><ol><li>Clicking On Bell Icon of Notifications must open a small window there only to show the list of Notifications&nbsp; </li><li>If there is a new and unread notification, Bell Icon must have a&nbsp; Red dot on it.&nbsp; </li> </ol><div><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/9d589f73-c793-49e8-ba17-9823ad2c7c7c?fileName=image.png\" alt=Image><br> </div> </div><div><br> </div><div><br> </div><div>AC4:&nbsp;<span>&nbsp;In the main section there will be&nbsp;</span><div style=\"box-sizing:border-box;\"><ol style=\"box-sizing:border-box;padding-left:40px;\"><li style=\"box-sizing:border-box;\">Heading &quot;Welcome&quot; with Green Underline </li><li style=\"box-sizing:border-box;\">&quot;Apply Now&quot; sub heading </li><li style=\"box-sizing:border-box;\">Tile 1 -&nbsp; </li><ol style=\"box-sizing:border-box;padding-left:40px;list-style:lower-alpha;\"><li style=\"box-sizing:border-box;\">Heading - Unfair Dismissal </li><li style=\"box-sizing:border-box;\">Subheading - Form F2 </li><li style=\"box-sizing:border-box;\">Text - As shown in image on left tile </li><li style=\"box-sizing:border-box;\">Start Button in Dark Green </li><li style=\"box-sizing:border-box;\">Clicking on Start button must initiate the F2 application and take user on &quot;Overview&quot; screen </li> </ol><li style=\"box-sizing:border-box;\">Tile 2 - </li><ol style=\"box-sizing:border-box;padding-left:40px;list-style:lower-alpha;\"><li style=\"box-sizing:border-box;\">Heading - General protections - dismissal </li><li style=\"box-sizing:border-box;\">Subheading - Form F8 </li><li style=\"box-sizing:border-box;\">Text - As shown in image on right tile </li><li style=\"box-sizing:border-box;\">Start Button in Dark Green </li><li style=\"box-sizing:border-box;\">Clicking on Start button must initiate the F8 application and take user on &quot;Overview&quot; screen </li> </ol> </ol><div style=\"display:inline-flex;\"><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/d7c75a0e-27ad-4999-9ec4-c26d6b218ebe?fileName=image.png\" alt=Image><div style=\"background-color:rgb(219, 98, 108);cursor:nw-resize;top:-3px;left:-3px;\"> </div><div style=\"background-color:rgb(219, 98, 108);cursor:ne-resize;top:-3px;right:-3px;\"> </div><div style=\"background-color:rgb(219, 98, 108);cursor:sw-resize;bottom:-3px;left:-3px;\"> </div><div style=\"background-color:rgb(219, 98, 108);cursor:se-resize;bottom:-3px;right:-3px;\"> </div><div style=\"border:1px solid rgb(219, 98, 108);pointer-events:none;\"> </div> </div><div><br> </div><div>AC5:&nbsp;<span>Dashboard&gt; FAQ Section</span><div style=\"box-sizing:border-box;\"><ol style=\"box-sizing:border-box;padding-left:40px;\"><li style=\"box-sizing:border-box;\">There must be a heading with &quot;Welcome<span>&nbsp;</span><i style=\"box-sizing:border-box;\"><u style=\"box-sizing:border-box;\">Firstname</u></i>&quot; </li><li style=\"box-sizing:border-box;\">Introduction Text and formatting must be same as in the designs </li><li style=\"box-sizing:border-box;\"><span style=\"box-sizing:border-box;display:inline !important;\">Useful Links Section&gt;&nbsp;</span>Links must take user to the right page on FWC website which opens in a new tab </li><li style=\"box-sizing:border-box;\"><span style=\"box-sizing:border-box;display:inline !important;\"><span style=\"box-sizing:border-box;\">&nbsp;</span>Need Help? Section &gt;</span>There must be two links for &quot;Phone&quot; and &quot;Chat Service&quot; as per the designs (<span style=\"background-color:rgb(128, 255, 128);\">These links wont be clickable at this stage)</span> </li> </ol><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/c80d6896-6496-4073-9fe3-fcb2285dbf02?fileName=image.png\" alt=Image style=\"box-sizing:border-box;max-width:100%;align-self:center;\"><br> </div> </div><div><br> </div><div>AC6:<span>&nbsp;Footer</span><div style=\"box-sizing:border-box;\"><ol style=\"box-sizing:border-box;padding-left:40px;\"><li style=\"box-sizing:border-box;\">Footer must have a Copyright signature as per the designs on the left </li><li style=\"box-sizing:border-box;\">Footer must have &quot;Disclaimer&quot; and &quot;Privacy&quot; links on the right </li><li style=\"box-sizing:border-box;\">Both the links must take them to the right pages on the FWC website which opens in a new tab </li> </ol> </div><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/7de5e032-eb1e-40e1-979f-31cf24a1b561?fileName=image.png\" alt=Image style=\"box-sizing:border-box;max-width:100%;align-self:center;\"><br> </div><div><br> </div><div><b style=\"box-sizing:border-box;font-weight:bold;\"><span style=\"box-sizing:border-box;font-weight:400;display:inline !important;background-color:rgb(255, 255, 128);\">Design 1a. Approved Designs for&nbsp;</span></b><b style=\"box-sizing:border-box;\"><span style=\"background-color:rgb(255, 255, 128);\">&nbsp;</span></b><span style=\"background-color:rgb(255, 255, 128);\"><b style=\"box-sizing:border-box;\">Logout-Profile Menu -</b></span><span style=\"display:inline !important;background-color:rgb(255, 255, 128);\">&nbsp;</span><a href=\"https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=742-1357\" style=\"box-sizing:border-box;text-decoration:underline;cursor:pointer;\"><span style=\"background-color:rgb(255, 255, 128);\">https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=742-1357</span></a><br> </div><div><br> </div> </div> </div><div>AC7: Profile Menu Drop Down Links and Logout Process for both Desktop <b>(Refer to Logout-Profile Menu Behaviour Designs)</b> </div><div><ol><li>Clicking on &quot;My Profile&quot; - Must take user to profile window -<a href=\"https://was-dev-aue-csp.azurewebsites.net/my-profile\">https://was-dev-aue-csp.azurewebsites.net/my-profile</a> </li><li>Clicking on &quot;Logout&quot; - Must Display a pop up message to confirm logout (As already developed in other logout ticket),&nbsp; </li><ol style=\"list-style:lower-alpha;\"><li>ensure the whole Logout Process works as expected for Desktops Screens 1-5 </li> </ol><li>Ensure the hover state has a light grey color (This is not applicable on Mobile) </li><li>Ensure the selected state has a dark grey colour </li> </ol><div>AC8:&nbsp;<span style=\"display:inline !important;\">Profile Menu Drop Down Links and Logout Process for Mobile</span> </div><div><ol><li><span>All the steps of opening Profile Menu and Logout works as expected for Mobile as per the designs Mobile Screens 1-5</span> </li> </ol><span style=\"display:inline !important;\"></span> </div><div><br> </div><div><div style=\"box-sizing:border-box;\"><b style=\"box-sizing:border-box;\"><span style=\"box-sizing:border-box;display:inline !important;background-color:rgb(255, 255, 128);\">Design 1b. Approved Designs for&nbsp;</span></b><span style=\"background-color:rgb(255, 255, 128);\"><b style=\"box-sizing:border-box;\">Navigation Behaviour</b></span> </div><div style=\"box-sizing:border-box;\"><a href=\"https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=1045-25160\" style=\"box-sizing:border-box;text-decoration:underline;cursor:pointer;\"><span style=\"background-color:rgb(255, 255, 128);\">https://www.figma.com/design/eLfazcLPS0TkqUJnG0y2oW/FWC_Wireframes_Fair-Work-Commission?node-id=1045-25160</span></a> </div> </div><div><br> </div><div>AC8: Main Bar on top in Grey will have 3 tabs&nbsp;<b style=\"box-sizing:border-box;\">(Refer to Navigation Menu Behaviour Designs)</b> </div><div><ol><li>Dashboard Tab -&nbsp;<a href=\"https://was-dev-aue-csp.azurewebsites.net/dashboard\">https://was-dev-aue-csp.azurewebsites.net/dashboard</a> </li><li>My Lodgments Tab -<a href=\"https://was-dev-aue-csp.azurewebsites.net/lodgments\">https://was-dev-aue-csp.azurewebsites.net/lodgments</a> </li><li>Forms Tab-&nbsp;<a href=\"https://was-dev-aue-csp.azurewebsites.net/forms\">https://was-dev-aue-csp.azurewebsites.net/forms</a> </li><li>Whichever tab is <b>selected</b> and opened at that time &quot;Tab is highlighted as white with Green underline&quot; <i>(Screen 1 on Navigation Design)</i> </li><li>If the user <b>hovers</b> on any other tab &quot;<b>Only a green underline</b>&quot; comes up&nbsp;<span style=\"display:inline !important;\"><i>(Screen 2 on Navigation Design)</i></span> </li><li>If the tab is on &quot;<b>Focused&quot; State,</b> Tab must be highlighted with a shaded circle <span style=\"display:inline !important;\"><i>(Screen 3 on Navigation Design)</i></span> </li><li><b>Disabled</b> State - Text turns grey&nbsp;<span style=\"display:inline !important;\"><i>(Screen 4 on Navigation Design)</i></span> </li> </ol> </div> </div><div><br> </div><div>AC9: Ensure the UI and functional behaviour of Dashboard works well on Mobile as well </div><div><br> </div><div><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/c5701dc4-b533-4306-8cbd-4d8310f76d38?fileName=image.png\" alt=Image style=\"width:551px;\" width=551 height=360><br> </div><div><br> </div><div><ol><li>Header - Logo, Notification Bell Icon, Initials - profile Menu&nbsp; </li><li>Footer<span> </span><span>- Copyright + Disclaimer and Privacy Links.&nbsp;</span> </li><li>Left Menu - Opens and have a &quot;close X&quot; on top right and a ologo on left<span style=\"display:inline !important;\">- Pls refer to designs</span> </li><li>Profile Menu - Opens and have a &quot;close X&quot;&nbsp; on top right to close the menu - Pls refer to designs </li><li>Main Section - Heading, Sub Heading and 2 Tiles - with text and Start button&nbsp; </li><li>Back to Top Button with Up Arrow </li><li>Need Help? button on bottom right -&nbsp; </li><ol style=\"list-style:lower-alpha;\"><li>This button must not move with the scroll as per the designs below </li><li>Need help? must change to &quot;?&quot; when user scrolls down </li> </ol> </ol><div style=\"position:relative;display:inline-flex;\"><img src=\"https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/2f120993-2db8-40e0-b0b9-e7c2a44b6f1a?fileName=image.png\" alt=Image style=\"width:587px;height:486px;\" width=587 height=486><div style=\"position:absolute;width:7px;height:7px;background-color:rgb(219, 98, 108);cursor:nw-resize;top:-3px;left:-3px;\"> </div><div style=\"position:absolute;width:7px;height:7px;background-color:rgb(219, 98, 108);cursor:ne-resize;top:-3px;right:-3px;\"> </div><div style=\"position:absolute;width:7px;height:7px;background-color:rgb(219, 98, 108);cursor:sw-resize;bottom:-3px;left:-3px;\"> </div><div style=\"position:absolute;width:7px;height:7px;background-color:rgb(219, 98, 108);cursor:se-resize;bottom:-3px;right:-3px;\"> </div><div style=\"position:absolute;border:1px solid rgb(219, 98, 108);pointer-events:none;\"> </div> </div><ol> </ol> </div> </div><div><br> </div>",
+    "System.Tags": "Action required (Test); ready; Showcase; UI",
+    "System.Parent": 7563
+  },
+  "multilineFieldsFormat": {
+    "System.Description": "html",
+    "Microsoft.VSTS.Common.AcceptanceCriteria": "html"
+  },
+  "relations": [
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8738",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8741",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8742",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8739",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "System.LinkTypes.Related",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8941",
+      "attributes": { "isLocked": false, "name": "Related" }
+    },
+    {
+      "rel": "System.LinkTypes.Hierarchy-Reverse",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/7563",
+      "attributes": { "isLocked": false, "name": "Parent" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8740",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "System.LinkTypes.Related",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8984",
+      "attributes": { "isLocked": false, "name": "Related" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8735",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "System.LinkTypes.Related",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/9181",
+      "attributes": { "isLocked": false, "name": "Related" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8737",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "Microsoft.VSTS.Common.TestedBy-Forward",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/8736",
+      "attributes": { "isLocked": false, "name": "Tested By" }
+    },
+    {
+      "rel": "System.LinkTypes.Related",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/9194",
+      "attributes": { "isLocked": false, "name": "Related" }
+    },
+    {
+      "rel": "AttachedFile",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/8a855264-1b74-4644-a3be-bb5f503e3144",
+      "attributes": {
+        "authorizedDate": "2025-02-18T02:20:54.233Z",
+        "id": 19976041,
+        "resourceCreatedDate": "2025-02-18T02:20:48.367Z",
+        "resourceModifiedDate": "2025-02-18T02:20:48.367Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "resourceSize": 927270,
+        "name": "First time user with no draft applications or active lodgments.png"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/PullRequestId/448296df-0774-48cb-b859-63c7df4a0284%2F135b8718-3fec-4b94-b7a7-2e1d7fdb59a9%2F2399",
+      "attributes": {
+        "authorizedDate": "2025-02-13T08:48:16.697Z",
+        "id": 19948666,
+        "resourceCreatedDate": "2025-02-13T08:48:16.697Z",
+        "resourceModifiedDate": "2025-02-13T08:48:16.697Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Pull Request"
+      }
+    },
+    {
+      "rel": "AttachedFile",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/ab36eb03-2b15-45b3-ada6-089a72a9312b",
+      "attributes": {
+        "authorizedDate": "2025-02-20T02:40:08.487Z",
+        "id": 20001356,
+        "resourceCreatedDate": "2025-02-20T02:39:53.027Z",
+        "resourceModifiedDate": "2025-02-20T02:39:53.027Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "resourceSize": 209495,
+        "name": "ff4b16e2-f1d5-4b47-94c9-93710509fdb9.png"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/Commit/448296df-0774-48cb-b859-63c7df4a0284%2f135b8718-3fec-4b94-b7a7-2e1d7fdb59a9%2fb5869e5585b294570c65d4bd79199636acf9e492",
+      "attributes": {
+        "authorizedDate": "2025-02-13T12:24:40.527Z",
+        "id": 19949567,
+        "resourceCreatedDate": "2025-02-13T12:24:40.527Z",
+        "resourceModifiedDate": "2025-02-13T12:24:40.527Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Fixed in Commit"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/PullRequestId/448296df-0774-48cb-b859-63c7df4a0284%2F135b8718-3fec-4b94-b7a7-2e1d7fdb59a9%2F2404",
+      "attributes": {
+        "authorizedDate": "2025-02-14T00:47:18.667Z",
+        "id": 19952295,
+        "resourceCreatedDate": "2025-02-14T00:47:18.667Z",
+        "resourceModifiedDate": "2025-02-14T00:47:18.667Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Pull Request"
+      }
+    },
+    {
+      "rel": "AttachedFile",
+      "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/attachments/3c7d542d-7a89-4967-850b-eff4e42a8bbf",
+      "attributes": {
+        "authorizedDate": "2025-02-10T22:31:53.237Z",
+        "id": 19914082,
+        "resourceCreatedDate": "2025-02-10T22:31:44.21Z",
+        "resourceModifiedDate": "2025-02-10T22:31:44.21Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "resourceSize": 6717506,
+        "name": "First time user with no draft applications or active lodgments.pdf"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/PullRequestId/448296df-0774-48cb-b859-63c7df4a0284%2F135b8718-3fec-4b94-b7a7-2e1d7fdb59a9%2F2406",
+      "attributes": {
+        "authorizedDate": "2025-02-14T01:40:19.793Z",
+        "id": 19953262,
+        "resourceCreatedDate": "2025-02-14T01:40:19.793Z",
+        "resourceModifiedDate": "2025-02-14T01:40:19.793Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Pull Request"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/Commit/448296df-0774-48cb-b859-63c7df4a0284%2f135b8718-3fec-4b94-b7a7-2e1d7fdb59a9%2fd802d5e6897386c96b7146c0d234aed070e18fb3",
+      "attributes": {
+        "authorizedDate": "2025-02-14T00:51:48.923Z",
+        "id": 19952373,
+        "resourceCreatedDate": "2025-02-14T00:51:48.923Z",
+        "resourceModifiedDate": "2025-02-14T00:51:48.923Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Fixed in Commit"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/Commit/448296df-0774-48cb-b859-63c7df4a0284%2f135b8718-3fec-4b94-b7a7-2e1d7fdb59a9%2fb70981c987c9c8ae5b3a69041430b1d291dcbca5",
+      "attributes": {
+        "authorizedDate": "2025-02-14T01:45:26.053Z",
+        "id": 19953346,
+        "resourceCreatedDate": "2025-02-14T01:45:26.053Z",
+        "resourceModifiedDate": "2025-02-14T01:45:26.053Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Fixed in Commit"
+      }
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/7836"
+    },
+    "workItemUpdates": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/7836/updates"
+    },
+    "workItemRevisions": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/7836/revisions"
+    },
+    "workItemComments": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/7836/comments"
+    },
+    "html": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_workitems/edit/7836"
+    },
+    "workItemType": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItemTypes/User%20Story"
+    },
+    "fields": {
+      "href": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/fields"
+    }
+  },
+  "url": "https://dev.azure.com/fwcdev/448296df-0774-48cb-b859-63c7df4a0284/_apis/wit/workItems/7836"
+}

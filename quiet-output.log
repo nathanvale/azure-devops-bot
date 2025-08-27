@@ -1,0 +1,24 @@
+{"level":30,"timestamp":"2025-08-27T10:11:02.617Z","component":"azure-devops-client","name":"azure-devops-client","component":"azure-devops-client","operation":"authentication_validation","msg":"Azure DevOps authentication validated successfully"}
+{"level":20,"timestamp":"2025-08-27T10:11:02.619Z","component":"azure-devops-client","name":"azure-devops-client","method":"POST","url":"https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/wiql?api-version=7.0","timeout":30000,"operation":"http_request","requestId":"9n8bd8bei","msg":"Azure DevOps API request initiated"}
+{"level":20,"timestamp":"2025-08-27T10:11:02.684Z","component":"azure-devops-client","name":"azure-devops-client","method":"POST","url":"https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/wiql?api-version=7.0","status":200,"statusText":"OK","contentLength":"1862","durationMs":65,"operation":"http_response","success":true,"msg":"Azure DevOps API response received"}
+{"level":20,"timestamp":"2025-08-27T10:11:02.685Z","component":"azure-devops-client","name":"azure-devops-client","method":"POST","url":"https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/wiql?api-version=7.0","timeout":30000,"operation":"http_request","requestId":"f4dqn3c9j","msg":"Azure DevOps API request initiated"}
+{"level":20,"timestamp":"2025-08-27T10:11:02.748Z","component":"azure-devops-client","name":"azure-devops-client","method":"POST","url":"https://dev.azure.com/fwcdev/Customer%20Services%20Platform/_apis/wit/wiql?api-version=7.0","status":200,"statusText":"OK","contentLength":"569","durationMs":63,"operation":"http_response","success":true,"msg":"Azure DevOps API response received"}
+┌ Result ──────────────────────┐
+│                              │
+│   "Your backlog is empty."   │
+│                              │
+└──────────────────────────────┘
+
+👋 Goodbye!
+/Users/nathanvale/code/azure-devops-bot/src/azure-devops-bot.ts:140
+    await this.syncService.stop()
+                           ^
+
+
+TypeError: this.syncService.stop is not a function
+    at CLIAzureDevOpsBot.stop (/Users/nathanvale/code/azure-devops-bot/src/azure-devops-bot.ts:140:28)
+    at process.shutdown (/Users/nathanvale/code/azure-devops-bot/src/index.ts:62:19)
+    at process.emit (node:events:531:35)
+    at process.emit (/Users/nathanvale/code/azure-devops-bot/node_modules/.pnpm/tsx@4.20.5/node_modules/tsx/dist/suppress-warnings.cjs:1:472)
+
+Node.js v20.18.0

@@ -51,13 +51,13 @@ pnpm test:performance tests/performance/production-validation-suite.test.ts # Fu
 
 ```bash
 # Full performance test suite with verbose output
-pnpm vitest --config vitest.performance.config.ts --reporter=verbose
+pnpm vitest --config vitest.config.performance.ts --reporter=verbose
 
 # Run specific test with detailed logging  
-pnpm vitest --config vitest.performance.config.ts tests/performance/mcp-tools-production.test.ts --reporter=verbose
+pnpm vitest --config vitest.config.performance.ts tests/performance/mcp-tools-production.test.ts --reporter=verbose
 
 # Run with coverage (if needed for analysis)
-pnpm vitest --config vitest.performance.config.ts --coverage
+pnpm vitest --config vitest.config.performance.ts --coverage
 ```
 
 ## Test Categories - Health Check Coverage

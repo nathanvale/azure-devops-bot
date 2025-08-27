@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 
 import { AzureDevOpsClient } from '../azure-devops.js'
 
@@ -23,6 +23,21 @@ describe('Production Environment Authentication', () => {
   beforeAll(() => {
     if (hasProductionPAT) {
       client = new AzureDevOpsClient()
+    }
+  })
+
+  afterEach(() => {
+    // Reset circuit breaker state between tests to prevent cross-test contamination
+    if (client && client.resilienceAdapter) {
+      try {
+        // Try to reset circuit breakers if the method exists
+        if (typeof (client.resilienceAdapter as any).resetCircuitBreakers === 'function') {
+          (client.resilienceAdapter as any).resetCircuitBreakers()
+        }
+      } catch (error) {
+        // Ignore reset errors to avoid test contamination
+        console.warn('Failed to reset circuit breakers:', error)
+      }
     }
   })
 

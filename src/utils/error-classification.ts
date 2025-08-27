@@ -21,19 +21,46 @@ export interface ClassifiedError {
  */
 export class ErrorClassifier {
   static classify(error: any): ClassifiedError {
-    // Authentication errors (401, 403)
-    if (error.status === 401 || error.status === 403) {
+    // Handle timeout errors from resilience adapter
+    if (error.name === 'TimeoutError') {
+      return {
+        type: ErrorType.NETWORK,
+        code: 'TIMEOUT_ERROR',
+        message: `Request timeout: ${error.message}`,
+        retryable: true,
+        retryDelayMs: 5000,
+        originalError: error
+      };
+    }
+    
+    // Note: Retry exhausted errors should not occur for auth errors anymore due to retryOn predicate
+    // But handle them as a fallback
+    if (error.message && error.message.includes('Retry exhausted')) {
       return {
         type: ErrorType.AUTHENTICATION,
-        code: error.status === 401 ? 'INVALID_TOKEN' : 'INSUFFICIENT_PERMISSIONS',
-        message: this.getAuthErrorMessage(error.status),
+        code: 'AUTH_FAILED',
+        message: 'Authentication failed after retry attempts. This should not normally occur.',
+        retryable: false,
+        originalError: error
+      };
+    }
+    
+    // Try multiple ways to get status code - prioritize statusCode for AzureDevOpsError
+    const status = error.statusCode || error.status || error.response?.status || error.cause?.status
+    
+    // Authentication errors (401, 403)
+    if (status === 401 || status === 403) {
+      return {
+        type: ErrorType.AUTHENTICATION,
+        code: status === 401 ? 'INVALID_TOKEN' : 'INSUFFICIENT_PERMISSIONS',
+        message: this.getAuthErrorMessage(status),
         retryable: false,
         originalError: error
       };
     }
 
     // Rate limiting errors (429)
-    if (error.status === 429) {
+    if (status === 429) {
       const resetTime = error.headers?.['x-ratelimit-reset'];
       const retryAfter = error.headers?.['retry-after'];
       const delayMs = this.calculateRateLimitDelay(resetTime, retryAfter);
@@ -61,11 +88,11 @@ export class ErrorClassifier {
     }
 
     // Server errors (5xx)
-    if (error.status >= 500 && error.status < 600) {
+    if (status >= 500 && status < 600) {
       return {
         type: ErrorType.SERVER,
         code: 'SERVER_ERROR',
-        message: `Azure DevOps server error: ${error.status} ${error.statusText}`,
+        message: `Azure DevOps server error: ${status} ${error.statusText}`,
         retryable: true,
         retryDelayMs: 2000, // Base delay for server errors
         originalError: error
@@ -73,11 +100,11 @@ export class ErrorClassifier {
     }
 
     // Client validation errors (4xx except 401, 403, 429)
-    if (error.status >= 400 && error.status < 500) {
+    if (status >= 400 && status < 500) {
       return {
         type: ErrorType.VALIDATION,
         code: 'CLIENT_ERROR',
-        message: `Request validation failed: ${error.status} ${error.statusText}`,
+        message: `Request validation failed: ${status} ${error.statusText}`,
         retryable: false,
         originalError: error
       };

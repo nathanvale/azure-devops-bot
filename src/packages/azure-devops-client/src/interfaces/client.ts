@@ -1,8 +1,12 @@
 import type { WorkItemComment } from '../types/comments.js'
 import type { BatchOptions, WorkItemExpand } from '../types/config.js'
+import type { UserProfile } from '../types/user-profile.js'
 import type { WorkItem, WorkItemQueryResult } from '../types/work-items.js'
 
 export interface IAzureDevOpsClient {
+  // Authentication Operations
+  getCurrentUserProfile(): Promise<UserProfile>
+  getCurrentUserProfileDirect(): Promise<UserProfile>
   // Work Item Operations
   getWorkItemsBatch(ids?: number[], options?: BatchOptions): Promise<WorkItem[]>
   getWorkItem(id: number, expand?: WorkItemExpand): Promise<WorkItem>

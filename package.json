@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "type": "module",
   "bin": {
-    "azure-devops-bot": "./src/index.ts"
+    "azure-devops-bot": "./bin/azure-devops-bot"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
@@ -14,9 +14,11 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "test:integration": "vitest --project=mcp-integration",
+    "test:integration": "vitest --config vitest.config.integration.ts --run",
     "test:unit": "vitest --exclude=./tests/integration/**/*.test.ts",
     "test:ci": "vitest --run --coverage",
+    "test:performance": "vitest --config vitest.config.performance.ts --run",
+    "test:performance:watch": "vitest --config vitest.config.performance.ts --watch",
     "db:reset": "rm -f prisma/dev.db && pnpm prisma migrate deploy",
     "db:init": "tsx scripts/init-database.ts",
     "postinstall": "prisma generate",
@@ -43,8 +45,19 @@
   "description": "",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.15.0",
-    "@orchestr8/resilience": "file:../../../@orchestr8/packages/resilience",
+    "@orchestr8/logger": "^2.0.0",
+    "@orchestr8/resilience": "1.0.2",
     "@prisma/client": "^6.11.1",
+    "axios": "^1.11.0",
+    "boxen": "^8.0.1",
+    "chalk": "^5.3.0",
+    "cli-progress": "^3.12.0",
+    "commander": "^12.1.0",
+    "dotenv": "^17.2.1",
+    "ora": "^8.1.1",
+    "p-limit": "^6.2.0",
+    "pino": "^9.9.0",
+    "pino-pretty": "^13.1.1",
     "prisma": "^6.11.1",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

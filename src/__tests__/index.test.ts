@@ -23,6 +23,23 @@ const mockAzureDevOpsClient = vi.hoisted(() => ({
 
 const mockSetUserEmails = vi.hoisted(() => vi.fn())
 
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  warn: vi.fn(),
+}))
+
+const mockInitializeLogger = vi.hoisted(() => vi.fn())
+const mockLoggerFactory = vi.hoisted(() => ({
+  createForComponent: vi.fn(() => mockLogger),
+}))
+
+vi.mock('../utils/logger.js', () => ({
+  initializeLogger: mockInitializeLogger,
+  LoggerFactory: mockLoggerFactory,
+}))
+
 vi.mock('../services/sync-service.js', () => ({
   SyncService: vi.fn(() => mockSyncService),
 }))
@@ -45,7 +62,7 @@ vi.mock('../services/azure-devops.js', () => {
   }
 })
 
-import { AzureDevOpsBot } from '../index.js'
+import { AzureDevOpsBot } from '../azure-devops-bot.js'
 
 interface ConsoleSpy {
   log: ReturnType<typeof vi.spyOn>
@@ -82,6 +99,11 @@ describe('AzureDevOpsBot', () => {
     mockSyncService.performSync.mockClear()
     mockSyncService.performSyncDetailed.mockClear()
     mockQueryEngine.processQuery.mockClear()
+    mockLogger.info.mockClear()
+    mockLogger.error.mockClear()
+    mockLogger.debug.mockClear()
+    mockLogger.warn.mockClear()
+    mockLoggerFactory.createForComponent.mockClear()
 
     // Create a new bot instance for each test
     bot = new AzureDevOpsBot()

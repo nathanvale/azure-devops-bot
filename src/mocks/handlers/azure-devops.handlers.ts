@@ -429,33 +429,52 @@ export const singleWorkItemHandler = http.get(
 )
 
 // Add comment handler - for POST requests to create comments
+// Use a handler function that checks the URL pattern since MSW v2 has issues with complex wildcards
 export const addWorkItemCommentHandler = http.post(
-  `${AZURE_DEVOPS_BASE}/wit/workitems/:id/comments`,
-  async ({ params, request }) => {
-    const workItemId = parseInt(params.id as string)
+  '*',
+  async ({ request }) => {
+    const url = request.url
+    
+    // Check if this is a comment POST request
+    if (!url.includes('/_apis/wit/workitems/') || !url.includes('/comments')) {
+      // Pass through to next handler
+      return
+    }
+    
+    console.log('[MSW] Handling add comment request to:', url)
+    
+    // Extract work item ID from URL
+    const match = url.match(/workitems\/(\d+)\/comments/)
+    if (!match) {
+      console.log('[MSW] Could not extract work item ID from URL')
+      return
+    }
+    
+    const workItemId = parseInt(match[1])
     const body = (await request.json()) as { text: string }
+    console.log('[MSW] Adding comment to work item:', workItemId, 'with text:', body.text)
 
     // Return success response for comment creation
-    return HttpResponse.json(
-      {
-        id: Math.floor(Math.random() * 1000) + 1,
-        workItemId,
-        text: body.text,
-        createdBy: {
-          displayName: 'Nathan Vale',
-          uniqueName: 'nathan.vale@example.com',
-        },
-        createdDate: new Date().toISOString(),
-        modifiedDate: null,
+    const response = {
+      id: Math.floor(Math.random() * 1000) + 1,
+      workItemId,
+      text: body.text,
+      createdBy: {
+        displayName: 'Nathan Vale',
+        uniqueName: 'nathan.vale@example.com',
       },
-      { status: 201 },
-    )
+      createdDate: new Date().toISOString(),
+      modifiedDate: null,
+    }
+    console.log('[MSW] Returning comment response:', response)
+    
+    return HttpResponse.json(response, { status: 201 })
   },
 )
 
 // Projects API handler - for configuration and validation requests
 export const projectsHandler = http.get(
-  'https://dev.azure.com/:org/_apis/projects',
+  'https://dev.azure.com/:org/:project/_apis/projects',
   ({ params }) => {
     const org = params.org as string
     return HttpResponse.json({
@@ -493,15 +512,51 @@ export const genericProjectsHandler = http.get(
   }
 )
 
+// Profile API handler - for authentication validation requests
+export const profileHandler = http.get(
+  'https://dev.azure.com/:org/:project/_apis/profile/profiles/me',
+  ({ params }) => {
+    return HttpResponse.json({
+      id: 'test-user-id',
+      displayName: 'Test User',
+      emailAddress: 'test.user@example.com',
+      domain: 'test-domain'
+    })
+  }
+)
+
+// Alternative profile handler for encoded project names
+export const profileHandlerEncoded = http.get(
+  'https://dev.azure.com/:org/*/_apis/profile/profiles/me',
+  ({ params }) => {
+    return HttpResponse.json({
+      id: 'test-user-id',
+      displayName: 'Test User',
+      emailAddress: 'test.user@example.com',
+      domain: 'test-domain'
+    })
+  }
+)
+
+// Catch-all handler for debugging unmatched requests
+const debugHandler = http.post('*', ({ request }) => {
+  console.log('[MSW DEBUG] Unhandled POST request to:', request.url)
+  return new HttpResponse(null, { status: 404 })
+})
+
 // Default handlers export
+// Order matters - more specific handlers should come first
 export const azureDevOpsHandlers = [
+  addWorkItemCommentHandler, // Move this first to ensure it matches before catch-all
   workItemsListHandler,
   workItemsQueryHandler,
   singleWorkItemHandler,
   createWorkItemHandler,
   updateWorkItemHandler,
   workItemCommentsHandler,
-  addWorkItemCommentHandler,
   projectsHandler,
   genericProjectsHandler,
+  profileHandler,
+  profileHandlerEncoded,
+  debugHandler, // Add debug handler last to catch unmatched requests
 ]

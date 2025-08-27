@@ -64,8 +64,10 @@ export class PATAuth {
       })
     }
 
-    // Always add api-version
-    url.searchParams.append('api-version', this.apiVersion)
+    // Add api-version if not already provided in queryParams
+    if (!queryParams || !queryParams['api-version']) {
+      url.searchParams.append('api-version', this.apiVersion)
+    }
 
     return url.toString()
   }
@@ -81,14 +83,17 @@ export class PATAuth {
   async validateAuthentication(): Promise<boolean> {
     try {
       // Test PAT with a minimal API call to verify authentication works
-      const testUrl = this.buildUrl('/_apis/projects')
+      // Use the projects endpoint which doesn't include the project name in the path
+      const testUrl = `${this.baseUrl}/_apis/projects?api-version=${this.apiVersion}`
       const response = await axios.get(testUrl, {
         headers: this.getAuthHeaders(),
         timeout: 10000,
       })
       return response.status === 200
     } catch (error) {
-      return false
+      // Re-throw the original error so the caller can handle it appropriately
+      // This allows proper error classification instead of generic error messages
+      throw error
     }
   }
 

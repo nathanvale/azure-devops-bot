@@ -15,46 +15,46 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 1.5 Add rate limit delay calculation from Azure DevOps X-RateLimit headers
   - [x] 1.6 Verify all tests pass for error classification logic
 
-- [ ] 2. Implement Authentication Validation Service with @orchestr8/logger
-  - [ ] 2.1 Write tests for AuthValidationService with success and failure scenarios
-  - [ ] 2.2 Create AuthValidationService with @orchestr8/resilience authentication policy
-  - [ ] 2.3 Implement PAT token validation using Azure DevOps /_apis/profile/profiles/me endpoint
-  - [ ] 2.4 Add structured @orchestr8/logger integration with proper error telemetry
-  - [ ] 2.5 Configure blocking authentication validation to prevent cascade failures
-  - [ ] 2.6 Verify all tests pass for authentication validation
+- [x] 2. Implement Authentication Validation Service with @orchestr8/logger
+  - [x] 2.1 Write tests for AuthValidationService with success and failure scenarios
+  - [x] 2.2 Create AuthValidationService with @orchestr8/resilience authentication policy
+  - [x] 2.3 Implement PAT token validation using Azure DevOps /_apis/profile/profiles/me endpoint
+  - [x] 2.4 Add structured @orchestr8/logger integration with proper error telemetry
+  - [x] 2.5 Configure blocking authentication validation to prevent cascade failures
+  - [x] 2.6 Verify all tests pass for authentication validation
 
-- [ ] 3. Create Resilience Policies Using @orchestr8/resilience
-  - [ ] 3.1 Write tests for ResiliencePolicy configurations with proper schema validation
-  - [ ] 3.2 Implement authenticationPolicy with no retries and 3-failure circuit breaker
-  - [ ] 3.3 Create syncOperationsPolicy with intelligent retry predicates and 50% failure rate circuit
-  - [ ] 3.4 Build batchOperationsPolicy optimized for bulk processing with 30% threshold
-  - [ ] 3.5 Add rateLimitAwarePolicy that respects Azure DevOps rate limit headers
-  - [ ] 3.6 Create ResiliencePolicySelector for policy selection by operation type
-  - [ ] 3.7 Verify all tests pass for resilience policy configuration
+- [x] 3. Create Resilience Policies Using @orchestr8/resilience
+  - [x] 3.1 Write tests for ResiliencePolicy configurations with proper schema validation
+  - [x] 3.2 Implement authenticationPolicy with no retries and 3-failure circuit breaker
+  - [x] 3.3 Create syncOperationsPolicy with intelligent retry predicates and 50% failure rate circuit
+  - [x] 3.4 Build batchOperationsPolicy optimized for bulk processing with 30% threshold
+  - [x] 3.5 Add rateLimitAwarePolicy that respects Azure DevOps rate limit headers
+  - [x] 3.6 Create ResiliencePolicySelector for policy selection by operation type
+  - [x] 3.7 Verify all tests pass for resilience policy configuration
 
-- [ ] 4. Create Enhanced Sync Service with @orchestr8/resilience Integration
-  - [ ] 4.1 Write tests for EnhancedSyncService with ProductionResilienceAdapter usage
-  - [ ] 4.2 Implement EnhancedSyncService using @orchestr8/resilience applyNormalizedPolicy
-  - [ ] 4.3 Add blocking authentication validation before sync operations
-  - [ ] 4.4 Integrate batch processing with batch-specific resilience policies
-  - [ ] 4.5 Configure resilience telemetry with @orchestr8/logger integration
-  - [ ] 4.6 Verify all tests pass for enhanced sync service functionality
+- [x] 4. Create Enhanced Sync Service with @orchestr8/resilience Integration
+  - [x] 4.1 Write tests for EnhancedSyncService with ProductionResilienceAdapter usage
+  - [x] 4.2 Implement EnhancedSyncService using @orchestr8/resilience applyNormalizedPolicy
+  - [x] 4.3 Add blocking authentication validation before sync operations
+  - [x] 4.4 Integrate batch processing with batch-specific resilience policies
+  - [x] 4.5 Configure resilience telemetry with @orchestr8/logger integration
+  - [x] 4.6 Verify all tests pass for enhanced sync service functionality
 
-- [ ] 5. Update Azure DevOps Client with @orchestr8/resilience
-  - [ ] 5.1 Write tests for AzureDevOpsRestClient using ProductionResilienceAdapter
-  - [ ] 5.2 Replace custom resilience logic with @orchestr8/resilience adapter
-  - [ ] 5.3 Update getCurrentUserProfile, getWorkItem, getWorkItemsBatch methods
-  - [ ] 5.4 Configure operation-specific resilience policies for different API calls
-  - [ ] 5.5 Add @orchestr8/logger integration with proper telemetry callbacks
-  - [ ] 5.6 Verify all tests pass for updated Azure DevOps client
+- [x] 5. Update Azure DevOps Client with @orchestr8/resilience
+  - [x] 5.1 Write tests for AzureDevOpsRestClient using ProductionResilienceAdapter
+  - [x] 5.2 Replace custom resilience logic with @orchestr8/resilience adapter
+  - [x] 5.3 Update getCurrentUserProfile, getWorkItem, getWorkItemsBatch methods
+  - [x] 5.4 Configure operation-specific resilience policies for different API calls
+  - [x] 5.5 Add @orchestr8/logger integration with proper telemetry callbacks
+  - [x] 5.6 Verify all tests pass for updated Azure DevOps client
 
-- [ ] 6. Add Integration Testing with @orchestr8 Packages
-  - [ ] 6.1 Write integration tests for @orchestr8/resilience policy execution
-  - [ ] 6.2 Create MSW mocks for Azure DevOps API responses (auth, rate limit, server errors)
-  - [ ] 6.3 Add integration tests for blocking authentication preventing cascade failures
-  - [ ] 6.4 Test end-to-end sync with ProductionResilienceAdapter and various failure modes
-  - [ ] 6.5 Verify circuit breaker behavior matches @orchestr8/resilience specifications
-  - [ ] 6.6 Verify all integration tests pass and cover critical failure paths
+- [x] 6. Add Integration Testing with @orchestr8 Packages
+  - [x] 6.1 Write integration tests for @orchestr8/resilience policy execution
+  - [x] 6.2 Create MSW mocks for Azure DevOps API responses (auth, rate limit, server errors)
+  - [x] 6.3 Add integration tests for blocking authentication preventing cascade failures
+  - [x] 6.4 Test end-to-end sync with ProductionResilienceAdapter and various failure modes
+  - [x] 6.5 Verify circuit breaker behavior matches @orchestr8/resilience specifications
+  - [x] 6.6 Verify all integration tests pass and cover critical failure paths
 
 - [ ] 7. Performance and @orchestr8 Package Integration Verification
   - [ ] 7.1 Write tests to verify @orchestr8/logger structured logging without sensitive data

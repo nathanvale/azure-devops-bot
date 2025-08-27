@@ -1,5 +1,10 @@
 #!/usr/bin/env tsx
 
+import dotenv from 'dotenv'
+
+// Load environment variables from .env file
+dotenv.config()
+
 /**
  * Test script to validate Azure DevOps PAT authentication
  * This script tests the actual authentication with the user's Azure DevOps organization

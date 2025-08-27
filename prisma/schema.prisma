@@ -10,14 +10,54 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Person {
+  // Primary key - Azure DevOps unique identifier
+  id            String   @id // "fe71887b-c2c7-60bd-8688-00d137e0b5f5"
+  
+  // Core identity fields (from Azure DevOps AzureDevOpsPerson interface)
+  displayName   String   // "Nathan Vale" 
+  uniqueName    String   @unique // "Nathan.Vale@fwc.gov.au" (email - critical for queries)
+  
+  // Additional Azure DevOps fields (per DEC-003: store everything)
+  url           String?  // "https://spsprodcus2.vssps.visualstudio.com/..."
+  imageUrl      String?  // "https://dev.azure.com/..."  
+  descriptor    String?  // "msa.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODg..."
+  inactive      Boolean  @default(false) // Account status in Azure DevOps
+  
+  // Audit fields
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Relations - all person fields that reference this table
+  assignedWorkItems     WorkItem[] @relation("AssignedTo")
+  createdWorkItems      WorkItem[] @relation("CreatedBy") 
+  changedWorkItems      WorkItem[] @relation("ChangedBy")
+  closedWorkItems       WorkItem[] @relation("ClosedBy")
+  resolvedWorkItems     WorkItem[] @relation("ResolvedBy")
+  activatedWorkItems    WorkItem[] @relation("ActivatedBy")
+  authorizedWorkItems   WorkItem[] @relation("AuthorizedAs")
+  
+  // Performance indexes (optimized for sub-100ms queries)
+  @@index([uniqueName]) // PRIMARY: Email-based lookups (most common)
+  @@index([displayName]) // SECONDARY: Display name searches  
+  @@index([inactive]) // Filter active/inactive users
+  @@index([uniqueName, inactive]) // COMPOUND: Active users by email
+  @@index([displayName, inactive]) // COMPOUND: Active users by display name
+  @@map("persons")
+}
+
 model WorkItem {
   id                Int      @id
   title             String
   state             String
   type              String
-  assignedTo        String   @map("assigned_to")
+  assignedTo        String   @map("assigned_to") // Keep for backward compatibility during migration
   azureUrl          String   @map("azure_url")  // Will map to url in future migration
   description       String?
+  
+  // NEW: Person foreign key relationships (nullable during migration)
+  assignedToId      String?  @map("assigned_to_id") 
+  assignedToPerson  Person?  @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   
   // Sprint/Board Info (for your reports)
   iterationPath     String?  @map("iteration_path") // e.g., "S3-Sprint 15"
@@ -38,11 +78,24 @@ model WorkItem {
   activatedDate     DateTime? @map("activated_date")
   stateChangeDate   DateTime? @map("state_change_date")
   
-  // People
+  // People (Keep old String fields for backward compatibility during migration)
   createdBy         String?  @map("created_by")
   changedBy         String?  @map("changed_by")
   closedBy          String?  @map("closed_by")
   resolvedBy        String?  @map("resolved_by")
+  
+  // NEW: Additional Person foreign key relationships
+  createdById       String?  @map("created_by_id")
+  createdByPerson   Person?  @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  
+  changedById       String?  @map("changed_by_id")
+  changedByPerson   Person?  @relation("ChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  
+  closedById        String?  @map("closed_by_id") 
+  closedByPerson    Person?  @relation("ClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  
+  resolvedById      String?  @map("resolved_by_id")
+  resolvedByPerson  Person?  @relation("ResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
   
   // Work tracking
   storyPoints       Float?   @map("story_points")
@@ -74,6 +127,27 @@ model WorkItem {
   stackRank         Float?   @map("stack_rank")
   valueArea         String?  @map("value_area")
   
+  // Additional fields for complete Azure DevOps coverage
+  boardLane         String?  @map("board_lane")
+  activatedBy       String?  @map("activated_by") // Keep for backward compatibility
+  authorizedAs      String?  @map("authorized_as") // Keep for backward compatibility
+  authorizedDate    DateTime? @map("authorized_date")
+  
+  // NEW: Additional Person foreign key relationships for activated and authorized
+  activatedById     String?  @map("activated_by_id")
+  activatedByPerson Person?  @relation("ActivatedBy", fields: [activatedById], references: [id], onDelete: SetNull)
+  
+  authorizedAsId    String?  @map("authorized_as_id")
+  authorizedAsPerson Person?  @relation("AuthorizedAs", fields: [authorizedAsId], references: [id], onDelete: SetNull)
+  revisedDate       DateTime? @map("revised_date")
+  resolution        String?
+  risk              String?
+  businessValue     Float?   @map("business_value")
+  timeCriticality   Float?   @map("time_criticality")
+  
+  // Store custom fields as JSON
+  customFields      String?  @map("custom_fields") // JSON string
+  
   // Store EVERYTHING from Azure DevOps (backup)
   rawJson           String   @map("raw_json")
   
@@ -83,13 +157,39 @@ model WorkItem {
   
   // Relations
   comments          WorkItemComment[]
+  sourceRelations   WorkItemRelation[] @relation("SourceRelations")
+  targetRelations   WorkItemRelation[] @relation("TargetRelations")
+  links             WorkItemLink[]
   
+  // Existing indexes (keep for backward compatibility)
   @@index([type])
   @@index([state])
   @@index([assignedTo])
   @@index([iterationPath])
   @@index([changedDate])
   @@index([createdDate])
+  @@index([assignedTo, state])
+  @@index([iterationPath, state])
+  @@index([areaPath])
+  @@index([boardColumn, boardColumnDone])
+  @@index([parentId])
+  @@index([type, state])
+  @@index([priority, state])
+  
+  // NEW: Indexes for Person foreign key relationships
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([changedById])
+  @@index([closedById])
+  @@index([resolvedById])
+  @@index([activatedById])
+  @@index([authorizedAsId])
+  
+  // NEW: Compound indexes for common query patterns (performance-critical)
+  @@index([assignedToId, state]) // "my active work items"
+  @@index([assignedToId, iterationPath]) // "my work items in current sprint"
+  @@index([createdById, state]) // "work items I created"
+  
   @@map("work_items")
 }
 
@@ -106,4 +206,74 @@ model WorkItemComment {
   
   @@index([workItemId])
   @@map("work_item_comments")
+}
+
+model WorkItemRelation {
+  id               Int    @id @default(autoincrement())
+  sourceId         Int    @map("source_id")
+  targetId         Int    @map("target_id")
+  relationshipType String @map("relationship_type")
+  attributes       String? // JSON string for additional metadata
+  
+  // Relations
+  sourceWorkItem   WorkItem @relation("SourceRelations", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetWorkItem   WorkItem @relation("TargetRelations", fields: [targetId], references: [id], onDelete: Cascade)
+  
+  // Performance indexes
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([relationshipType])
+  @@index([sourceId, relationshipType])
+  @@index([targetId, relationshipType])
+  @@map("work_item_relations")
+}
+
+model WorkItemLink {
+  id           Int    @id @default(autoincrement())
+  workItemId   Int    @map("work_item_id")
+  linkType     String @map("link_type") // "ArtifactLink", "AttachedFile", etc.
+  linkUrl      String @map("link_url")
+  linkTitle    String @map("link_title") // Display name like "Pull Request", "Fixed in Commit"
+  attributes   String? // JSON string for metadata (PR ID, commit hash, file info, etc.)
+  
+  // Relations
+  workItem     WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  
+  // Performance indexes
+  @@index([workItemId])
+  @@index([linkType])
+  @@index([workItemId, linkType])
+  @@map("work_item_links")
+}
+
+model SyncMetric {
+  id            Int      @id @default(autoincrement())
+  syncType      String   @map("sync_type") // "detailed", "basic", "comments"
+  startTime     DateTime @map("start_time")
+  endTime       DateTime @map("end_time")
+  durationMs    Int      @map("duration_ms")
+  
+  // Counts
+  totalAttempted Int     @map("total_attempted")
+  totalSucceeded Int     @map("total_succeeded")
+  totalFailed    Int     @map("total_failed")
+  successRate    Float   @map("success_rate")
+  
+  // Error summary
+  totalErrors    Int     @map("total_errors")
+  errorsByType   String  @map("errors_by_type") // JSON string
+  
+  // Performance metrics
+  avgResponseTime Float? @map("avg_response_time")
+  rateLimitHits   Int    @default(0) @map("rate_limit_hits")
+  
+  // Status
+  status         String  @default("completed") // "completed", "failed", "partial"
+  
+  createdAt      DateTime @default(now()) @map("created_at")
+  
+  @@index([syncType])
+  @@index([startTime])
+  @@index([successRate])
+  @@map("sync_metrics")
 }

@@ -146,10 +146,8 @@ describe('AzureDevOpsClient - REST API Implementation', () => {
       expect(result.length).toBeGreaterThanOrEqual(0)
     })
 
-    it('should return empty array for work item without comments', async () => {
-      const result = await client.fetchWorkItemComments(99999)
-      expect(Array.isArray(result)).toBe(true)
-    })
+    // Moved to azure-devops.integration.test.ts as this test is slow (~1 second)
+    // due to resilience policies with retry delays
   })
 
   describe('addWorkItemComment', () => {
@@ -159,12 +157,8 @@ describe('AzureDevOpsClient - REST API Implementation', () => {
       )
     })
 
-    it('should add comment to work item', async () => {
-      // MSW handler should handle the comment creation
-      await expect(
-        client.addWorkItemComment(1234, 'Test comment'),
-      ).resolves.not.toThrow()
-    })
+    // Moved to azure-devops.integration.test.ts as this test requires
+    // proper MSW setup for axios instances and involves resilience policies
   })
 
   // linkWorkItemToPullRequest tests are skipped until the method is fully implemented in the REST client

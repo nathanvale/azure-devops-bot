@@ -10,7 +10,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
-import { AzureAuth } from '../src/services/auth.js'
+import { AuthValidationService } from '../src/services/auth-validation.js'
 
 const execAsync = promisify(exec)
 
