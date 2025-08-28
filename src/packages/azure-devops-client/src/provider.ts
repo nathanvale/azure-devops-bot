@@ -1,13 +1,13 @@
 import type { IWorkItemProvider, ProviderInfo } from './interfaces/provider.js'
 import type { CommentData, WorkItemComment } from './types/comments.js'
 import type { AzureDevOpsClientConfig } from './types/config.js'
+import type { PersonData, WorkItemDataWithPersons } from './types/person.js'
 import type {
   WorkItemData,
   WorkItemQuery,
   WorkItem,
   AzureDevOpsPerson,
 } from './types/work-items.js'
-import type { PersonData, WorkItemDataWithPersons } from './types/person.js'
 
 import { AzureDevOpsRestClient } from './client.js'
 
@@ -64,7 +64,9 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
    * Fetches work items with complete Person data
    * Per DEC-009: Extract all person fields for normalized storage
    */
-  async fetchWorkItemsWithPersons(query?: WorkItemQuery): Promise<WorkItemDataWithPersons[]> {
+  async fetchWorkItemsWithPersons(
+    query?: WorkItemQuery,
+  ): Promise<WorkItemDataWithPersons[]> {
     try {
       let workItems: WorkItem[]
 
@@ -79,13 +81,15 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
 
         // Get full work item details with expanded fields
         const workItemIds = queryResult.workItems.map((wi) => wi.id)
-        workItems = await this.client.batchGetWorkItems(workItemIds, 'all')
+        workItems = await this.client.batchGetWorkItems(workItemIds)
       } else {
         // For now, return empty array if no query is provided
         workItems = []
       }
 
-      return workItems.map((workItem) => this.mapWorkItemToDataWithPersons(workItem))
+      return workItems.map((workItem) =>
+        this.mapWorkItemToDataWithPersons(workItem),
+      )
     } catch (error) {
       // Preserve RetryExhaustedError for proper error handling
       if (error instanceof Error && error.name === 'RetryExhaustedError') {
@@ -94,6 +98,37 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       // Re-throw with additional context for other errors
       throw new Error(
         `Failed to fetch work items with persons: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  /**
+   * Batch fetch work items with Person data
+   * Per DEC-009: Extract all person fields for normalized storage
+   */
+  async getWorkItemsBatch(
+    workItemIds: number[],
+  ): Promise<WorkItemDataWithPersons[]> {
+    if (!workItemIds || workItemIds.length === 0) {
+      return []
+    }
+
+    try {
+      // Use the REST client's batch API which handles chunking into 200-item batches
+      const workItems = await this.client.batchGetWorkItems(workItemIds)
+
+      // Map to WorkItemDataWithPersons format with Person objects
+      return workItems.map((workItem) =>
+        this.mapWorkItemToDataWithPersons(workItem),
+      )
+    } catch (error) {
+      // Preserve RetryExhaustedError for proper error handling
+      if (error instanceof Error && error.name === 'RetryExhaustedError') {
+        throw error
+      }
+      // Re-throw with additional context for other errors
+      throw new Error(
+        `Failed to batch fetch work items with persons: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }
@@ -130,7 +165,9 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
    * Gets a single work item with complete Person data
    * Per DEC-009: Extract all person fields for normalized storage
    */
-  async getWorkItemWithPersons(id: string | number): Promise<WorkItemDataWithPersons | null> {
+  async getWorkItemWithPersons(
+    id: string | number,
+  ): Promise<WorkItemDataWithPersons | null> {
     try {
       const numericId = typeof id === 'string' ? parseInt(id, 10) : id
 
@@ -297,7 +334,9 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
    * Maps Azure DevOps WorkItem to WorkItemData with complete Person objects
    * Per DEC-009: Extract all person fields for normalized storage
    */
-  private mapWorkItemToDataWithPersons(workItem: WorkItem): WorkItemDataWithPersons {
+  private mapWorkItemToDataWithPersons(
+    workItem: WorkItem,
+  ): WorkItemDataWithPersons {
     const fields = workItem.fields
 
     return {
@@ -305,37 +344,85 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       title: fields['System.Title'] || '',
       state: fields['System.State'] || '',
       type: fields['System.WorkItemType'] || '',
-      
+
       // Legacy string fields for backward compatibility
-      assignedTo: this.extractPersonName(fields['System.AssignedTo']),
-      createdBy: this.extractPersonName(fields['System.CreatedBy']),
-      changedBy: this.extractPersonName(fields['System.ChangedBy']),
-      closedBy: this.extractPersonName(fields['Microsoft.VSTS.Common.ClosedBy']),
-      resolvedBy: this.extractPersonName(fields['Microsoft.VSTS.Common.ResolvedBy']),
-      activatedBy: this.extractPersonName(fields['Microsoft.VSTS.Common.ActivatedBy']),
-      authorizedAs: this.extractPersonName(fields['System.AuthorizedAs']),
-      
+      assignedTo: this.extractPersonName(
+        fields['System.AssignedTo'] as AzureDevOpsPerson | undefined,
+      ),
+      createdBy: this.extractPersonName(
+        fields['System.CreatedBy'] as AzureDevOpsPerson | undefined,
+      ),
+      changedBy: this.extractPersonName(
+        fields['System.ChangedBy'] as AzureDevOpsPerson | undefined,
+      ),
+      closedBy: this.extractPersonName(
+        fields['Microsoft.VSTS.Common.ClosedBy'] as
+          | AzureDevOpsPerson
+          | undefined,
+      ),
+      resolvedBy: this.extractPersonName(
+        fields['Microsoft.VSTS.Common.ResolvedBy'] as
+          | AzureDevOpsPerson
+          | undefined,
+      ),
+      activatedBy: this.extractPersonName(
+        fields['Microsoft.VSTS.Common.ActivatedBy'] as
+          | AzureDevOpsPerson
+          | undefined,
+      ),
+      authorizedAs: this.extractPersonName(
+        fields['System.AuthorizedAs'] as AzureDevOpsPerson | undefined,
+      ),
+
       // New Person object fields with complete data
-      assignedToPerson: this.extractPersonData(fields['System.AssignedTo']),
-      createdByPerson: this.extractPersonData(fields['System.CreatedBy']),
-      changedByPerson: this.extractPersonData(fields['System.ChangedBy']),
-      closedByPerson: this.extractPersonData(fields['Microsoft.VSTS.Common.ClosedBy']),
-      resolvedByPerson: this.extractPersonData(fields['Microsoft.VSTS.Common.ResolvedBy']),
-      activatedByPerson: this.extractPersonData(fields['Microsoft.VSTS.Common.ActivatedBy']),
-      authorizedAsPerson: this.extractPersonData(fields['System.AuthorizedAs']),
-      
+      assignedToPerson: this.extractPersonData(
+        fields['System.AssignedTo'] as AzureDevOpsPerson | undefined,
+      ),
+      createdByPerson: this.extractPersonData(
+        fields['System.CreatedBy'] as AzureDevOpsPerson | undefined,
+      ),
+      changedByPerson: this.extractPersonData(
+        fields['System.ChangedBy'] as AzureDevOpsPerson | undefined,
+      ),
+      closedByPerson: this.extractPersonData(
+        fields['Microsoft.VSTS.Common.ClosedBy'] as
+          | AzureDevOpsPerson
+          | undefined,
+      ),
+      resolvedByPerson: this.extractPersonData(
+        fields['Microsoft.VSTS.Common.ResolvedBy'] as
+          | AzureDevOpsPerson
+          | undefined,
+      ),
+      activatedByPerson: this.extractPersonData(
+        fields['Microsoft.VSTS.Common.ActivatedBy'] as
+          | AzureDevOpsPerson
+          | undefined,
+      ),
+      authorizedAsPerson: this.extractPersonData(
+        fields['System.AuthorizedAs'] as AzureDevOpsPerson | undefined,
+      ),
+
       // Date fields
       createdDate: fields['System.CreatedDate'] || '',
       changedDate: fields['System.ChangedDate'] || '',
-      closedDate: fields['Microsoft.VSTS.Common.ClosedDate'],
-      resolvedDate: fields['Microsoft.VSTS.Common.ResolvedDate'],
-      activatedDate: fields['Microsoft.VSTS.Common.ActivatedDate'],
-      authorizedDate: fields['Microsoft.VSTS.Common.AuthorizedDate'],
-      
+      closedDate: fields['Microsoft.VSTS.Common.ClosedDate'] as
+        | string
+        | undefined,
+      resolvedDate: fields['Microsoft.VSTS.Common.ResolvedDate'] as
+        | string
+        | undefined,
+      activatedDate: fields['Microsoft.VSTS.Common.ActivatedDate'] as
+        | string
+        | undefined,
+      authorizedDate: fields['Microsoft.VSTS.Common.AuthorizedDate'] as
+        | string
+        | undefined,
+
       // Other fields
       description: fields['System.Description'],
       tags: this.parseTags(fields['System.Tags']),
-      
+
       // Raw data for future-proofing (per DEC-003)
       raw: {
         ...fields,
@@ -388,7 +475,7 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
     person: AzureDevOpsPerson | string | undefined,
   ): PersonData | null {
     if (!person || typeof person === 'string') return null
-    
+
     return {
       id: person.id,
       displayName: person.displayName,
@@ -396,7 +483,7 @@ export class AzureDevOpsProvider implements IWorkItemProvider {
       url: person.url,
       imageUrl: person.imageUrl,
       descriptor: person.descriptor,
-      inactive: false // Default value - Azure DevOps doesn't always provide this
+      inactive: false, // Default value - Azure DevOps doesn't always provide this
     }
   }
 

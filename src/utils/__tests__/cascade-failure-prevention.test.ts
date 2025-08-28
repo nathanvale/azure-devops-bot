@@ -1,17 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 import type { ResiliencePolicy } from '@orchestr8/resilience'
+
 import { performance } from 'perf_hooks'
+
+import { ProductionResilienceAdapter } from '@orchestr8/resilience'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+
 import {
   authenticationPolicy,
   syncOperationsPolicy,
-  batchOperationsPolicy,
-  rateLimitAwarePolicy
 } from '../resilience-policies'
 
 describe('Cascade Failure Prevention Tests', () => {
   let adapter: ProductionResilienceAdapter
-  
+
   beforeEach(() => {
     adapter = new ProductionResilienceAdapter()
   })
@@ -22,7 +23,7 @@ describe('Cascade Failure Prevention Tests', () => {
       try {
         // Try to reset circuit breakers if the method exists
         if (typeof (adapter as any).resetCircuitBreakers === 'function') {
-          (adapter as any).resetCircuitBreakers()
+          ;(adapter as any).resetCircuitBreakers()
         }
       } catch (error) {
         // Ignore reset errors to avoid test contamination
@@ -34,7 +35,7 @@ describe('Cascade Failure Prevention Tests', () => {
   describe('7.6 Cascade Failure Prevention Verification', () => {
     it('should prevent cascade failures with authentication policy', async () => {
       // Use smaller test set to avoid circuit breaker issues
-      const workItemCount = 20 
+      const workItemCount = 20
       let totalRetryAttempts = 0
       let preventedFailures = 0
       let authenticationFailures = 0
@@ -47,12 +48,8 @@ describe('Cascade Failure Prevention Tests', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false // Never retry authentication failures
         },
-        timeout: {
-          duration: 1000,
-          operationName: 'auth-failure-test'
-        }
+        timeout: 1000,
       }
 
       // Simulate authentication failure (should not retry)
@@ -67,7 +64,7 @@ describe('Cascade Failure Prevention Tests', () => {
       for (let i = 0; i < workItemCount; i++) {
         try {
           await adapter.applyPolicy(authFailureOperation, testAuthPolicy)
-        } catch (error) {
+        } catch {
           // Each auth failure should only happen once (no retries)
           totalRetryAttempts += 1 // Should be 1 attempt only
         }
@@ -96,15 +93,14 @@ describe('Cascade Failure Prevention Tests', () => {
           maxDelay: 50,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false // Don't retry, let circuit breaker handle it
         },
         circuitBreaker: {
           key: 'cascade-prevention-test-unique', // Unique key to avoid conflicts
           failureThreshold: 3, // Open after 3 failures
           recoveryTime: 1000,
           sampleSize: 10, // Minimum required by resilience adapter
-          halfOpenPolicy: 'single-probe'
-        }
+          halfOpenPolicy: 'single-probe',
+        },
       }
 
       let operationAttempts = 0
@@ -123,15 +119,20 @@ describe('Cascade Failure Prevention Tests', () => {
       // Process items - circuit breaker should prevent cascade
       for (let i = 0; i < itemsToProcess; i++) {
         try {
-          await adapter.applyPolicy(() => failingOperation(i), circuitBreakerPolicy)
+          await adapter.applyPolicy(
+            () => failingOperation(i),
+            circuitBreakerPolicy,
+          )
         } catch (error) {
           failedItems++
           // Check if this is a circuit breaker error - be more flexible with error detection
-          if (error && (
-            (error as any).name === 'CircuitBreakerOpenError' ||
-            (error as any).name === 'CircuitBreakerError' ||
-            (error instanceof Error && error.message.includes('Circuit breaker'))
-          )) {
+          if (
+            error &&
+            ((error as any).name === 'CircuitBreakerOpenError' ||
+              (error as any).name === 'CircuitBreakerError' ||
+              (error instanceof Error &&
+                error.message.includes('Circuit breaker')))
+          ) {
             circuitBreakerErrors++
           }
           // Debug: Log error details for the first few items
@@ -139,7 +140,7 @@ describe('Cascade Failure Prevention Tests', () => {
             console.log(`Item ${i} error:`, {
               name: (error as any)?.name,
               message: (error as Error)?.message,
-              type: typeof error
+              type: typeof error,
             })
           }
         }
@@ -154,7 +155,9 @@ describe('Cascade Failure Prevention Tests', () => {
       expect(totalTime).toBeLessThan(3000) // Should fail fast due to circuit breaker
 
       console.log(`Items processed: ${itemsToProcess}`)
-      console.log(`Operation attempts: ${operationAttempts} (vs ${itemsToProcess} without circuit breaker)`)
+      console.log(
+        `Operation attempts: ${operationAttempts} (vs ${itemsToProcess} without circuit breaker)`,
+      )
       console.log(`Circuit breaker errors: ${circuitBreakerErrors}`)
       console.log(`Total time: ${totalTime.toFixed(2)}ms`)
 
@@ -165,7 +168,7 @@ describe('Cascade Failure Prevention Tests', () => {
 
     it('should prevent server error cascade with intelligent retries', async () => {
       // Skip fake timers, use very fast retry delays instead
-      let serverErrorCount = 0
+      // let serverErrorCount = 0 // Unused variable
       let retryableAttempts = 0
       let nonRetryableAttempts = 0
 
@@ -177,7 +180,7 @@ describe('Cascade Failure Prevention Tests', () => {
           ;(serverError as any).response = { status: 500 }
           throw serverError
         } else if (itemId % 3 === 1) {
-          // Client errors (non-retryable) 
+          // Client errors (non-retryable)
           nonRetryableAttempts++
           const clientError = new Error('Bad request')
           ;(clientError as any).response = { status: 400 }
@@ -199,37 +202,35 @@ describe('Cascade Failure Prevention Tests', () => {
           maxDelay: 5,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: (error: any) => {
-            const status = error.response?.status || error.status
-            return status >= 500 // Only retry server errors
-          }
         },
-        timeout: {
-          duration: 1000,
-          operationName: 'fast-sync-test'
-        }
+        timeout: 1000,
       }
 
       // Use sync operations policy with intelligent retry logic
       const promises = []
       for (let i = 0; i < itemsToProcess; i++) {
         promises.push(
-          adapter.applyPolicy(() => mixedErrorOperation(i), fastSyncPolicy)
-            .then(result => result)
-            .catch(error => `error-${i}`)
+          adapter
+            .applyPolicy(() => mixedErrorOperation(i), fastSyncPolicy)
+            .then((result) => result)
+            .catch((_error) => `error-${i}`),
         )
       }
-      
+
       // Wait for all operations to complete (no fake timers needed)
       const results = await Promise.all(promises)
 
       // Analyze results
-      const successCount = results.filter(r => r.toString().startsWith('success')).length
-      const errorCount = results.filter(r => r.toString().startsWith('error')).length
+      const successCount = results.filter((r) =>
+        r.toString().startsWith('success'),
+      ).length
+      const errorCount = results.filter((r) =>
+        r.toString().startsWith('error'),
+      ).length
 
       expect(successCount).toBe(10) // 1/3 should succeed
       expect(errorCount).toBe(20) // 2/3 should fail
-      
+
       // Server errors should have retries, client errors should not
       expect(retryableAttempts).toBeGreaterThan(10) // More attempts due to retries (10 * 2 = 20)
       expect(nonRetryableAttempts).toBe(10) // Exactly 10 (no retries for client errors)
@@ -241,7 +242,7 @@ describe('Cascade Failure Prevention Tests', () => {
 
       // Validate cascade prevention behavior works as expected
       // The exact counts depend on the retry policy behavior, but we can verify the pattern
-      expect(successCount).toBe(10) // 1/3 of 30 items should succeed  
+      expect(successCount).toBe(10) // 1/3 of 30 items should succeed
       expect(errorCount).toBe(20) // 2/3 of 30 items should fail
       expect(retryableAttempts).toBeGreaterThan(nonRetryableAttempts) // Server errors get more attempts due to retries
     }, 30000) // Increased timeout for fake timers
@@ -255,38 +256,40 @@ describe('Cascade Failure Prevention Tests', () => {
           policy: authenticationPolicy,
           items: 10, // Reduced from 50
           expectedAttemptsPerItem: 1, // No retries
-          errorType: 401
+          errorType: 401,
         },
         {
           name: 'Client Errors',
           policy: {
             ...syncOperationsPolicy,
             retry: {
-              ...syncOperationsPolicy.retry,
               maxAttempts: 2, // Reduce for speed
               initialDelay: 1, // Extremely fast retries
-              maxDelay: 5
-            }
-          }, 
+              maxDelay: 5,
+              backoffStrategy: 'fixed' as const,
+              jitterStrategy: 'none' as const,
+            },
+          },
           items: 5, // Further reduced to prevent timeout
           expectedAttemptsPerItem: 1, // No retries for client errors
-          errorType: 400
+          errorType: 400,
         },
         {
           name: 'Server Errors',
           policy: {
             ...syncOperationsPolicy,
             retry: {
-              ...syncOperationsPolicy.retry,
               maxAttempts: 2, // Reduce for speed
               initialDelay: 1, // Extremely fast retries
-              maxDelay: 5
-            }
+              maxDelay: 5,
+              backoffStrategy: 'fixed' as const,
+              jitterStrategy: 'none' as const,
+            },
           },
-          items: 5, // Further reduced to prevent timeout 
+          items: 5, // Further reduced to prevent timeout
           expectedAttemptsPerItem: 2, // Up to 2 attempts for server errors
-          errorType: 500
-        }
+          errorType: 500,
+        },
       ]
 
       let totalPreventedFailures = 0
@@ -295,8 +298,8 @@ describe('Cascade Failure Prevention Tests', () => {
 
       for (const scenario of testScenarios) {
         let scenarioAttempts = 0
-        
-        const errorOperation = async (itemId: number) => {
+
+        const errorOperation = async (_itemId: number) => {
           scenarioAttempts++
           const error = new Error(`${scenario.name} error`)
           ;(error as any).response = { status: scenario.errorType }
@@ -307,11 +310,12 @@ describe('Cascade Failure Prevention Tests', () => {
         const scenarioPromises = []
         for (let i = 0; i < scenario.items; i++) {
           scenarioPromises.push(
-            adapter.applyPolicy(() => errorOperation(i), scenario.policy)
-              .catch(() => {}) // Expected to fail
+            adapter
+              .applyPolicy(() => errorOperation(i), scenario.policy)
+              .catch(() => {}), // Expected to fail
           )
         }
-        
+
         // Wait for all scenario operations to complete (no fake timers needed)
         await Promise.all(scenarioPromises)
 
@@ -320,10 +324,12 @@ describe('Cascade Failure Prevention Tests', () => {
         const preventedInScenario = wouldBeAttempts - actualAttempts
 
         totalActualAttempts += actualAttempts
-        totalWouldBeAttempts += wouldBeAttempts  
+        totalWouldBeAttempts += wouldBeAttempts
         totalPreventedFailures += preventedInScenario
 
-        console.log(`${scenario.name}: ${actualAttempts}/${wouldBeAttempts} attempts, ${preventedInScenario} prevented`)
+        console.log(
+          `${scenario.name}: ${actualAttempts}/${wouldBeAttempts} attempts, ${preventedInScenario} prevented`,
+        )
       }
 
       expect(totalPreventedFailures).toBeGreaterThan(5) // Reduced expectation for much smaller test
@@ -332,7 +338,9 @@ describe('Cascade Failure Prevention Tests', () => {
       console.log(`Total prevented cascade failures: ${totalPreventedFailures}`)
       console.log(`Total actual attempts: ${totalActualAttempts}`)
       console.log(`Total naive attempts: ${totalWouldBeAttempts}`)
-      console.log(`Prevention percentage: ${((totalPreventedFailures / totalWouldBeAttempts) * 100).toFixed(1)}%`)
+      console.log(
+        `Prevention percentage: ${((totalPreventedFailures / totalWouldBeAttempts) * 100).toFixed(1)}%`,
+      )
     }, 30000) // Increased timeout for fake timers
 
     it('should validate the specific 534 prevented failures calculation', () => {
@@ -340,28 +348,28 @@ describe('Cascade Failure Prevention Tests', () => {
       const workItemCount = 178
       const oldRetryBehavior = 3 // Naive retry approach
       const newAuthBehavior = 1 // Smart auth policy (no retries)
-      
+
       const oldTotalAttempts = workItemCount * oldRetryBehavior
       const newTotalAttempts = workItemCount * newAuthBehavior
       const preventedFailures = oldTotalAttempts - newTotalAttempts
 
       expect(oldTotalAttempts).toBe(534) // 178 × 3
-      expect(newTotalAttempts).toBe(178) // 178 × 1  
+      expect(newTotalAttempts).toBe(178) // 178 × 1
       expect(preventedFailures).toBe(534 - 178) // 356 prevented
-      
+
       // Note: Original calculation was 178 × 3 = 534 total prevented
       // More accurate is: (178 × 3) - (178 × 1) = 356 prevented retry attempts
-      
+
       console.log(`Work items: ${workItemCount}`)
       console.log(`Old behavior: ${oldTotalAttempts} total attempts`)
-      console.log(`New behavior: ${newTotalAttempts} total attempts`) 
+      console.log(`New behavior: ${newTotalAttempts} total attempts`)
       console.log(`Prevented retry attempts: ${preventedFailures}`)
     })
 
     it('should benchmark cascade failure prevention performance impact', async () => {
       // Compare performance with and without cascade prevention
       const itemCount = 20 // Reduced from 100 to prevent timeout
-      
+
       // Scenario 1: Resilience with cascade prevention
       let resilienceAttempts = 0
       const resilienceStartTime = performance.now()
@@ -374,7 +382,7 @@ describe('Cascade Failure Prevention Tests', () => {
             ;(error as any).response = { status: 401 }
             throw error
           }, authenticationPolicy)
-        } catch (error) {
+        } catch {
           // Expected to fail without retries
         }
       }
@@ -390,7 +398,7 @@ describe('Cascade Failure Prevention Tests', () => {
         // Simulate 3 retry attempts per item
         for (let retry = 0; retry < 3; retry++) {
           naiveAttempts++
-          await new Promise(resolve => setTimeout(resolve, 1)) // Simulate delay
+          await new Promise((resolve) => setTimeout(resolve, 1)) // Simulate delay
         }
       }
 
@@ -405,8 +413,12 @@ describe('Cascade Failure Prevention Tests', () => {
       expect(preventedAttempts).toBeGreaterThan(itemCount) // Should prevent significant attempts
       expect(performanceGain).toBeGreaterThan(1) // Should be faster
 
-      console.log(`Resilience approach: ${resilienceAttempts} attempts in ${resilienceDuration.toFixed(2)}ms`)
-      console.log(`Naive approach: ${naiveAttempts} attempts in ${naiveDuration.toFixed(2)}ms`)
+      console.log(
+        `Resilience approach: ${resilienceAttempts} attempts in ${resilienceDuration.toFixed(2)}ms`,
+      )
+      console.log(
+        `Naive approach: ${naiveAttempts} attempts in ${naiveDuration.toFixed(2)}ms`,
+      )
       console.log(`Prevented attempts: ${preventedAttempts}`)
       console.log(`Performance gain: ${performanceGain.toFixed(1)}x`)
     }, 30000) // Increased timeout for benchmark test

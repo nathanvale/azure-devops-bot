@@ -18,11 +18,13 @@ Comprehensive guide for integrating the Azure DevOps Bot MCP server with various
 The Model Context Protocol (MCP) is an open standard that enables AI assistants to securely connect to data sources and tools. The Azure DevOps Bot implements MCP 1.15+ with:
 
 ### Transport Methods
+
 - **stdio** (Standard Input/Output) - Most common, used by Claude Desktop
 - **HTTP** - For remote servers (not used in this implementation)
 - **SSE** (Server-Sent Events) - Legacy support (not used)
 
 ### Protocol Features
+
 - **Tools**: 8 work item management functions
 - **Resources**: Work item data and comments
 - **Authentication**: PAT-based with Azure DevOps
@@ -31,17 +33,18 @@ The Model Context Protocol (MCP) is an open standard that enables AI assistants 
 ## Claude Desktop Integration
 
 ### Supported Platforms
+
 - macOS (tested)
-- Windows (tested)  
+- Windows (tested)
 - Linux (supported)
 
 ### Configuration File Locations
 
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Linux | `~/.config/claude/claude_desktop_config.json` |
+| Platform | Path                                                              |
+| -------- | ----------------------------------------------------------------- |
+| macOS    | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows  | `%APPDATA%\Claude\claude_desktop_config.json`                     |
+| Linux    | `~/.config/claude/claude_desktop_config.json`                     |
 
 ### Basic Configuration
 
@@ -63,12 +66,16 @@ The Model Context Protocol (MCP) is an open standard that enables AI assistants 
 ### Advanced Claude Desktop Configuration
 
 #### Multiple Email Support
+
 ```json
 {
   "mcpServers": {
     "azure-devops-bot": {
       "command": "pnpm",
-      "args": ["mcp", "--emails=user1@fwc.gov.au,user2@fwc.gov.au,team@fwc.gov.au"],
+      "args": [
+        "mcp",
+        "--emails=user1@fwc.gov.au,user2@fwc.gov.au,team@fwc.gov.au"
+      ],
       "cwd": "/Users/username/azure-devops-bot",
       "env": {
         "AZURE_DEVOPS_PAT": "your-pat-token",
@@ -80,6 +87,7 @@ The Model Context Protocol (MCP) is an open standard that enables AI assistants 
 ```
 
 #### Environment File Support
+
 ```json
 {
   "mcpServers": {
@@ -94,6 +102,7 @@ The Model Context Protocol (MCP) is an open standard that enables AI assistants 
 ```
 
 #### Debug Configuration
+
 ```json
 {
   "mcpServers": {
@@ -113,6 +122,7 @@ The Model Context Protocol (MCP) is an open standard that enables AI assistants 
 ## VS Code Integration
 
 ### Supported VS Code Versions
+
 - VS Code Stable 1.102+
 - VS Code Insiders (latest)
 
@@ -144,7 +154,7 @@ Create `.vscode/mcp.json` in your workspace:
       "default": "your.email@fwc.gov.au"
     },
     {
-      "type": "promptString", 
+      "type": "promptString",
       "id": "azure-pat",
       "description": "Azure DevOps Personal Access Token",
       "password": true
@@ -202,13 +212,13 @@ Add to `.devcontainer/devcontainer.json`:
 
 ### VS Code Commands
 
-| Command | Purpose |
-|---------|---------|
-| `MCP: Add Server` | Add new MCP server |
-| `MCP: List Servers` | View all configured servers |
-| `MCP: Show Installed Servers` | Open MCP servers view |
-| `MCP: Reset Cached Tools` | Clear tool cache |
-| `MCP: Browse Resources` | View available resources |
+| Command                       | Purpose                     |
+| ----------------------------- | --------------------------- |
+| `MCP: Add Server`             | Add new MCP server          |
+| `MCP: List Servers`           | View all configured servers |
+| `MCP: Show Installed Servers` | Open MCP servers view       |
+| `MCP: Reset Cached Tools`     | Clear tool cache            |
+| `MCP: Browse Resources`       | View available resources    |
 
 ### Using MCP Tools in VS Code
 
@@ -222,6 +232,7 @@ Add to `.devcontainer/devcontainer.json`:
 For other MCP clients, use these connection details:
 
 ### Server Configuration
+
 ```json
 {
   "name": "azure-devops-bot",
@@ -237,6 +248,7 @@ For other MCP clients, use these connection details:
 ```
 
 ### Command Line Test
+
 ```bash
 # Test MCP server directly
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | pnpm mcp --emails=user@fwc.gov.au
@@ -246,13 +258,13 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | pnpm mcp --e
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AZURE_DEVOPS_PAT` | Required | Personal Access Token |
-| `AZURE_DEVOPS_USER_EMAILS` | None | Comma-separated email list (alternative to --emails) |
-| `AZURE_DEVOPS_SYNC_INTERVAL_MINUTES` | 2 | Background sync interval |
-| `NODE_ENV` | development | Runtime environment |
-| `DEBUG` | None | Debug output pattern |
+| Variable                             | Default     | Description                                          |
+| ------------------------------------ | ----------- | ---------------------------------------------------- |
+| `AZURE_DEVOPS_PAT`                   | Required    | Personal Access Token                                |
+| `AZURE_DEVOPS_USER_EMAILS`           | None        | Comma-separated email list (alternative to --emails) |
+| `AZURE_DEVOPS_SYNC_INTERVAL_MINUTES` | 2           | Background sync interval                             |
+| `NODE_ENV`                           | development | Runtime environment                                  |
+| `DEBUG`                              | None        | Debug output pattern                                 |
 
 ### Configuration File (.env)
 
@@ -274,15 +286,17 @@ DEBUG=azure-devops-bot:*
 ### Performance Tuning
 
 #### Sync Interval Optimization
+
 ```bash
 # Fast updates (1 minute) - Higher API usage
 pnpm mcp --emails=user@fwc.gov.au --sync-interval=1
 
-# Conservative updates (10 minutes) - Lower API usage  
+# Conservative updates (10 minutes) - Lower API usage
 pnpm mcp --emails=user@fwc.gov.au --sync-interval=10
 ```
 
 #### Memory Optimization
+
 ```json
 {
   "command": "pnpm",
@@ -336,7 +350,7 @@ pnpm mcp --emails=user@fwc.gov.au --sync-interval=10
 {
   "servers": {
     "azure-devops-bot": {
-      "type": "stdio", 
+      "type": "stdio",
       "command": "pnpm",
       "args": ["mcp", "--emails=team@fwc.gov.au"],
       "cwd": "/shared/azure-devops-bot"
@@ -348,6 +362,7 @@ pnpm mcp --emails=user@fwc.gov.au --sync-interval=10
 ### Workspace-Specific Servers
 
 **Project A** (`.vscode/mcp.json`):
+
 ```json
 {
   "servers": {
@@ -359,6 +374,7 @@ pnpm mcp --emails=user@fwc.gov.au --sync-interval=10
 ```
 
 **Project B** (`.vscode/mcp.json`):
+
 ```json
 {
   "servers": {
@@ -382,6 +398,7 @@ Use VS Code profiles for different team configurations:
 ### Common Connection Issues
 
 #### Server Not Starting
+
 ```bash
 # Check server manually
 pnpm mcp --emails=test@fwc.gov.au
@@ -393,12 +410,14 @@ pnpm mcp --emails=test@fwc.gov.au
 #### Tools Not Appearing
 
 **Claude Desktop:**
+
 1. Check config file path is correct
 2. Verify JSON syntax (use [JSONLint](https://jsonlint.com))
 3. Restart Claude Desktop completely
 4. Check for MCP indicator (🔌) in chat
 
 **VS Code:**
+
 1. Run `MCP: List Servers` command
 2. Check server status in Extensions view
 3. Review MCP output: `View → Output → Select "MCP"`
@@ -419,6 +438,7 @@ curl -u ":YOUR_PAT_TOKEN" \
 #### Enable Full Debug Logging
 
 **Claude Desktop:**
+
 ```json
 {
   "env": {
@@ -429,6 +449,7 @@ curl -u ":YOUR_PAT_TOKEN" \
 ```
 
 **VS Code:**
+
 ```json
 {
   "dev": {
@@ -453,12 +474,14 @@ pm2 logs azure-devops-bot
 ### Performance Debugging
 
 #### Check Database Size
+
 ```bash
 ls -lh prisma/dev.db
 # Should be < 50MB for good performance
 ```
 
 #### Monitor Memory Usage
+
 ```bash
 # During development
 ps aux | grep "azure-devops-bot"
@@ -468,6 +491,7 @@ pm2 monit
 ```
 
 #### Force Refresh Data
+
 ```bash
 # Delete database and restart
 rm prisma/dev.db
@@ -477,6 +501,7 @@ pnpm mcp --emails=user@fwc.gov.au
 ### Network Issues
 
 #### Corporate Firewall
+
 ```json
 {
   "env": {
@@ -487,6 +512,7 @@ pnpm mcp --emails=user@fwc.gov.au
 ```
 
 #### SSL Certificate Issues
+
 ```json
 {
   "env": {
@@ -506,4 +532,4 @@ For additional support:
 
 ---
 
-*This guide covers advanced MCP integration scenarios. For basic setup, see [Quick Start Guide](QUICK_START.md).*
+_This guide covers advanced MCP integration scenarios. For basic setup, see [Quick Start Guide](QUICK_START.md)._

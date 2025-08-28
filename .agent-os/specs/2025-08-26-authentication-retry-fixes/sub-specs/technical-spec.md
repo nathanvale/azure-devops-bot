@@ -40,14 +40,17 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## Approach Options
 
 **Option A: Modify Existing Error Handling**
+
 - Pros: Minimal code changes, maintains current architecture
 - Cons: Doesn't address fundamental issue of non-blocking authentication
 
 **Option B: Implement Pre-flight Authentication Check** (Selected)
+
 - Pros: Prevents cascade failures, clear separation of concerns, fail-fast principle
 - Cons: Additional API call overhead for authentication validation
 
 **Option C: Reactive Error Handling Only**
+
 - Pros: No additional API calls, lightweight implementation
 - Cons: Still allows cascade failures to begin before detection
 
@@ -56,6 +59,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 ## External Dependencies
 
 Implementation uses existing @orchestr8 packages:
+
 - **@orchestr8/resilience** - ProductionResilienceAdapter with ResiliencePolicy configuration
 - **@orchestr8/logger** - Structured logging with createLogger API
 - **azure-devops-client** package for API calls
@@ -71,38 +75,38 @@ import type { ResiliencePolicy } from '@orchestr8/schema'
 import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 
 export interface AuthValidationResult {
-  success: boolean;
-  error?: AuthenticationError;
-  profile?: UserProfile;
+  success: boolean
+  error?: AuthenticationError
+  profile?: UserProfile
 }
 
 export interface UserProfile {
-  id: string;
-  displayName: string;
-  emailAddress: string;
-  domain: string;
+  id: string
+  displayName: string
+  emailAddress: string
+  domain: string
 }
 
 // Resilience policy specifically for authentication validation
 const authValidationPolicy: ResiliencePolicy = {
   retry: {
-    maxAttempts: 1,           // No retries for auth validation
+    maxAttempts: 1, // No retries for auth validation
     initialDelay: 0,
     maxDelay: 0,
     backoffStrategy: 'fixed',
-    retryOn: () => false      // Never retry authentication
+    retryOn: () => false, // Never retry authentication
   },
   circuitBreaker: {
     key: 'azure-devops-auth', // Explicit key for auth circuit
-    failureThreshold: 3,      // Trip after 3 failures
-    recoveryTime: 300000,     // 5 minutes
-    sampleSize: 10,           // Minimum required
-    halfOpenPolicy: 'single-probe'
+    failureThreshold: 3, // Trip after 3 failures
+    recoveryTime: 300000, // 5 minutes
+    sampleSize: 10, // Minimum required
+    halfOpenPolicy: 'single-probe',
   },
   timeout: {
-    duration: 30000,          // 30 second timeout
-    operationName: 'authentication-validation'
-  }
+    duration: 30000, // 30 second timeout
+    operationName: 'authentication-validation',
+  },
 }
 
 export class AuthValidationService {
@@ -118,12 +122,12 @@ export class AuthValidationService {
       name: 'azure-devops-auth',
       defaultFields: {
         service: 'azure-devops-bot',
-        component: 'authentication'
-      }
+        component: 'authentication',
+      },
     })
-    
+
     this.resilienceAdapter = new ProductionResilienceAdapter({
-      telemetry: this.createResilienceTelemetry()
+      telemetry: this.createResilienceTelemetry(),
     })
   }
 
@@ -134,66 +138,75 @@ export class AuthValidationService {
   async validateAuthentication(): Promise<AuthValidationResult> {
     const start = performance.now()
     this.logger.info('Starting authentication validation')
-    
+
     try {
       const profile = await this.resilienceAdapter.applyNormalizedPolicy(
         () => this.client.getCurrentUserProfile(),
         authValidationPolicy,
-        'retry-cb-timeout'
+        'retry-cb-timeout',
       )
-      
+
       this.logger.info('Authentication successful', {
         userId: profile.id,
         userEmail: profile.emailAddress,
-        duration: performance.now() - start
+        duration: performance.now() - start,
       })
-      
+
       return {
         success: true,
-        profile
+        profile,
       }
     } catch (error) {
       const classified = ErrorClassifier.classify(error)
-      
+
       this.logger.error('Authentication failed', {
         errorType: classified.type,
         errorCode: classified.code,
         retryable: classified.retryable,
         httpStatus: error.status,
-        duration: performance.now() - start
+        duration: performance.now() - start,
       })
-      
+
       return {
         success: false,
-        error: this.classifyAuthError(error)
+        error: this.classifyAuthError(error),
       }
     }
   }
 
   private classifyAuthError(error: any): AuthenticationError {
     if (error.status === 401) {
-      return new AuthenticationError('INVALID_TOKEN', 
-        'PAT token is invalid or expired. Please verify your AZURE_DEVOPS_PAT environment variable.')
+      return new AuthenticationError(
+        'INVALID_TOKEN',
+        'PAT token is invalid or expired. Please verify your AZURE_DEVOPS_PAT environment variable.',
+      )
     }
     if (error.status === 403) {
-      return new AuthenticationError('INSUFFICIENT_PERMISSIONS', 
-        'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" permission.')
+      return new AuthenticationError(
+        'INSUFFICIENT_PERMISSIONS',
+        'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" permission.',
+      )
     }
-    return new AuthenticationError('AUTH_FAILED', 
-      `Authentication failed: ${error.message}. Check network connectivity and PAT token validity.`)
+    return new AuthenticationError(
+      'AUTH_FAILED',
+      `Authentication failed: ${error.message}. Check network connectivity and PAT token validity.`,
+    )
   }
 
   private createResilienceTelemetry() {
     return {
       onRetry: (attempt: number, error: Error) => {
-        this.logger.warn('Auth validation retry', { attempt, error: error.message })
+        this.logger.warn('Auth validation retry', {
+          attempt,
+          error: error.message,
+        })
       },
       onCircuitOpen: (key: string) => {
         this.logger.error('Auth circuit breaker opened', { key })
       },
       onCircuitClose: (key: string) => {
         this.logger.info('Auth circuit breaker closed', { key })
-      }
+      },
     }
   }
 }
@@ -208,16 +221,16 @@ export enum ErrorType {
   RATE_LIMIT = 'RATE_LIMIT',
   NETWORK = 'NETWORK',
   SERVER = 'SERVER',
-  VALIDATION = 'VALIDATION'
+  VALIDATION = 'VALIDATION',
 }
 
 export interface ClassifiedError {
-  type: ErrorType;
-  code: string;
-  message: string;
-  retryable: boolean;
-  retryDelayMs?: number;
-  originalError: Error;
+  type: ErrorType
+  code: string
+  message: string
+  retryable: boolean
+  retryDelayMs?: number
+  originalError: Error
 }
 
 /**
@@ -230,27 +243,28 @@ export class ErrorClassifier {
     if (error.status === 401 || error.status === 403) {
       return {
         type: ErrorType.AUTHENTICATION,
-        code: error.status === 401 ? 'INVALID_TOKEN' : 'INSUFFICIENT_PERMISSIONS',
+        code:
+          error.status === 401 ? 'INVALID_TOKEN' : 'INSUFFICIENT_PERMISSIONS',
         message: this.getAuthErrorMessage(error.status),
         retryable: false,
-        originalError: error
-      };
+        originalError: error,
+      }
     }
 
     // Rate limiting errors (429)
     if (error.status === 429) {
-      const resetTime = error.headers?.['x-ratelimit-reset'];
-      const retryAfter = error.headers?.['retry-after'];
-      const delayMs = this.calculateRateLimitDelay(resetTime, retryAfter);
-      
+      const resetTime = error.headers?.['x-ratelimit-reset']
+      const retryAfter = error.headers?.['retry-after']
+      const delayMs = this.calculateRateLimitDelay(resetTime, retryAfter)
+
       return {
         type: ErrorType.RATE_LIMIT,
         code: 'RATE_LIMITED',
         message: `Rate limit exceeded. Server requests retry after ${delayMs}ms`,
         retryable: true,
         retryDelayMs: delayMs,
-        originalError: error
-      };
+        originalError: error,
+      }
     }
 
     // Network errors (connection issues, timeouts)
@@ -261,8 +275,8 @@ export class ErrorClassifier {
         message: `Network connectivity issue: ${error.code || error.message}`,
         retryable: true,
         retryDelayMs: 1000, // Base delay for exponential backoff
-        originalError: error
-      };
+        originalError: error,
+      }
     }
 
     // Server errors (5xx)
@@ -273,8 +287,8 @@ export class ErrorClassifier {
         message: `Azure DevOps server error: ${error.status} ${error.statusText}`,
         retryable: true,
         retryDelayMs: 2000, // Base delay for server errors
-        originalError: error
-      };
+        originalError: error,
+      }
     }
 
     // Client validation errors (4xx except 401, 403, 429)
@@ -284,8 +298,8 @@ export class ErrorClassifier {
         code: 'CLIENT_ERROR',
         message: `Request validation failed: ${error.status} ${error.statusText}`,
         retryable: false,
-        originalError: error
-      };
+        originalError: error,
+      }
     }
 
     // Unknown errors - treat as non-retryable for safety
@@ -294,8 +308,8 @@ export class ErrorClassifier {
       code: 'UNKNOWN_ERROR',
       message: `Unclassified error: ${error.message || 'Unknown error occurred'}`,
       retryable: false,
-      originalError: error
-    };
+      originalError: error,
+    }
   }
 
   /**
@@ -304,13 +318,15 @@ export class ErrorClassifier {
    */
   static createRetryPredicate() {
     return (error: unknown): boolean => {
-      const classified = ErrorClassifier.classify(error);
-      
+      const classified = ErrorClassifier.classify(error)
+
       // Log the classification for observability
-      console.debug(`Error classified as ${classified.type}, retryable: ${classified.retryable}`);
-      
-      return classified.retryable;
-    };
+      console.debug(
+        `Error classified as ${classified.type}, retryable: ${classified.retryable}`,
+      )
+
+      return classified.retryable
+    }
   }
 
   /**
@@ -324,26 +340,29 @@ export class ErrorClassifier {
       error.code === 'ENOTFOUND' ||
       error.code === 'ECONNABORTED' ||
       !error.status // No HTTP status usually indicates network issue
-    );
+    )
   }
 
   /**
    * Calculates delay for rate limit retries using Azure DevOps headers
    */
-  private static calculateRateLimitDelay(resetTime?: string, retryAfter?: string): number {
+  private static calculateRateLimitDelay(
+    resetTime?: string,
+    retryAfter?: string,
+  ): number {
     if (retryAfter) {
       // Retry-After header in seconds
-      return Math.min(parseInt(retryAfter) * 1000, 300000); // Max 5 minutes
+      return Math.min(parseInt(retryAfter) * 1000, 300000) // Max 5 minutes
     }
-    
+
     if (resetTime) {
       // X-RateLimit-Reset as Unix timestamp
-      const resetTimestamp = parseInt(resetTime) * 1000;
-      const now = Date.now();
-      return Math.max(1000, Math.min(resetTimestamp - now, 300000)); // Min 1s, max 5min
+      const resetTimestamp = parseInt(resetTime) * 1000
+      const now = Date.now()
+      return Math.max(1000, Math.min(resetTimestamp - now, 300000)) // Min 1s, max 5min
     }
-    
-    return 60000; // Default 1 minute delay if no headers
+
+    return 60000 // Default 1 minute delay if no headers
   }
 
   /**
@@ -351,12 +370,12 @@ export class ErrorClassifier {
    */
   private static getAuthErrorMessage(status: number): string {
     if (status === 401) {
-      return 'PAT token is invalid or expired. Please verify AZURE_DEVOPS_PAT environment variable contains a valid Personal Access Token.';
+      return 'PAT token is invalid or expired. Please verify AZURE_DEVOPS_PAT environment variable contains a valid Personal Access Token.'
     }
     if (status === 403) {
-      return 'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" scope enabled in Azure DevOps.';
+      return 'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" scope enabled in Azure DevOps.'
     }
-    return 'Authentication failed with unexpected error. Please check PAT token and network connectivity.';
+    return 'Authentication failed with unexpected error. Please check PAT token and network connectivity.'
   }
 }
 ```
@@ -376,7 +395,7 @@ import { ErrorClassifier } from './error-classification.js'
 // Policy for authentication operations - fail fast, no retries
 export const authenticationPolicy: ResiliencePolicy = {
   retry: {
-    maxAttempts: 1,           // No retries for authentication
+    maxAttempts: 1, // No retries for authentication
     initialDelay: 0,
     maxDelay: 0,
     backoffStrategy: 'fixed',
@@ -384,116 +403,120 @@ export const authenticationPolicy: ResiliencePolicy = {
     retryOn: (error: unknown) => {
       const classified = ErrorClassifier.classify(error)
       return false // Never retry authentication operations
-    }
+    },
   },
   circuitBreaker: {
     key: 'azure-devops-auth',
-    failureThreshold: 3,      // Trip after 3 failures
-    recoveryTime: 300000,     // 5 minutes
+    failureThreshold: 3, // Trip after 3 failures
+    recoveryTime: 300000, // 5 minutes
     sampleSize: 10,
-    halfOpenPolicy: 'single-probe'
+    halfOpenPolicy: 'single-probe',
   },
   timeout: {
     duration: 30000,
-    operationName: 'authentication'
-  }
+    operationName: 'authentication',
+  },
 }
 
 // Policy for data sync operations - smart retry with error type awareness
 export const syncOperationsPolicy: ResiliencePolicy = {
   retry: {
-    maxAttempts: 5,           // Maximum retries across all error types
-    initialDelay: 1000,       // 1 second base delay
-    maxDelay: 30000,         // 30 second maximum
+    maxAttempts: 5, // Maximum retries across all error types
+    initialDelay: 1000, // 1 second base delay
+    maxDelay: 30000, // 30 second maximum
     backoffStrategy: 'exponential',
-    jitterStrategy: 'full',   // Prevent thundering herd
+    jitterStrategy: 'full', // Prevent thundering herd
     retryOn: (error: unknown) => {
       const classified = ErrorClassifier.classify(error)
-      
+
       switch (classified.type) {
         case 'AUTHENTICATION':
         case 'VALIDATION':
-          return false          // Never retry auth/validation errors
+          return false // Never retry auth/validation errors
         case 'RATE_LIMIT':
         case 'NETWORK':
         case 'SERVER':
-          return true           // Retry network/server issues
+          return true // Retry network/server issues
         default:
-          return false          // Conservative default
+          return false // Conservative default
       }
-    }
+    },
   },
   circuitBreaker: {
     key: 'azure-devops-sync',
-    failureThreshold: 0.5,    // 50% failure rate (better than count)
-    recoveryTime: 60000,      // 1 minute recovery
-    sampleSize: 10,           // Statistical significance
-    halfOpenPolicy: 'single-probe'
+    failureThreshold: 0.5, // 50% failure rate (better than count)
+    recoveryTime: 60000, // 1 minute recovery
+    sampleSize: 10, // Statistical significance
+    halfOpenPolicy: 'single-probe',
   },
   timeout: {
-    duration: 120000,         // 2 minutes for sync operations
-    operationName: 'work-item-sync'
-  }
+    duration: 120000, // 2 minutes for sync operations
+    operationName: 'work-item-sync',
+  },
 }
 
 // Policy for batch work item operations - optimized for bulk processing
 export const batchOperationsPolicy: ResiliencePolicy = {
   retry: {
-    maxAttempts: 3,           // Fewer retries for batch ops
-    initialDelay: 2000,       // 2 second base delay
-    maxDelay: 15000,         // 15 second maximum
+    maxAttempts: 3, // Fewer retries for batch ops
+    initialDelay: 2000, // 2 second base delay
+    maxDelay: 15000, // 15 second maximum
     backoffStrategy: 'exponential',
     jitterStrategy: 'decorrelated', // Better for batch operations
-    retryOn: ErrorClassifier.createRetryPredicate()
+    retryOn: ErrorClassifier.createRetryPredicate(),
   },
   circuitBreaker: {
     key: 'azure-devops-batch',
-    failureThreshold: 0.3,    // 30% failure rate for batch
-    recoveryTime: 30000,      // 30 seconds recovery
-    sampleSize: 15,           // Larger sample for batch operations
-    halfOpenPolicy: 'single-probe'
+    failureThreshold: 0.3, // 30% failure rate for batch
+    recoveryTime: 30000, // 30 seconds recovery
+    sampleSize: 15, // Larger sample for batch operations
+    halfOpenPolicy: 'single-probe',
   },
   timeout: {
-    duration: 180000,         // 3 minutes for batch operations
-    operationName: 'batch-processing'
-  }
+    duration: 180000, // 3 minutes for batch operations
+    operationName: 'batch-processing',
+  },
 }
 
 // Policy for rate-limited operations - respects server timing
 export const rateLimitAwarePolicy: ResiliencePolicy = {
   retry: {
     maxAttempts: 5,
-    initialDelay: 1000,       // Will be overridden by rate limit headers
-    maxDelay: 300000,         // 5 minutes maximum (Azure DevOps max)
+    initialDelay: 1000, // Will be overridden by rate limit headers
+    maxDelay: 300000, // 5 minutes maximum (Azure DevOps max)
     backoffStrategy: 'fixed', // Use exact delays from headers
-    jitterStrategy: 'none',   // No jitter for rate limit delays
+    jitterStrategy: 'none', // No jitter for rate limit delays
     retryOn: (error: unknown) => {
       const classified = ErrorClassifier.classify(error)
-      
+
       // Only retry rate limit and network errors
-      return classified.type === 'RATE_LIMIT' || 
-             classified.type === 'NETWORK' ||
-             classified.type === 'SERVER'
-    }
+      return (
+        classified.type === 'RATE_LIMIT' ||
+        classified.type === 'NETWORK' ||
+        classified.type === 'SERVER'
+      )
+    },
   },
   circuitBreaker: {
     key: 'azure-devops-rate-limit',
-    failureThreshold: 0.8,    // High threshold for rate limits (80%)
-    recoveryTime: 600000,     // 10 minutes for rate limit recovery
-    sampleSize: 20,           // Larger sample for rate limit detection
-    halfOpenPolicy: 'single-probe'
+    failureThreshold: 0.8, // High threshold for rate limits (80%)
+    recoveryTime: 600000, // 10 minutes for rate limit recovery
+    sampleSize: 20, // Larger sample for rate limit detection
+    halfOpenPolicy: 'single-probe',
   },
   timeout: {
-    duration: 300000,         // 5 minutes for rate-limited operations
-    operationName: 'rate-limited-operation'
-  }
+    duration: 300000, // 5 minutes for rate-limited operations
+    operationName: 'rate-limited-operation',
+  },
 }
 
 /**
  * Policy selector based on operation type
  */
 export class ResiliencePolicySelector {
-  static getPolicy(operationType: 'auth' | 'sync' | 'batch' | 'rateLimit'): ResiliencePolicy {
+  static getPolicy(
+    operationType: 'auth' | 'sync' | 'batch' | 'rateLimit',
+  ): ResiliencePolicy {
     switch (operationType) {
       case 'auth':
         return authenticationPolicy
@@ -517,7 +540,10 @@ export class ResiliencePolicySelector {
 import { createLogger, type Logger } from '@orchestr8/logger'
 import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 import { ResiliencePolicySelector } from '../utils/resilience-policies.js'
-import { ErrorClassifier, type ClassifiedError } from '../utils/error-classification.js'
+import {
+  ErrorClassifier,
+  type ClassifiedError,
+} from '../utils/error-classification.js'
 import { AuthValidationService } from './auth-validation.js'
 
 /**
@@ -531,7 +557,7 @@ export class EnhancedSyncService {
 
   constructor(
     private client: AzureDevOpsClient,
-    private databaseService: DatabaseService
+    private databaseService: DatabaseService,
   ) {
     this.initializeServices()
   }
@@ -543,13 +569,13 @@ export class EnhancedSyncService {
       level: 'info',
       defaultFields: {
         service: 'azure-devops-bot',
-        component: 'sync-service'
-      }
+        component: 'sync-service',
+      },
     })
 
     // Create resilience adapter with telemetry integration
     this.resilienceAdapter = new ProductionResilienceAdapter({
-      telemetry: this.createResilienceTelemetry()
+      telemetry: this.createResilienceTelemetry(),
     })
 
     this.authValidationService = new AuthValidationService(this.client)
@@ -561,34 +587,33 @@ export class EnhancedSyncService {
    */
   async syncAllWorkItems(): Promise<void> {
     const start = performance.now()
-    
+
     this.logger.info('Starting work item sync with authentication validation')
-    
+
     try {
       // BLOCKING authentication validation - prevents cascade failures
       await this.validateAuthenticationBlocking()
-      
+
       // Execute sync operations with resilience policies
       await this.resilienceAdapter.applyNormalizedPolicy(
         () => this.performSyncOperations(),
         ResiliencePolicySelector.getPolicy('sync'),
-        'retry-cb-timeout'
+        'retry-cb-timeout',
       )
-      
+
       this.logger.info('Sync completed successfully', {
-        duration: performance.now() - start
+        duration: performance.now() - start,
       })
-      
     } catch (error) {
       const classified = ErrorClassifier.classify(error)
-      
+
       this.logger.error('Sync failed', {
         errorType: classified.type,
         errorCode: classified.code,
         retryable: classified.retryable,
-        duration: performance.now() - start
+        duration: performance.now() - start,
       })
-      
+
       throw new Error(`Sync operation failed: ${classified.message}`)
     }
   }
@@ -599,28 +624,29 @@ export class EnhancedSyncService {
    */
   private async validateAuthenticationBlocking(): Promise<void> {
     this.logger.info('Performing blocking authentication validation')
-    
+
     const authResult = await this.resilienceAdapter.applyNormalizedPolicy(
       () => this.authValidationService.validateAuthentication(),
       ResiliencePolicySelector.getPolicy('auth'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
-    
+
     if (!authResult.success) {
-      const errorMsg = `Authentication validation failed: ${authResult.error?.message}. ` +
-                      'All sync operations cancelled to prevent cascade failures.'
-      
+      const errorMsg =
+        `Authentication validation failed: ${authResult.error?.message}. ` +
+        'All sync operations cancelled to prevent cascade failures.'
+
       this.logger.error('Authentication validation failed', {
         errorCode: authResult.error?.code,
-        preventedCascadeFailure: true
+        preventedCascadeFailure: true,
       })
-      
+
       throw new Error(errorMsg)
     }
-    
+
     this.logger.info('Authentication validated successfully', {
       user: authResult.profile?.displayName,
-      email: authResult.profile?.emailAddress
+      email: authResult.profile?.emailAddress,
     })
   }
 
@@ -629,61 +655,60 @@ export class EnhancedSyncService {
    */
   private async performSyncOperations(): Promise<void> {
     const start = performance.now()
-    
+
     // Fetch work item IDs first
     const workItemIds = await this.resilienceAdapter.applyNormalizedPolicy(
       () => this.client.fetchWorkItemIds(),
       ResiliencePolicySelector.getPolicy('sync'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
-    
+
     this.logger.info('Fetched work item IDs', { count: workItemIds.length })
-    
+
     // Process work items in batches with batch-specific resilience policy
     const batches = this.createBatches(workItemIds, 200)
     let processedCount = 0
-    
+
     for (const [index, batchIds] of batches.entries()) {
       try {
         await this.resilienceAdapter.applyNormalizedPolicy(
           () => this.processBatch(batchIds),
           ResiliencePolicySelector.getPolicy('batch'),
-          'retry-cb-timeout'
+          'retry-cb-timeout',
         )
-        
+
         processedCount += batchIds.length
-        
+
         this.logger.info('Batch processed successfully', {
           batchIndex: index + 1,
           totalBatches: batches.length,
           batchSize: batchIds.length,
-          totalProcessed: processedCount
+          totalProcessed: processedCount,
         })
-        
       } catch (error) {
         const classified = ErrorClassifier.classify(error)
-        
+
         this.logger.error('Batch processing failed', {
           batchIndex: index + 1,
           errorType: classified.type,
           errorCode: classified.code,
-          retryable: classified.retryable
+          retryable: classified.retryable,
         })
-        
+
         // For batch failures, continue with next batch unless it's auth error
         if (classified.type === 'AUTHENTICATION') {
           throw error // Auth errors should stop entire sync
         }
-        
+
         // Log but continue with other batches for other error types
         continue
       }
     }
-    
+
     this.logger.info('Sync operations completed', {
       totalItems: workItemIds.length,
       processedItems: processedCount,
-      duration: performance.now() - start
+      duration: performance.now() - start,
     })
   }
 
@@ -717,29 +742,29 @@ export class EnhancedSyncService {
           operation: operationName,
           attempt,
           errorType: classified.type,
-          errorCode: classified.code
+          errorCode: classified.code,
         })
       },
-      
+
       onCircuitOpen: (key: string, failures: number) => {
         this.logger.error('Circuit breaker opened', {
           circuitKey: key,
-          failureCount: failures
+          failureCount: failures,
         })
       },
-      
+
       onCircuitClose: (key: string) => {
         this.logger.info('Circuit breaker closed', {
-          circuitKey: key
+          circuitKey: key,
         })
       },
-      
+
       onTimeout: (duration: number, operationName?: string) => {
         this.logger.warn('Operation timeout', {
           operation: operationName,
-          timeoutMs: duration
+          timeoutMs: duration,
         })
-      }
+      },
     }
   }
 }
@@ -765,7 +790,7 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
   private readonly resilienceAdapter: ProductionResilienceAdapter
   private readonly batchProcessor: BatchProcessor<number, WorkItem>
   private logger: Logger
-  
+
   // Remove the old resilience field and replace with proper adapter
   constructor(config: AzureDevOpsClientConfig) {
     this.auth = new PATAuth(config)
@@ -778,7 +803,7 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
       },
       this.rateLimiter,
     )
-    
+
     this.initializeServices()
     this.setupInterceptors()
   }
@@ -790,8 +815,8 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
       level: 'debug',
       defaultFields: {
         service: 'azure-devops-bot',
-        component: 'rest-client'
-      }
+        component: 'rest-client',
+      },
     })
 
     // Initialize resilience adapter with telemetry
@@ -802,7 +827,7 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
           this.logger.warn('Client operation retry', {
             operation: operationName,
             attempt,
-            errorType: classified.type
+            errorType: classified.type,
           })
         },
         onCircuitOpen: (key: string) => {
@@ -810,8 +835,8 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
         },
         onCircuitClose: (key: string) => {
           this.logger.info('Client circuit breaker closed', { key })
-        }
-      }
+        },
+      },
     })
   }
 
@@ -823,12 +848,12 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
       async () => {
         const response = await this.httpClient.get(
           this.auth.buildUrl('/_apis/profile/profiles/me'),
-          { headers: this.auth.getAuthHeaders() }
+          { headers: this.auth.getAuthHeaders() },
         )
         return this.transformUserProfile(response.data)
       },
       ResiliencePolicySelector.getPolicy('auth'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
   }
 
@@ -840,41 +865,44 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
       async () => {
         const expandParam = expand?.join(',') || 'All'
         const url = this.auth.buildUrl(`/_apis/wit/workitems/${id}`, {
-          '$expand': expandParam
+          $expand: expandParam,
         })
 
         const response = await this.httpClient.get(url, {
-          headers: this.auth.getAuthHeaders()
+          headers: this.auth.getAuthHeaders(),
         })
 
         return this.transformWorkItem(response.data)
       },
       ResiliencePolicySelector.getPolicy('sync'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
   }
 
   /**
    * Batch work item fetching with batch-specific resilience policy
    */
-  async getWorkItemsBatch(ids: number[], expand?: WorkItemExpand[]): Promise<WorkItem[]> {
+  async getWorkItemsBatch(
+    ids: number[],
+    expand?: WorkItemExpand[],
+  ): Promise<WorkItem[]> {
     return this.resilienceAdapter.applyNormalizedPolicy(
       async () => {
         const expandParam = expand?.join(',') || 'All'
         const url = this.auth.buildUrl('/_apis/wit/workitems', {
-          'ids': ids.join(','),
-          '$expand': expandParam
+          ids: ids.join(','),
+          $expand: expandParam,
         })
 
         const response = await this.httpClient.get(url, {
-          headers: this.auth.getAuthHeaders()
+          headers: this.auth.getAuthHeaders(),
         })
 
         const batchResponse = response.data as WorkItemBatchResponse
-        return batchResponse.value.map(item => this.transformWorkItem(item))
+        return batchResponse.value.map((item) => this.transformWorkItem(item))
       },
       ResiliencePolicySelector.getPolicy('batch'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
   }
 
@@ -888,12 +916,12 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
         const response = await this.httpClient.post(
           url,
           { query: wiql },
-          { headers: this.auth.getAuthHeaders() }
+          { headers: this.auth.getAuthHeaders() },
         )
         return this.transformQueryResult(response.data)
       },
       ResiliencePolicySelector.getPolicy('rateLimit'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
   }
 
@@ -929,18 +957,21 @@ export class AzureDevOpsRestClient implements IAzureDevOpsClient {
 ## Migration from Current Implementation
 
 ### Removed Components
+
 - **Custom CircuitBreaker class**: Replaced with @orchestr8/resilience circuit breaker policies
 - **Manual retry loops**: Replaced with ResiliencePolicy retry configuration
 - **Error-specific timeout handling**: Unified under @orchestr8/resilience timeout policies
 - **Custom backoff calculations**: Handled by @orchestr8/resilience backoff strategies
 
 ### Preserved Components
+
 - **ErrorClassifier**: Enhanced to work with @orchestr8/resilience retry predicates
 - **Rate limiting logic**: Integrated into rate-limit-aware resilience policies
 - **Batch processing**: Enhanced with batch-specific resilience policies
 - **Authentication patterns**: Improved with blocking validation and proper error handling
 
 ### New Capabilities
+
 - **Jitter strategies**: Prevent thundering herd problems in batch operations
 - **Statistical circuit breakers**: Use failure rates instead of raw counts
 - **Operation-specific policies**: Different resilience behavior per operation type

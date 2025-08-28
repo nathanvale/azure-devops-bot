@@ -15,6 +15,7 @@ Transform the Azure DevOps Bot from a basic console-logging tool into a professi
 As a development team lead, I want to quickly see high-level work item summaries without overwhelming console output, so I can get instant insights during sprint planning without scrolling through verbose logs.
 
 **Workflow:**
+
 1. Run `azure-devops-bot --quiet "my work items"`
 2. See only essential information: count of items, key status, completion time
 3. Get color-coded visual indicators for quick status assessment
@@ -25,6 +26,7 @@ As a development team lead, I want to quickly see high-level work item summaries
 As a DevOps engineer troubleshooting sync issues, I need comprehensive debug information when investigating Azure DevOps integration problems, so I can understand exactly what's happening during data retrieval and identify failure points.
 
 **Workflow:**
+
 1. Run `azure-devops-bot --debug --format json "sync status"`
 2. See complete request/response cycles with Azure DevOps API
 3. View detailed error traces and system context
@@ -36,6 +38,7 @@ As a DevOps engineer troubleshooting sync issues, I need comprehensive debug inf
 As an AI agent generating sprint reports, I require structured, machine-readable output that can be easily parsed and transformed into various report formats, so I can create beautiful stakeholder reports without parsing console logs.
 
 **Workflow:**
+
 1. Execute `azure-devops-bot --format markdown "team progress"`
 2. Receive consistently formatted markdown output
 3. Get metadata about data freshness and retrieval performance

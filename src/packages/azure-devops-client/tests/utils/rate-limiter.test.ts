@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 
 import type { RateLimitConfig } from '../../src/types/config.js'
 
-import {
-  RateLimiter,
-  type RateLimitStatus,
-} from '../../src/utils/rate-limiter.js'
+import { RateLimiter } from '../../src/utils/rate-limiter.js'
 
 describe('RateLimiter', () => {
   let rateLimiter: RateLimiter
@@ -76,10 +73,8 @@ describe('RateLimiter', () => {
 
     it('should enforce rate limiting between requests', async () => {
       const mockRequestFn = vi.fn().mockResolvedValue('success')
-      const delayTime = 1000 / 2 // 500ms for 2 requests per second
 
       // First request should execute immediately
-      const start = Date.now()
       await rateLimiter.execute(mockRequestFn)
 
       // Advance time slightly (not enough for rate limit window)
@@ -302,7 +297,6 @@ describe('RateLimiter', () => {
       const mockRequestFn = vi.fn().mockResolvedValue('success')
 
       // This should be delayed due to rate limit
-      const startTime = Date.now()
       await rateLimiter.execute(mockRequestFn)
 
       expect(mockRequestFn).toHaveBeenCalledOnce()

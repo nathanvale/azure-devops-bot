@@ -140,8 +140,8 @@ describe('AzureDevOpsClient REST Integration', () => {
 
       expect(result).toHaveLength(2)
       expect(result.every((item) => item !== undefined)).toBe(true)
-      expect(result[0].id).toBe(1234)
-      expect(result[1].id).toBe(5678)
+      expect(result[0]!.id).toBe(1234)
+      expect(result[1]!.id).toBe(5678)
     })
 
     it('should indicate batch operation support through provider info', () => {

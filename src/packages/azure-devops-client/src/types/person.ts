@@ -5,11 +5,11 @@
 export interface PersonData {
   // Primary identifier
   id: string // Azure DevOps unique person ID
-  
+
   // Core identity fields
   displayName: string // "Nathan Vale"
   uniqueName: string // "Nathan.Vale@fwc.gov.au" (email)
-  
+
   // Additional Azure DevOps fields
   url?: string // API URL for this person
   imageUrl?: string // Avatar/profile image URL
@@ -26,7 +26,7 @@ export interface WorkItemDataWithPersons {
   title: string
   state: string
   type: string
-  
+
   // Legacy string fields (for backward compatibility)
   assignedTo?: string
   createdBy?: string
@@ -35,7 +35,7 @@ export interface WorkItemDataWithPersons {
   resolvedBy?: string
   activatedBy?: string
   authorizedAs?: string
-  
+
   // New Person object fields
   assignedToPerson?: PersonData | null
   createdByPerson?: PersonData | null
@@ -44,7 +44,7 @@ export interface WorkItemDataWithPersons {
   resolvedByPerson?: PersonData | null
   activatedByPerson?: PersonData | null
   authorizedAsPerson?: PersonData | null
-  
+
   // Date fields
   createdDate: string
   changedDate: string
@@ -52,11 +52,11 @@ export interface WorkItemDataWithPersons {
   resolvedDate?: string
   activatedDate?: string
   authorizedDate?: string
-  
+
   // Other fields
   description?: string
   tags?: string[]
-  
+
   // Raw data for future-proofing (per DEC-003)
   raw: Record<string, unknown>
 }

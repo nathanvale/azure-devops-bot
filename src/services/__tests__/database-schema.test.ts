@@ -23,16 +23,17 @@ describe('Database Schema - Person Table', () => {
         displayName: 'Nathan Vale',
         uniqueName: 'Nathan.Vale@fwc.gov.au',
         url: 'https://spsprodcus2.vssps.visualstudio.com/_apis/Identities/fe71887b-c2c7-60bd-8688-00d137e0b5f5',
-        imageUrl: 'https://dev.azure.com/fwcdev/_api/_common/identityImage?id=fe71887b-c2c7-60bd-8688-00d137e0b5f5',
+        imageUrl:
+          'https://dev.azure.com/fwcdev/_api/_common/identityImage?id=fe71887b-c2c7-60bd-8688-00d137e0b5f5',
         descriptor: 'msa.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1',
-        inactive: false
+        inactive: false,
       }
 
       // This will fail initially as Person table doesn't exist yet
       // After migration, this should pass
       try {
         const person = await prisma.person.create({
-          data: personData
+          data: personData,
         })
 
         expect(person).toMatchObject({
@@ -42,7 +43,7 @@ describe('Database Schema - Person Table', () => {
           url: personData.url,
           imageUrl: personData.imageUrl,
           descriptor: personData.descriptor,
-          inactive: personData.inactive
+          inactive: personData.inactive,
         })
 
         expect(person.createdAt).toBeInstanceOf(Date)
@@ -58,7 +59,7 @@ describe('Database Schema - Person Table', () => {
         id: 'person-1',
         displayName: 'User One',
         uniqueName: 'user.one@example.com',
-        inactive: false
+        inactive: false,
       }
 
       try {
@@ -69,11 +70,11 @@ describe('Database Schema - Person Table', () => {
         const duplicateData = {
           ...personData,
           id: 'person-2',
-          displayName: 'Different Name'
+          displayName: 'Different Name',
         }
 
         await expect(
-          prisma.person.create({ data: duplicateData })
+          prisma.person.create({ data: duplicateData }),
         ).rejects.toThrow()
       } catch (error) {
         // Expected to fail before migration
@@ -86,13 +87,13 @@ describe('Database Schema - Person Table', () => {
         id: 'minimal-person',
         displayName: 'Minimal User',
         uniqueName: 'minimal@example.com',
-        inactive: false
+        inactive: false,
         // url, imageUrl, descriptor are optional
       }
 
       try {
         const person = await prisma.person.create({
-          data: minimalPersonData
+          data: minimalPersonData,
         })
 
         expect(person.id).toBe(minimalPersonData.id)
@@ -126,12 +127,12 @@ describe('Database Schema - Person Table', () => {
         closedById: null,
         resolvedById: null,
         activatedById: null,
-        authorizedAsId: null
+        authorizedAsId: null,
       }
 
       try {
         const workItem = await prisma.workItem.create({
-          data: workItemData
+          data: workItemData,
         })
 
         expect(workItem.assignedToId).toBeNull()
@@ -155,8 +156,8 @@ describe('Database Schema - Person Table', () => {
             id: 'test-person',
             displayName: 'Test User',
             uniqueName: 'test.user@example.com',
-            inactive: false
-          }
+            inactive: false,
+          },
         })
 
         // Create WorkItem with Person reference
@@ -170,18 +171,18 @@ describe('Database Schema - Person Table', () => {
             assignedToId: person.id, // New foreign key
             azureUrl: 'https://dev.azure.com/test',
             rawJson: '{}',
-            lastUpdatedAt: new Date()
+            lastUpdatedAt: new Date(),
           },
           include: {
-            assignedTo: true // Include Person data
-          }
+            assignedToPerson: true, // Include Person data
+          },
         })
 
         expect(workItem.assignedToId).toBe(person.id)
         expect(workItem.assignedTo).toMatchObject({
           id: person.id,
           displayName: person.displayName,
-          uniqueName: person.uniqueName
+          uniqueName: person.uniqueName,
         })
       } catch (error) {
         // Expected to fail before migration
@@ -205,11 +206,11 @@ describe('Database Schema - Person Table', () => {
       const expectedIndexes = [
         'persons_unique_name_key', // Unique constraint
         'persons_unique_name_idx', // Performance index
-        'persons_active_email_idx' // Compound index
+        'persons_active_email_idx', // Compound index
       ]
 
       if (Array.isArray(indexes) && indexes.length > 0) {
-        expectedIndexes.forEach(indexName => {
+        expectedIndexes.forEach((indexName) => {
           expect(indexes.some((idx: any) => idx.name === indexName)).toBe(true)
         })
       } else {
@@ -231,15 +232,16 @@ describe('Database Schema - Person Table', () => {
         'work_items_assigned_to_id_idx',
         'work_items_created_by_id_idx',
         'work_items_assigned_state_idx', // Compound index
-        'work_items_assigned_iteration_idx' // Compound index
+        'work_items_assigned_iteration_idx', // Compound index
       ]
 
       if (Array.isArray(indexes) && indexes.length > 0) {
-        expectedIndexes.forEach(indexName => {
-          const hasIndex = indexes.some((idx: any) => 
-            idx.name === indexName || 
-            idx.name.includes('assigned_to_id') ||
-            idx.name.includes('created_by_id')
+        expectedIndexes.forEach((indexName) => {
+          const hasIndex = indexes.some(
+            (idx: any) =>
+              idx.name === indexName ||
+              idx.name.includes('assigned_to_id') ||
+              idx.name.includes('created_by_id'),
           )
           expect(hasIndex).toBe(true)
         })
@@ -253,33 +255,33 @@ describe('Database Schema - Person Table', () => {
   describe('Query Performance', () => {
     it('should execute email-based queries efficiently with Person join', async () => {
       const userEmail = 'Nathan.Vale@fwc.gov.au'
-      
+
       try {
         const startTime = performance.now()
-        
+
         // New optimized query with Person join
         const results = await prisma.workItem.findMany({
           where: {
-            assignedTo: {
-              uniqueName: userEmail
+            assignedToPerson: {
+              uniqueName: userEmail,
             },
-            state: { not: 'Closed' }
+            state: { not: 'Closed' },
           },
           include: {
-            assignedTo: true
+            assignedToPerson: true,
           },
-          take: 100
+          take: 100,
         })
-        
+
         const queryTime = performance.now() - startTime
-        
+
         // Target: sub-100ms, optimized should be ~2ms
         expect(queryTime).toBeLessThan(100)
-        
+
         // If we get results, validate structure
         if (results.length > 0) {
-          expect(results[0].assignedTo).toHaveProperty('uniqueName')
-          expect(results[0].assignedTo).toHaveProperty('displayName')
+          expect(results[0]?.assignedToPerson).toHaveProperty('uniqueName')
+          expect(results[0]?.assignedToPerson).toHaveProperty('displayName')
         }
       } catch (error) {
         // Expected to fail before migration
@@ -291,13 +293,13 @@ describe('Database Schema - Person Table', () => {
       try {
         // Measure old approach (if it still exists)
         const oldStartTime = performance.now()
-        const oldResults = await prisma.workItem.findMany({
+        await prisma.workItem.findMany({
           where: {
             assignedTo: {
-              contains: 'Nathan.Vale@fwc.gov.au'
-            }
+              contains: 'Nathan.Vale@fwc.gov.au',
+            },
           },
-          take: 100
+          take: 100,
         })
         const oldQueryTime = performance.now() - oldStartTime
 
@@ -305,14 +307,14 @@ describe('Database Schema - Person Table', () => {
         const newStartTime = performance.now()
         const newResults = await prisma.workItem.findMany({
           where: {
-            assignedTo: {
-              uniqueName: 'Nathan.Vale@fwc.gov.au'
-            }
+            assignedToPerson: {
+              uniqueName: 'Nathan.Vale@fwc.gov.au',
+            },
           },
           include: {
-            assignedTo: true
+            assignedToPerson: true,
           },
-          take: 100
+          take: 100,
         })
         const newQueryTime = performance.now() - newStartTime
 

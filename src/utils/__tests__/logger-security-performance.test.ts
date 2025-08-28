@@ -1,7 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { initializeLogger, getLogger, LoggerFactory, createChildLogger } from '../logger'
-import { performance } from 'perf_hooks'
 import type { Logger } from '@orchestr8/logger'
+
+import { performance } from 'perf_hooks'
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+
+import {
+  initializeLogger,
+  // getLogger,
+  LoggerFactory,
+  createChildLogger,
+} from '../logger'
 
 describe('Logger Security & Performance Tests', () => {
   let logger: Logger
@@ -11,7 +19,7 @@ describe('Logger Security & Performance Tests', () => {
   beforeEach(async () => {
     // Initialize logger for testing
     logger = await initializeLogger('test-logger')
-    
+
     // Capture console output for verification
     capturedLogs = []
     originalConsoleError = console.error
@@ -33,7 +41,7 @@ describe('Logger Security & Performance Tests', () => {
         AZURE_DEVOPS_PAT: 'my-secret-pat',
         password: 'super-secret',
         secret: 'my-secret-key',
-        normalField: 'visible-data'
+        normalField: 'visible-data',
       }
 
       logger.info('Testing sensitive data redaction', sensitiveData)
@@ -53,22 +61,22 @@ describe('Logger Security & Performance Tests', () => {
         request: {
           headers: {
             authorization: 'Bearer secret-token',
-            'x-api-key': 'api-key-123'
+            'x-api-key': 'api-key-123',
           },
           body: {
             pat: 'nested-pat-token',
             user: {
               password: 'nested-password',
               profile: {
-                name: 'Test User'
-              }
-            }
-          }
+                name: 'Test User',
+              },
+            },
+          },
         },
         response: {
           data: 'response-data',
-          token: 'response-token'
-        }
+          token: 'response-token',
+        },
       }
 
       expect(() => {
@@ -86,15 +94,15 @@ describe('Logger Security & Performance Tests', () => {
         pat: 'error-context-pat',
         operation: 'getUserProfile',
         token: 'error-token',
-        correlationId: 'test-123'
+        correlationId: 'test-123',
       }
 
       // Clear any previous logs
       capturedLogs = []
 
-      logger.error('Azure API error occurred', { 
-        error: errorWithSensitiveData, 
-        ...context 
+      logger.error('Azure API error occurred', {
+        error: errorWithSensitiveData,
+        ...context,
       })
 
       // Wait for async console output
@@ -110,20 +118,22 @@ describe('Logger Security & Performance Tests', () => {
         pat: 'performance-test-pat',
         token: 'performance-token',
         secret: 'performance-secret',
-        data: Array(100).fill(0).map((_, i) => ({
-          id: i,
-          value: `value-${i}`,
-          publicField: `public-${i}`
-        }))
+        data: Array(100)
+          .fill(0)
+          .map((_, i) => ({
+            id: i,
+            value: `value-${i}`,
+            publicField: `public-${i}`,
+          })),
       }
 
       const startTime = performance.now()
-      
+
       // Reduce iterations for performance test
       for (let i = 0; i < 10; i++) {
         logger.info(`Performance test iteration ${i}`, largeSensitiveObject)
       }
-      
+
       const endTime = performance.now()
       const duration = endTime - startTime
 
@@ -136,14 +146,14 @@ describe('Logger Security & Performance Tests', () => {
     it('should redact sensitive data in component loggers', () => {
       const azureLogger = LoggerFactory.createForAzureAPI('getCurrentUser', {
         pat: 'component-pat-token',
-        requestId: 'req-123'
+        requestId: 'req-123',
       })
 
       expect(() => {
         azureLogger.info('Azure API operation completed', {
           token: 'operation-token',
           result: 'success',
-          authorization: 'Bearer sensitive-token'
+          authorization: 'Bearer sensitive-token',
         })
       }).not.toThrow()
     })
@@ -151,28 +161,28 @@ describe('Logger Security & Performance Tests', () => {
     it('should redact sensitive data in MCP loggers', () => {
       const mcpLogger = LoggerFactory.createForMCP('wit_get_work_item', {
         secret: 'mcp-secret',
-        toolId: 'test-tool'
+        toolId: 'test-tool',
       })
 
       expect(() => {
         mcpLogger.debug('MCP tool execution', {
           pat: 'mcp-pat-token',
           params: { workItemId: 123 },
-          password: 'mcp-password'
+          password: 'mcp-password',
         })
       }).not.toThrow()
     })
 
     it('should redact sensitive data in request loggers', () => {
       const requestLogger = LoggerFactory.createForRequest('corr-123', {
-        AZURE_DEVOPS_PAT: 'request-pat'
+        AZURE_DEVOPS_PAT: 'request-pat',
       })
 
       expect(() => {
         requestLogger.error('Request failed', {
           token: 'request-token',
           error: 'Authentication error',
-          authorization: 'Basic encoded-credentials'
+          authorization: 'Basic encoded-credentials',
         })
       }).not.toThrow()
     })
@@ -182,34 +192,34 @@ describe('Logger Security & Performance Tests', () => {
     it('should inherit redaction behavior in child loggers', () => {
       const childLogger = createChildLogger({
         component: 'sync-service',
-        pat: 'child-logger-pat'
+        pat: 'child-logger-pat',
       })
 
       expect(() => {
         childLogger.warn('Sync operation warning', {
           token: 'sync-token',
           items: 5,
-          secret: 'sync-secret'
+          secret: 'sync-secret',
         })
       }).not.toThrow()
     })
 
     it('should handle deeply nested child loggers with sensitive data', () => {
       const parentLogger = createChildLogger({ service: 'azure-client' })
-      const childLogger = parentLogger.child({ 
+      const childLogger = parentLogger.child({
         operation: 'batch-fetch',
-        pat: 'nested-pat'
+        pat: 'nested-pat',
       })
-      const grandchildLogger = childLogger.child({ 
+      const grandchildLogger = childLogger.child({
         batchId: 'batch-123',
-        authorization: 'nested-auth'
+        authorization: 'nested-auth',
       })
 
       expect(() => {
         grandchildLogger.info('Nested operation completed', {
           password: 'nested-password',
           results: 42,
-          token: 'nested-token'
+          token: 'nested-token',
         })
       }).not.toThrow()
     })
@@ -238,15 +248,17 @@ describe('Logger Security & Performance Tests', () => {
         secret: 'perf-secret',
         metadata: {
           timestamp: new Date().toISOString(),
-          operation: 'performance-test'
+          operation: 'performance-test',
         },
         data: {
-          workItems: Array(50).fill(0).map((_, i) => ({
-            id: i,
-            title: `Work Item ${i}`,
-            state: 'Active'
-          }))
-        }
+          workItems: Array(50)
+            .fill(0)
+            .map((_, i) => ({
+              id: i,
+              title: `Work Item ${i}`,
+              state: 'Active',
+            })),
+        },
       }
 
       const iterations = 20
@@ -269,18 +281,20 @@ describe('Logger Security & Performance Tests', () => {
 
       const startTime = performance.now()
 
-      const workers = Array(concurrentLogs).fill(0).map(async (_, workerId) => {
-        const workerLogger = createChildLogger({ workerId })
-        
-        for (let i = 0; i < logsPerWorker; i++) {
-          workerLogger.info(`Worker ${workerId} log ${i}`, {
-            pat: `worker-pat-${workerId}-${i}`,
-            token: `worker-token-${workerId}`,
-            secret: `worker-secret-${workerId}`,
-            data: { iteration: i }
-          })
-        }
-      })
+      const workers = Array(concurrentLogs)
+        .fill(0)
+        .map(async (_, workerId) => {
+          const workerLogger = createChildLogger({ workerId })
+
+          for (let i = 0; i < logsPerWorker; i++) {
+            workerLogger.info(`Worker ${workerId} log ${i}`, {
+              pat: `worker-pat-${workerId}-${i}`,
+              token: `worker-token-${workerId}`,
+              secret: `worker-secret-${workerId}`,
+              data: { iteration: i },
+            })
+          }
+        })
 
       await Promise.all(workers)
 
@@ -296,18 +310,18 @@ describe('Logger Security & Performance Tests', () => {
   describe('Memory Usage Tests', () => {
     it('should not leak memory with repeated logger creation', () => {
       const initialMemory = process.memoryUsage().heapUsed
-      
+
       // Create many child loggers with sensitive data
       for (let i = 0; i < 1000; i++) {
         const childLogger = createChildLogger({
           iteration: i,
           pat: `memory-test-pat-${i}`,
-          token: `memory-token-${i}`
+          token: `memory-token-${i}`,
         })
-        
+
         childLogger.info('Memory test log', {
           data: `test-data-${i}`,
-          secret: `test-secret-${i}`
+          secret: `test-secret-${i}`,
         })
       }
 

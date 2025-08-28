@@ -1,3 +1,5 @@
+import { URLSearchParams } from 'url'
+
 import axios, { type AxiosResponse, type AxiosError } from 'axios'
 import {
   describe,
@@ -123,7 +125,7 @@ describe('AzureDevOpsRestClient - Batch Operations', () => {
     // Create client - if auth fails, manually override
     try {
       client = new AzureDevOpsRestClient(config)
-    } catch (error) {
+    } catch {
       // If constructor fails due to auth, create manually
       client = Object.create(AzureDevOpsRestClient.prototype)
       ;(client as any).httpClient = mockAxios
@@ -219,11 +221,7 @@ describe('AzureDevOpsRestClient - Batch Operations', () => {
 
     it('should handle empty ID array', async () => {
       console.log('Testing empty array...')
-      console.log('Client auth type:', typeof client.auth)
-      console.log(
-        'Client auth methods:',
-        client.auth ? Object.keys(client.auth) : 'no auth',
-      )
+      console.log('Testing batch operations with empty array')
 
       const result = await client.getWorkItemsBatch([])
       expect(result).toEqual([])

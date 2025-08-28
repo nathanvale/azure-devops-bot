@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { ErrorClassifier, ErrorType, type ClassifiedError } from '../error-classification.js'
+
+import { ErrorClassifier, ErrorType } from '../error-classification.js'
 
 describe('ErrorClassifier', () => {
   describe('classify', () => {
@@ -8,7 +9,7 @@ describe('ErrorClassifier', () => {
         const error = {
           status: 401,
           statusText: 'Unauthorized',
-          message: 'Invalid token'
+          message: 'Invalid token',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -16,9 +17,10 @@ describe('ErrorClassifier', () => {
         expect(result).toEqual({
           type: ErrorType.AUTHENTICATION,
           code: 'INVALID_TOKEN',
-          message: 'PAT token is invalid or expired. Please verify AZURE_DEVOPS_PAT environment variable contains a valid Personal Access Token.',
+          message:
+            'PAT token is invalid or expired. Please verify AZURE_DEVOPS_PAT environment variable contains a valid Personal Access Token.',
           retryable: false,
-          originalError: error
+          originalError: error,
         })
       })
 
@@ -26,7 +28,7 @@ describe('ErrorClassifier', () => {
         const error = {
           status: 403,
           statusText: 'Forbidden',
-          message: 'Access denied'
+          message: 'Access denied',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -34,9 +36,10 @@ describe('ErrorClassifier', () => {
         expect(result).toEqual({
           type: ErrorType.AUTHENTICATION,
           code: 'INSUFFICIENT_PERMISSIONS',
-          message: 'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" scope enabled in Azure DevOps.',
+          message:
+            'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" scope enabled in Azure DevOps.',
           retryable: false,
-          originalError: error
+          originalError: error,
         })
       })
     })
@@ -48,8 +51,8 @@ describe('ErrorClassifier', () => {
           statusText: 'Too Many Requests',
           message: 'Rate limit exceeded',
           headers: {
-            'retry-after': '60'
-          }
+            'retry-after': '60',
+          },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -60,7 +63,7 @@ describe('ErrorClassifier', () => {
           message: 'Rate limit exceeded. Server requests retry after 60000ms',
           retryable: true,
           retryDelayMs: 60000,
-          originalError: error
+          originalError: error,
         })
       })
 
@@ -71,8 +74,8 @@ describe('ErrorClassifier', () => {
           statusText: 'Too Many Requests',
           message: 'Rate limit exceeded',
           headers: {
-            'x-ratelimit-reset': futureTimestamp.toString()
-          }
+            'x-ratelimit-reset': futureTimestamp.toString(),
+          },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -87,7 +90,7 @@ describe('ErrorClassifier', () => {
           status: 429,
           statusText: 'Too Many Requests',
           message: 'Rate limit exceeded',
-          headers: {}
+          headers: {},
         }
 
         const result = ErrorClassifier.classify(error)
@@ -101,8 +104,8 @@ describe('ErrorClassifier', () => {
           statusText: 'Too Many Requests',
           message: 'Rate limit exceeded',
           headers: {
-            'retry-after': '600' // 10 minutes
-          }
+            'retry-after': '600', // 10 minutes
+          },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -115,7 +118,7 @@ describe('ErrorClassifier', () => {
       it('classifies ECONNRESET as NETWORK error', () => {
         const error = {
           code: 'ECONNRESET',
-          message: 'Connection reset by peer'
+          message: 'Connection reset by peer',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -126,14 +129,14 @@ describe('ErrorClassifier', () => {
           message: 'Network connectivity issue: ECONNRESET',
           retryable: true,
           retryDelayMs: 1000,
-          originalError: error
+          originalError: error,
         })
       })
 
       it('classifies ECONNREFUSED as NETWORK error', () => {
         const error = {
           code: 'ECONNREFUSED',
-          message: 'Connection refused'
+          message: 'Connection refused',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -145,7 +148,7 @@ describe('ErrorClassifier', () => {
       it('classifies ETIMEDOUT as NETWORK error', () => {
         const error = {
           code: 'ETIMEDOUT',
-          message: 'Request timeout'
+          message: 'Request timeout',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -157,7 +160,7 @@ describe('ErrorClassifier', () => {
       it('classifies ENOTFOUND as NETWORK error', () => {
         const error = {
           code: 'ENOTFOUND',
-          message: 'DNS lookup failed'
+          message: 'DNS lookup failed',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -169,7 +172,7 @@ describe('ErrorClassifier', () => {
       it('classifies ECONNABORTED as NETWORK error', () => {
         const error = {
           code: 'ECONNABORTED',
-          message: 'Request aborted'
+          message: 'Request aborted',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -181,7 +184,7 @@ describe('ErrorClassifier', () => {
       it('classifies errors with network codes but without status as NETWORK error', () => {
         const error = {
           code: 'ECONNRESET',
-          message: 'Network error without status'
+          message: 'Network error without status',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -196,7 +199,7 @@ describe('ErrorClassifier', () => {
         const error = {
           status: 500,
           statusText: 'Internal Server Error',
-          message: 'Server error'
+          message: 'Server error',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -207,14 +210,14 @@ describe('ErrorClassifier', () => {
           message: 'Azure DevOps server error: 500 Internal Server Error',
           retryable: true,
           retryDelayMs: 2000,
-          originalError: error
+          originalError: error,
         })
       })
 
       it('classifies 502 as SERVER error', () => {
         const error = {
           status: 502,
-          statusText: 'Bad Gateway'
+          statusText: 'Bad Gateway',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -226,7 +229,7 @@ describe('ErrorClassifier', () => {
       it('classifies 503 as SERVER error', () => {
         const error = {
           status: 503,
-          statusText: 'Service Unavailable'
+          statusText: 'Service Unavailable',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -238,7 +241,7 @@ describe('ErrorClassifier', () => {
       it('classifies 504 as SERVER error', () => {
         const error = {
           status: 504,
-          statusText: 'Gateway Timeout'
+          statusText: 'Gateway Timeout',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -253,7 +256,7 @@ describe('ErrorClassifier', () => {
         const error = {
           status: 400,
           statusText: 'Bad Request',
-          message: 'Invalid request'
+          message: 'Invalid request',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -263,14 +266,14 @@ describe('ErrorClassifier', () => {
           code: 'CLIENT_ERROR',
           message: 'Request validation failed: 400 Bad Request',
           retryable: false,
-          originalError: error
+          originalError: error,
         })
       })
 
       it('classifies 404 as VALIDATION error', () => {
         const error = {
           status: 404,
-          statusText: 'Not Found'
+          statusText: 'Not Found',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -282,7 +285,7 @@ describe('ErrorClassifier', () => {
       it('classifies 422 as VALIDATION error', () => {
         const error = {
           status: 422,
-          statusText: 'Unprocessable Entity'
+          statusText: 'Unprocessable Entity',
         }
 
         const result = ErrorClassifier.classify(error)
@@ -295,18 +298,16 @@ describe('ErrorClassifier', () => {
     describe('Unknown Errors', () => {
       it('classifies unknown errors as VALIDATION with UNKNOWN_ERROR code', () => {
         const error = {
-          message: 'Something unexpected happened'
+          message: 'Something unexpected happened',
         }
 
         const result = ErrorClassifier.classify(error)
 
-        expect(result).toEqual({
-          type: ErrorType.VALIDATION,
-          code: 'UNKNOWN_ERROR',
-          message: 'Unclassified error: Something unexpected happened',
-          retryable: false,
-          originalError: error
-        })
+        expect(result.type).toBe(ErrorType.VALIDATION)
+        expect(result.code).toBe('UNKNOWN_ERROR')
+        expect(result.message).toBe('Unclassified error: Something unexpected happened')
+        expect(result.retryable).toBe(false)
+        expect(result.originalError).toBeInstanceOf(Error)
       })
 
       it('handles errors without message', () => {
@@ -316,7 +317,9 @@ describe('ErrorClassifier', () => {
 
         expect(result.type).toBe(ErrorType.VALIDATION)
         expect(result.code).toBe('UNKNOWN_ERROR')
-        expect(result.message).toBe('Unclassified error: Unknown error occurred')
+        expect(result.message).toBe(
+          'Unclassified error: Unknown error occurred',
+        )
         expect(result.retryable).toBe(false)
       })
     })
@@ -328,7 +331,7 @@ describe('ErrorClassifier', () => {
     it('returns false for AUTHENTICATION errors', () => {
       const authError = {
         status: 401,
-        message: 'Unauthorized'
+        message: 'Unauthorized',
       }
 
       const shouldRetry = retryPredicate(authError)
@@ -339,7 +342,7 @@ describe('ErrorClassifier', () => {
     it('returns false for VALIDATION errors', () => {
       const validationError = {
         status: 400,
-        message: 'Bad Request'
+        message: 'Bad Request',
       }
 
       const shouldRetry = retryPredicate(validationError)
@@ -350,7 +353,7 @@ describe('ErrorClassifier', () => {
     it('returns true for RATE_LIMIT errors', () => {
       const rateLimitError = {
         status: 429,
-        message: 'Rate limit exceeded'
+        message: 'Rate limit exceeded',
       }
 
       const shouldRetry = retryPredicate(rateLimitError)
@@ -361,7 +364,7 @@ describe('ErrorClassifier', () => {
     it('returns true for NETWORK errors', () => {
       const networkError = {
         code: 'ECONNRESET',
-        message: 'Connection reset'
+        message: 'Connection reset',
       }
 
       const shouldRetry = retryPredicate(networkError)
@@ -372,7 +375,7 @@ describe('ErrorClassifier', () => {
     it('returns true for SERVER errors', () => {
       const serverError = {
         status: 500,
-        message: 'Internal server error'
+        message: 'Internal server error',
       }
 
       const shouldRetry = retryPredicate(serverError)
@@ -382,7 +385,7 @@ describe('ErrorClassifier', () => {
 
     it('returns false for unknown errors by default', () => {
       const unknownError = {
-        message: 'Unknown error'
+        message: 'Unknown error',
       }
 
       const shouldRetry = retryPredicate(unknownError)
@@ -396,7 +399,7 @@ describe('ErrorClassifier', () => {
       it('uses retry-after header when available', () => {
         const error = {
           status: 429,
-          headers: { 'retry-after': '30' }
+          headers: { 'retry-after': '30' },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -408,7 +411,7 @@ describe('ErrorClassifier', () => {
         const resetTime = Math.floor((Date.now() + 45000) / 1000) // 45 seconds from now
         const error = {
           status: 429,
-          headers: { 'x-ratelimit-reset': resetTime.toString() }
+          headers: { 'x-ratelimit-reset': resetTime.toString() },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -423,8 +426,8 @@ describe('ErrorClassifier', () => {
           status: 429,
           headers: {
             'retry-after': '30',
-            'x-ratelimit-reset': resetTime.toString()
-          }
+            'x-ratelimit-reset': resetTime.toString(),
+          },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -436,7 +439,7 @@ describe('ErrorClassifier', () => {
         const pastTime = Math.floor((Date.now() - 5000) / 1000) // 5 seconds ago
         const error = {
           status: 429,
-          headers: { 'x-ratelimit-reset': pastTime.toString() }
+          headers: { 'x-ratelimit-reset': pastTime.toString() },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -448,7 +451,7 @@ describe('ErrorClassifier', () => {
         const farFutureTime = Math.floor((Date.now() + 600000) / 1000) // 10 minutes from now
         const error = {
           status: 429,
-          headers: { 'x-ratelimit-reset': farFutureTime.toString() }
+          headers: { 'x-ratelimit-reset': farFutureTime.toString() },
         }
 
         const result = ErrorClassifier.classify(error)
@@ -459,7 +462,7 @@ describe('ErrorClassifier', () => {
       it('defaults to 1 minute when no headers available', () => {
         const error = {
           status: 429,
-          headers: {}
+          headers: {},
         }
 
         const result = ErrorClassifier.classify(error)

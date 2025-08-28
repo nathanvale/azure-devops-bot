@@ -1,15 +1,23 @@
-import type { AzureDevOpsPerson } from '../types/azure-devops-api.js'
-import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 import type { Logger } from '@orchestr8/logger'
-import { LoggerFactory } from '../utils/logger.js'
+
+import { ProductionResilienceAdapter } from '@orchestr8/resilience'
+
+import type { AzureDevOpsPerson } from '../types/azure-devops-api.js'
+import type { ResilienceTelemetryContext } from '../types/common.js'
 
 import {
   AzureDevOpsProvider,
   type WorkItemData as RestWorkItemData,
+  type WorkItemDataWithPersons as RestWorkItemDataWithPersons,
   type CommentData as RestCommentData,
   type AzureDevOpsClientConfig,
 } from '../packages/azure-devops-client/dist/index.js'
+import { LoggerFactory } from '../utils/logger.js'
 import { ResiliencePolicySelector } from '../utils/resilience-policies.js'
+import type {
+  ComprehensiveWorkItemData,
+  ComprehensiveWorkItemDataWithPersons,
+} from '../types/database.js'
 
 // Configuration constants
 const ORGANIZATION = 'fwcdev'
@@ -25,7 +33,12 @@ export interface WorkItemCommentData {
   modifiedDate: Date | null
 }
 
-export interface WorkItemData {
+// Re-export comprehensive types for backward compatibility
+export type WorkItemData = ComprehensiveWorkItemData
+export type WorkItemDataWithPersons = ComprehensiveWorkItemDataWithPersons
+
+// Legacy interface for internal mapping only
+interface LegacyWorkItemData {
   id: number
   title: string
   state: string
@@ -78,7 +91,7 @@ export interface WorkItemData {
 
   // Related items
   parentId?: number
-  
+
   // Relationships - extracted from relations array
   relationships?: Array<{
     sourceId: number
@@ -103,7 +116,7 @@ export interface WorkItemData {
   resolution?: string
   businessValue?: number
   timeCriticality?: number
-  
+
   // Custom fields - JSON string of WEF extensions and custom fields
   customFields?: string
 
@@ -116,7 +129,7 @@ export class AzureDevOpsClient {
   private static readonly PROJECT = PROJECT
   private static userEmails: string[] = []
   private restProvider: AzureDevOpsProvider
-  private resilienceAdapter: ProductionResilienceAdapter
+  private resilienceAdapter!: ProductionResilienceAdapter
   private logger?: Logger
 
   constructor() {
@@ -149,7 +162,7 @@ export class AzureDevOpsClient {
     }
 
     this.restProvider = new AzureDevOpsProvider(config)
-    
+
     // Initialize @orchestr8/resilience integration
     this.initializeResilienceServices()
   }
@@ -169,7 +182,7 @@ export class AzureDevOpsClient {
 
     // Initialize ProductionResilienceAdapter with telemetry
     this.resilienceAdapter = new ProductionResilienceAdapter({
-      telemetry: this.createResilienceTelemetry()
+      telemetry: this.createResilienceTelemetry() as any,
     })
   }
 
@@ -178,35 +191,54 @@ export class AzureDevOpsClient {
    */
   private createResilienceTelemetry() {
     return {
-      logEvent: (type: string, context: any, metadata?: Record<string, unknown>) => {
+      logEvent: (
+        type: string,
+        context: ResilienceTelemetryContext,
+        metadata?: Record<string, unknown>,
+      ) => {
         if (this.logger && typeof this.logger.info === 'function') {
-          this.logger.info(`Azure DevOps resilience event: ${type}`, { context, metadata })
+          this.logger.info(`Azure DevOps resilience event: ${type}`, {
+            context,
+            metadata,
+          })
         }
       },
-      
+
       createCircuitBreakerObserver: () => ({
-        onStateChange: (key: string, state: 'closed' | 'open' | 'half-open') => {
+        onStateChange: (
+          key: string,
+          state: 'closed' | 'open' | 'half-open',
+        ) => {
           if (state === 'open') {
             if (this.logger && typeof this.logger.error === 'function') {
-              this.logger.error('Azure DevOps circuit breaker opened - API failures detected', { 
-                circuitKey: key,
-                action: 'blocking_further_attempts'
-              })
+              this.logger.error(
+                'Azure DevOps circuit breaker opened - API failures detected',
+                {
+                  circuitKey: key,
+                  action: 'blocking_further_attempts',
+                },
+              )
             }
           } else if (state === 'closed') {
             if (this.logger && typeof this.logger.info === 'function') {
-              this.logger.info('Azure DevOps circuit breaker closed - API operations recovered', { 
-                circuitKey: key 
-              })
+              this.logger.info(
+                'Azure DevOps circuit breaker closed - API operations recovered',
+                {
+                  circuitKey: key,
+                },
+              )
             }
           } else if (state === 'half-open') {
             if (this.logger && typeof this.logger.warn === 'function') {
-              this.logger.warn('Azure DevOps circuit breaker half-open - testing recovery', {
-                circuitKey: key
-              })
+              this.logger.warn(
+                'Azure DevOps circuit breaker half-open - testing recovery',
+                {
+                  circuitKey: key,
+                },
+              )
             }
           }
-        }
+        },
       }),
 
       onRetry: (attempt: number, error: unknown) => {
@@ -214,7 +246,7 @@ export class AzureDevOpsClient {
           this.logger.warn('Azure DevOps operation retry', {
             event: 'retry_attempt',
             attempt,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           })
         }
       },
@@ -223,7 +255,7 @@ export class AzureDevOpsClient {
           this.logger.error('Azure DevOps circuit breaker opened', {
             event: 'circuit_breaker_open',
             key,
-            failureRate
+            failureRate,
           })
         }
       },
@@ -232,7 +264,7 @@ export class AzureDevOpsClient {
           this.logger.warn('Azure DevOps operation timeout', {
             event: 'operation_timeout',
             operation,
-            duration
+            duration,
           })
         }
       },
@@ -242,7 +274,7 @@ export class AzureDevOpsClient {
             event: 'operation_success',
             operation,
             duration,
-            attempt
+            attempt,
           })
         }
       },
@@ -252,7 +284,7 @@ export class AzureDevOpsClient {
             event: 'operation_failure',
             operation,
             error: error instanceof Error ? error.message : String(error),
-            duration
+            duration,
           })
         }
       },
@@ -264,14 +296,14 @@ export class AzureDevOpsClient {
           if (this.logger && typeof this.logger.debug === 'function') {
             this.logger.debug('Azure DevOps operation timing', {
               operation,
-              durationMs: duration
+              durationMs: duration,
             })
           }
           return duration
         }
       },
-      
-      getLogger: () => this.logger
+
+      getLogger: () => this.logger,
     }
   }
 
@@ -290,73 +322,81 @@ export class AzureDevOpsClient {
     return this.restProvider.getClient()
   }
 
-  async fetchWorkItems(): Promise<WorkItemData[]> {
-    if (this.logger) this.logger.debug('🚀 Starting comprehensive work items sync...')
-    
-    // Apply resilience policy for batch work item operations
-    try {
-      return await this.resilienceAdapter.applyNormalizedPolicy(
-        async () => {
-          // Use REST provider to fetch all work items with comprehensive query
-          const query = {
-            filters: {
-              type: ['User Story', 'Product Backlog Item', 'Bug', 'Task'],
-              state: [], // Will exclude removed items by default
-            },
-            orderBy: 'changedDate',
-            orderDirection: 'desc' as const,
-          }
+  async fetchWorkItems(): Promise<WorkItemDataWithPersons[]> {
+    if (this.logger)
+      this.logger.debug('🚀 Starting comprehensive work items sync...')
 
-          if (this.logger) this.logger.debug('📋 Fetching work items with query:', JSON.stringify(query, null, 2))
-          const startTime = Date.now()
-          
-          const restWorkItems = await this.restProvider.fetchWorkItems(query)
-          
-          const fetchDuration = Date.now() - startTime
-          if (this.logger) this.logger.debug(`✅ Fetched ${restWorkItems.length} work items from Azure DevOps in ${fetchDuration}ms`)
-          if (this.logger) this.logger.debug('🔄 Starting work item transformation process...')
-          
-          const transformStartTime = Date.now()
-          const transformedItems = restWorkItems.map((item, index) => {
-            if (index % 50 === 0) {
-              if (this.logger) this.logger.debug(`  📝 Transforming work items... ${index + 1}/${restWorkItems.length} (${Math.round((index + 1) / restWorkItems.length * 100)}%)`)
-            }
-            return this.transformRestWorkItem(item)
-          })
-          
-          const transformDuration = Date.now() - transformStartTime
-          if (this.logger) this.logger.debug(`✅ Transformed ${transformedItems.length} work items in ${transformDuration}ms`)
-          
-          // Log summary of extracted data
-          const summary = {
-            totalItems: transformedItems.length,
-            withRelationships: transformedItems.filter(item => item.relationships && item.relationships.length > 0).length,
-            withStoryPoints: transformedItems.filter(item => item.storyPoints && item.storyPoints > 0).length,
-            withAcceptanceCriteria: transformedItems.filter(item => item.acceptanceCriteria).length,
-            withCustomFields: transformedItems.filter(item => item.customFields).length,
-            byType: transformedItems.reduce((acc, item) => {
+    // Apply resilience policy for batch work item operations
+    return await this.resilienceAdapter.applyNormalizedPolicy(
+      async () => {
+        // Get validated user emails to filter work items
+        const userEmails = AzureDevOpsClient.getUserEmails()
+
+        // Use REST provider to fetch all work items with comprehensive query
+        const query = {
+          filters: {
+            type: ['User Story', 'Product Backlog Item', 'Bug', 'Task'],
+            state: [], // Will exclude removed items by default
+            // Include assignedTo filter if user emails are configured
+            ...(userEmails.length > 0 ? { assignedTo: userEmails } : {}),
+          },
+          orderBy: 'changedDate',
+          orderDirection: 'desc' as const,
+        }
+
+        if (this.logger)
+          this.logger.debug(
+            '📋 Fetching work items with query:',
+            { query },
+          )
+        const startTime = Date.now()
+
+        // Use fetchWorkItemsWithPersons to get complete person data per DEC-009
+        // Return directly without transformation to preserve Person objects
+        const restWorkItems =
+          await this.restProvider.fetchWorkItemsWithPersons(query)
+
+        const fetchDuration = Date.now() - startTime
+        if (this.logger)
+          this.logger.debug(
+            `✅ Fetched ${restWorkItems.length} work items from Azure DevOps in ${fetchDuration}ms`,
+          )
+
+        // Log summary of extracted data (adapted for WorkItemDataWithPersons)
+        const summary = {
+          totalItems: restWorkItems.length,
+          withAssignedTo: restWorkItems.filter((item) => item.assignedToPerson)
+            .length,
+          withCreatedBy: restWorkItems.filter((item) => item.createdByPerson)
+            .length,
+          byType: restWorkItems.reduce(
+            (acc, item) => {
               acc[item.type] = (acc[item.type] || 0) + 1
               return acc
-            }, {} as Record<string, number>),
-            byState: transformedItems.reduce((acc, item) => {
+            },
+            {} as Record<string, number>,
+          ),
+          byState: restWorkItems.reduce(
+            (acc, item) => {
               acc[item.state] = (acc[item.state] || 0) + 1
               return acc
-            }, {} as Record<string, number>)
-          }
-          
-          if (this.logger) this.logger.debug('📈 Work items sync summary:', JSON.stringify(summary, null, 2))
-          
-          return transformedItems
-        },
-        ResiliencePolicySelector.getPolicy('batch'),
-        'retry-cb-timeout'
-      )
-    } catch (error: any) {
-      // For resilience-integration.test.ts: let RetryExhaustedError bubble up
-      // For azure-devops-resilience-integration.test.ts: unwrap to get original error
-      // TODO: This creates a conflict between test expectations
-      throw error
-    }
+            },
+            {} as Record<string, number>,
+          ),
+        }
+
+        if (this.logger)
+          this.logger.debug(
+            '📈 Work items sync summary:',
+            { summary },
+          )
+
+        // Return WorkItemDataWithPersons directly to preserve Person objects
+        return restWorkItems
+      },
+      ResiliencePolicySelector.getPolicy('batch'),
+      'retry-cb-timeout',
+    )
   }
 
   async fetchWorkItemComments(
@@ -372,22 +412,28 @@ export class AzureDevOpsClient {
           )
         },
         ResiliencePolicySelector.getPolicy('sync'),
-        'retry-cb-timeout'
+        'retry-cb-timeout',
       )
     } catch (error) {
       // Check if this is a RetryExhaustedError that wraps another error
-      if (error instanceof Error && error.name === 'RetryExhaustedError' && 'lastError' in error) {
-        const lastError = (error as any).lastError
+      if (
+        error instanceof Error &&
+        error.name === 'RetryExhaustedError' &&
+        'lastError' in error
+      ) {
+        const lastError = (error as { lastError?: Error }).lastError
         // If the last error is a resilience-specific error, throw that instead
-        if (lastError && lastError.name && (
-          lastError.name.includes('ResilienceError') ||
-          lastError.name.includes('CircuitBreakerError') ||
-          lastError.name.includes('RateLimitError')
-        )) {
+        if (
+          lastError &&
+          lastError.name &&
+          (lastError.name.includes('ResilienceError') ||
+            lastError.name.includes('CircuitBreakerError') ||
+            lastError.name.includes('RateLimitError'))
+        ) {
           throw lastError
         }
       }
-      
+
       // For all other errors, throw as-is
       throw error
     }
@@ -395,33 +441,25 @@ export class AzureDevOpsClient {
 
   async fetchSingleWorkItem(id: number): Promise<WorkItemData> {
     // Apply resilience policy for single work item operations
-    try {
-      return await this.resilienceAdapter.applyNormalizedPolicy(
-        async () => {
-          const restWorkItem = await this.restProvider.getWorkItem(id)
+    return await this.resilienceAdapter.applyNormalizedPolicy(
+      async () => {
+        const restWorkItem = await this.restProvider.getWorkItem(id)
 
-          if (!restWorkItem) {
-            throw new Error(`Work item ${id} not found or returned null`)
-          }
+        if (!restWorkItem) {
+          throw new Error(`Work item ${id} not found or returned null`)
+        }
 
-          return this.transformRestWorkItem(restWorkItem)
-        },
-        ResiliencePolicySelector.getPolicy('sync'),
-        'retry-cb-timeout'
-      )
-    } catch (error) {
-      // For resilience-integration.test.ts: let RetryExhaustedError bubble up
-      // TODO: This creates a conflict between test expectations
-      
-      // For all other errors, throw as-is
-      throw error
-    }
+        return this.transformRestWorkItem(restWorkItem)
+      },
+      ResiliencePolicySelector.getPolicy('sync'),
+      'retry-cb-timeout',
+    )
   }
 
   async fetchWorkItemsDetailed(
     workItemIds: number[],
-    concurrencyLimit: number = 5,
-  ): Promise<WorkItemData[]> {
+    _concurrencyLimit: number = 5,
+  ): Promise<WorkItemDataWithPersons[]> {
     if (!workItemIds || workItemIds.length === 0) {
       return []
     }
@@ -429,28 +467,11 @@ export class AzureDevOpsClient {
     // Apply resilience policy for batch operations
     return await this.resilienceAdapter.applyNormalizedPolicy(
       async () => {
-        // Use the REST client's batch API instead of individual calls
-        // Convert workItemIds to RestWorkItemData format
-        const restClient = this.restProvider.getClient()
-        const workItems = await restClient.batchGetWorkItems(workItemIds)
-        
-        // Convert WorkItem to RestWorkItemData format for transformation
-        const restWorkItemData = workItems.map(item => ({
-          id: item.id,
-          title: item.fields['System.Title'],
-          state: item.fields['System.State'],
-          type: item.fields['System.WorkItemType'],
-          assignedTo: item.fields['System.AssignedTo']?.displayName || 'Unassigned',
-          createdDate: item.fields['System.CreatedDate'],
-          changedDate: item.fields['System.ChangedDate'],
-          description: item.fields['System.Description'],
-          raw: item
-        }))
-        
-        return restWorkItemData.map((item) => this.transformRestWorkItem(item))
+        // Use the provider's method which extracts Person data per DEC-009
+        return await this.restProvider.getWorkItemsBatch(workItemIds)
       },
       ResiliencePolicySelector.getPolicy('batch'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
   }
 
@@ -458,58 +479,67 @@ export class AzureDevOpsClient {
    * Batch fetch work items using the REST client's optimized batch API
    * This reduces API calls from N individual calls to ~N/200 batch calls
    */
-  async fetchWorkItemsBatch(workItemIds: number[]): Promise<WorkItemData[]> {
+  async fetchWorkItemsBatch(
+    workItemIds: number[],
+  ): Promise<WorkItemDataWithPersons[]> {
     if (!workItemIds || workItemIds.length === 0) {
       return []
     }
 
     // Use console.log since logger might not be initialized yet
-    if (this.logger) this.logger.debug(`🔄 Starting batch work item fetch: ${workItemIds.length} items (${Math.ceil(workItemIds.length / 200)} batches)`)
+    if (this.logger)
+      this.logger.debug(
+        `🔄 Starting batch work item fetch: ${workItemIds.length} items (${Math.ceil(workItemIds.length / 200)} batches)`,
+      )
 
     // Apply resilience policy for batch operations
     return await this.resilienceAdapter.applyNormalizedPolicy(
       async () => {
-        // Use the REST client's batch API which handles chunking into 200-item batches
-        const restClient = this.restProvider.getClient()
-        const workItems = await restClient.batchGetWorkItems(workItemIds)
-        
-        // Use console.log since logger might not be initialized yet
-        if (this.logger) this.logger.debug(`✅ Batch work item fetch completed: ${workItems.length}/${workItemIds.length} items retrieved`)
+        // Use the provider's method which extracts Person data per DEC-009
+        // This will fetch work items and extract all Person objects
+        const workItemsWithPersons =
+          await this.restProvider.getWorkItemsBatch(workItemIds)
 
-        // Convert WorkItem to RestWorkItemData format for transformation
-        const restWorkItemData = workItems.map(item => ({
-          id: item.id,
-          title: item.fields['System.Title'],
-          state: item.fields['System.State'],
-          type: item.fields['System.WorkItemType'],
-          assignedTo: item.fields['System.AssignedTo']?.displayName || 'Unassigned',
-          createdDate: item.fields['System.CreatedDate'],
-          changedDate: item.fields['System.ChangedDate'],
-          description: item.fields['System.Description'],
-          raw: item
-        }))
-        
-        return restWorkItemData.map((item) => this.transformRestWorkItem(item))
+        if (this.logger)
+          this.logger.debug(
+            `✅ Batch work item fetch completed: ${workItemsWithPersons.length}/${workItemIds.length} items retrieved`,
+          )
+
+        // Return WorkItemDataWithPersons directly to preserve Person objects
+        return workItemsWithPersons
       },
       ResiliencePolicySelector.getPolicy('batch'),
-      'retry-cb-timeout'
+      'retry-cb-timeout',
     )
   }
 
-  async addWorkItemComment(workItemId: number, comment: string): Promise<any> {
+  async addWorkItemComment(
+    workItemId: number,
+    comment: string,
+  ): Promise<{ id: string; version: number; text: string; url: string }> {
     // Validate comment text
     const trimmedComment = comment.trim()
     if (!trimmedComment) {
       throw new Error('Comment text cannot be empty')
     }
 
-    if (this.logger) this.logger.debug(`💬 Adding comment to work item ${workItemId}`)
+    if (this.logger)
+      this.logger.debug(`💬 Adding comment to work item ${workItemId}`)
 
     // The REST client already has its own resilience policies, so we don't need to wrap it again
     const restClient = this.restProvider.getClient()
-    const result = await restClient.addWorkItemComment(workItemId, trimmedComment)
-    if (this.logger) this.logger.debug(`✅ Successfully added comment to work item ${workItemId}`)
-    return result
+    const result = await restClient.addWorkItemComment(
+      workItemId,
+      trimmedComment,
+    )
+    if (this.logger)
+      this.logger.debug(
+        `✅ Successfully added comment to work item ${workItemId}`,
+      )
+    return {
+      ...result,
+      url: (result as any).url || `https://dev.azure.com/${(this.restProvider as any).organization}/_apis/wit/workItems/${workItemId}/comments/${result.id}`,
+    }
   }
 
   async linkWorkItemToPullRequest(
@@ -518,46 +548,77 @@ export class AzureDevOpsClient {
   ): Promise<void> {
     const trimmedUrl = pullRequestUrl.trim()
 
-    if (this.logger) this.logger.debug(
-      `🔗 Linking work item ${workItemId} to pull request: ${trimmedUrl}`,
-    )
+    if (this.logger)
+      this.logger.debug(
+        `🔗 Linking work item ${workItemId} to pull request: ${trimmedUrl}`,
+      )
 
     // The REST client already has its own resilience policies, so we don't need to wrap it again
     const restClient = this.restProvider.getClient()
     await restClient.linkWorkItemToPullRequest(workItemId, trimmedUrl)
-    if (this.logger) this.logger.debug(
-      `✅ Successfully linked work item ${workItemId} to pull request`,
-    )
+    if (this.logger)
+      this.logger.debug(
+        `✅ Successfully linked work item ${workItemId} to pull request`,
+      )
   }
 
   /**
    * Transforms REST provider WorkItemData to the existing WorkItemData format
+   * Updated to handle WorkItemDataWithPersons which includes Person objects
    */
-  private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
-    const rawData = restWorkItem.raw as any
+  private transformRestWorkItem(
+    restWorkItem: RestWorkItemData | WorkItemDataWithPersons,
+  ): WorkItemData {
+    const rawData = restWorkItem.raw as Record<string, unknown>
     const fields = rawData.fields || rawData // Handle both nested and flat field structures
-    const workItemId = typeof restWorkItem.id === 'string' ? parseInt(restWorkItem.id, 10) : restWorkItem.id
+    const fieldsAny = fields as any // Type assertion for Azure DevOps field access
+    const workItemId =
+      typeof restWorkItem.id === 'string'
+        ? parseInt(restWorkItem.id, 10)
+        : restWorkItem.id
 
-    if (this.logger) this.logger.debug(`🔄 Transforming work item ${workItemId} (${restWorkItem.type}: ${restWorkItem.title})`)
-    
+    if (this.logger)
+      this.logger.debug(
+        `🔄 Transforming work item ${workItemId} (${restWorkItem.type}: ${restWorkItem.title})`,
+      )
+
     // Log field extraction details for debugging
     const extractedFields = {
       basicFields: ['id', 'title', 'state', 'type', 'assignedTo'],
       sprintFields: ['iterationPath', 'areaPath', 'boardColumn', 'boardLane'],
-      dateFields: ['createdDate', 'changedDate', 'closedDate', 'resolvedDate', 'activatedDate'],
-      peopleFields: ['createdBy', 'changedBy', 'closedBy', 'resolvedBy', 'activatedBy'],
+      dateFields: [
+        'createdDate',
+        'changedDate',
+        'closedDate',
+        'resolvedDate',
+        'activatedDate',
+      ],
+      peopleFields: [
+        'createdBy',
+        'changedBy',
+        'closedBy',
+        'resolvedBy',
+        'activatedBy',
+      ],
       workFields: ['storyPoints', 'effort', 'remainingWork', 'completedWork'],
       contentFields: ['acceptanceCriteria', 'reproSteps', 'systemInfo'],
-      relationshipCount: (rawData.relations || []).length
+      relationshipCount: Array.isArray(rawData.relations) ? rawData.relations.length : 0,
     }
-    
-    if (this.logger) this.logger.debug(`  📊 Field extraction summary for work item ${workItemId}:`, {
-      relationshipCount: extractedFields.relationshipCount,
-      hasAcceptanceCriteria: !!fields['Microsoft.VSTS.Common.AcceptanceCriteria'],
-      hasDescription: !!(restWorkItem.description || fields['System.Description']),
-      hasStoryPoints: !!fields['Microsoft.VSTS.Scheduling.StoryPoints'],
-      boardColumn: fields['System.BoardColumn'] || 'N/A'
-    })
+
+    if (this.logger)
+      this.logger.debug(
+        `  📊 Field extraction summary for work item ${workItemId}:`,
+        {
+          relationshipCount: extractedFields.relationshipCount,
+          hasAcceptanceCriteria:
+            !!fieldsAny['Microsoft.VSTS.Common.AcceptanceCriteria'],
+          hasDescription: !!(
+            restWorkItem.description || fieldsAny['System.Description']
+          ),
+          hasStoryPoints: !!fieldsAny['Microsoft.VSTS.Scheduling.StoryPoints'],
+          boardColumn: fieldsAny['System.BoardColumn'] || 'N/A',
+        },
+      )
 
     return {
       id:
@@ -568,109 +629,120 @@ export class AzureDevOpsClient {
       state: restWorkItem.state,
       type: restWorkItem.type,
       assignedTo: restWorkItem.assignedTo || 'Unassigned',
-      lastUpdatedAt: new Date(restWorkItem.changedDate),
-      description: restWorkItem.description || fields['System.Description'] || '',
+      // lastUpdatedAt: new Date(restWorkItem.changedDate), // Not in ComprehensiveWorkItemData interface
+      description:
+        restWorkItem.description || fieldsAny['System.Description'] || '',
 
       // Sprint/Board Info - Enhanced with additional fields from test.json
-      iterationPath: fields['System.IterationPath'],
-      areaPath: fields['System.AreaPath'],
-      boardColumn: fields['System.BoardColumn'],
-      boardColumnDone: fields['System.BoardColumnDone'] === true,
-      boardLane: fields['System.BoardLane'] || fields['WEF_352AABABD92A469BB5F1976D53DB379D_Kanban.Lane'],
+      iterationPath: fieldsAny['System.IterationPath'],
+      areaPath: fieldsAny['System.AreaPath'],
+      boardColumn: fieldsAny['System.BoardColumn'],
+      boardColumnDone: fieldsAny['System.BoardColumnDone'] === true,
+      boardLane:
+        fieldsAny['System.BoardLane'] ||
+        fieldsAny['WEF_352AABABD92A469BB5F1976D53DB379D_Kanban.Lane'],
 
       // Priority/Tags
-      priority: fields['Microsoft.VSTS.Common.Priority'],
-      severity: fields['Microsoft.VSTS.Common.Severity'],
-      tags: fields['System.Tags'],
+      priority: fieldsAny['Microsoft.VSTS.Common.Priority'],
+      severity: fieldsAny['Microsoft.VSTS.Common.Severity'],
+      tags: fieldsAny['System.Tags'],
 
       // All the dates - Enhanced with more date fields
-      createdDate: fields['System.CreatedDate']
-        ? new Date(fields['System.CreatedDate'])
+      createdDate: fieldsAny['System.CreatedDate']
+        ? new Date(fieldsAny['System.CreatedDate']).toISOString()
+        : '',
+      changedDate: restWorkItem.changedDate ? new Date(restWorkItem.changedDate).toISOString() : '',
+      closedDate: fieldsAny['Microsoft.VSTS.Common.ClosedDate']
+        ? new Date(fieldsAny['Microsoft.VSTS.Common.ClosedDate']).toISOString()
         : undefined,
-      changedDate: new Date(restWorkItem.changedDate),
-      closedDate: fields['Microsoft.VSTS.Common.ClosedDate']
-        ? new Date(fields['Microsoft.VSTS.Common.ClosedDate'])
+      resolvedDate: fieldsAny['Microsoft.VSTS.Common.ResolvedDate']
+        ? new Date(fieldsAny['Microsoft.VSTS.Common.ResolvedDate']).toISOString()
         : undefined,
-      resolvedDate: fields['Microsoft.VSTS.Common.ResolvedDate']
-        ? new Date(fields['Microsoft.VSTS.Common.ResolvedDate'])
+      activatedDate: fieldsAny['Microsoft.VSTS.Common.ActivatedDate']
+        ? new Date(fieldsAny['Microsoft.VSTS.Common.ActivatedDate']).toISOString()
         : undefined,
-      activatedDate: fields['Microsoft.VSTS.Common.ActivatedDate']
-        ? new Date(fields['Microsoft.VSTS.Common.ActivatedDate'])
+      stateChangeDate: fieldsAny['Microsoft.VSTS.Common.StateChangeDate']
+        ? new Date(fieldsAny['Microsoft.VSTS.Common.StateChangeDate']).toISOString()
         : undefined,
-      stateChangeDate: fields['Microsoft.VSTS.Common.StateChangeDate']
-        ? new Date(fields['Microsoft.VSTS.Common.StateChangeDate'])
+      authorizedDate: fieldsAny['System.AuthorizedDate']
+        ? new Date(fieldsAny['System.AuthorizedDate']).toISOString()
         : undefined,
-      authorizedDate: fields['System.AuthorizedDate']
-        ? new Date(fields['System.AuthorizedDate'])
-        : undefined,
-      revisedDate: fields['System.RevisedDate']
-        ? new Date(fields['System.RevisedDate'])
+      revisedDate: fieldsAny['System.RevisedDate']
+        ? new Date(fieldsAny['System.RevisedDate']).toISOString()
         : undefined,
 
       // People - Enhanced with more person fields
-      createdBy: this.extractPersonNameFromRaw(fields['System.CreatedBy']),
-      changedBy: this.extractPersonNameFromRaw(fields['System.ChangedBy']),
+      createdBy: this.extractPersonNameFromRaw(fieldsAny['System.CreatedBy']),
+      changedBy: this.extractPersonNameFromRaw(fieldsAny['System.ChangedBy']),
       closedBy: this.extractPersonNameFromRaw(
-        fields['Microsoft.VSTS.Common.ClosedBy'],
+        fieldsAny['Microsoft.VSTS.Common.ClosedBy'],
       ),
       resolvedBy: this.extractPersonNameFromRaw(
-        fields['Microsoft.VSTS.Common.ResolvedBy'],
+        fieldsAny['Microsoft.VSTS.Common.ResolvedBy'],
       ),
       activatedBy: this.extractPersonNameFromRaw(
-        fields['Microsoft.VSTS.Common.ActivatedBy'],
+        fieldsAny['Microsoft.VSTS.Common.ActivatedBy'],
       ),
-      authorizedAs: this.extractPersonNameFromRaw(fields['System.AuthorizedAs']),
+      authorizedAs: this.extractPersonNameFromRaw(
+        fieldsAny['System.AuthorizedAs'],
+      ),
 
       // Work tracking - Enhanced with schedule fields
       storyPoints: this.parseFloat(
-        fields['Microsoft.VSTS.Scheduling.StoryPoints'],
+        fieldsAny['Microsoft.VSTS.Scheduling.StoryPoints'],
       ),
-      effort: this.parseFloat(fields['Microsoft.VSTS.Scheduling.Effort']),
+      effort: this.parseFloat(fieldsAny['Microsoft.VSTS.Scheduling.Effort']),
       remainingWork: this.parseFloat(
-        fields['Microsoft.VSTS.Scheduling.RemainingWork'],
+        fieldsAny['Microsoft.VSTS.Scheduling.RemainingWork'],
       ),
       completedWork: this.parseFloat(
-        fields['Microsoft.VSTS.Scheduling.CompletedWork'],
+        fieldsAny['Microsoft.VSTS.Scheduling.CompletedWork'],
       ),
       originalEstimate: this.parseFloat(
-        fields['Microsoft.VSTS.Scheduling.OriginalEstimate'],
+        fieldsAny['Microsoft.VSTS.Scheduling.OriginalEstimate'],
       ),
 
       // Content
-      acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'],
-      reproSteps: fields['Microsoft.VSTS.TCM.ReproSteps'],
-      systemInfo: fields['Microsoft.VSTS.TCM.SystemInfo'],
+      acceptanceCriteria: fieldsAny['Microsoft.VSTS.Common.AcceptanceCriteria'],
+      reproSteps: fieldsAny['Microsoft.VSTS.TCM.ReproSteps'],
+      systemInfo: fieldsAny['Microsoft.VSTS.TCM.SystemInfo'],
 
       // Related items (extract from relations in raw data)
-      parentId: this.extractParentIdFromRaw(rawData.relations || []),
-      
+      parentId: this.extractParentIdFromRaw(Array.isArray(rawData.relations) ? rawData.relations : []),
+
       // Extract all relationships for future relationship table storage
       relationships: this.extractAllRelationshipsFromRaw(
-        typeof restWorkItem.id === 'string' ? parseInt(restWorkItem.id, 10) : restWorkItem.id,
-        rawData.relations || []
-      ),
+        typeof restWorkItem.id === 'string'
+          ? parseInt(restWorkItem.id, 10)
+          : restWorkItem.id,
+        Array.isArray(rawData.relations) ? rawData.relations : [],
+      ) as any,
 
       // Additional Azure DevOps fields - Enhanced from test.json structure
-      rev: rawData.rev,
-      reason: fields['System.Reason'],
-      watermark: fields['System.Watermark'],
-      url: rawData.url,
-      commentCount: fields['System.CommentCount'] || 0,
-      hasAttachments: this.hasAttachmentsFromRaw(rawData.relations || []),
-      teamProject: fields['System.TeamProject'],
-      areaId: fields['System.AreaId'],
-      nodeId: fields['System.IterationId'],
-      stackRank: this.parseFloat(fields['Microsoft.VSTS.Common.StackRank']),
-      valueArea: fields['Microsoft.VSTS.Common.ValueArea'],
-      
+      rev: typeof rawData.rev === 'number' ? rawData.rev : undefined,
+      reason: fieldsAny['System.Reason'],
+      watermark: typeof rawData.watermark === 'number' ? rawData.watermark : undefined,
+      url: typeof rawData.url === 'string' ? rawData.url : undefined,
+      commentCount: fieldsAny['System.CommentCount'] || 0,
+      hasAttachments: this.hasAttachmentsFromRaw(Array.isArray(rawData.relations) ? rawData.relations : []),
+      teamProject: fieldsAny['System.TeamProject'],
+      areaId: fieldsAny['System.AreaId'],
+      nodeId: fieldsAny['System.IterationId'],
+      stackRank: this.parseFloat(fieldsAny['Microsoft.VSTS.Common.StackRank']),
+      valueArea: fieldsAny['Microsoft.VSTS.Common.ValueArea'],
+
       // Additional comprehensive fields from test.json
-      risk: fields['Microsoft.VSTS.Common.Risk'],
-      resolution: fields['Microsoft.VSTS.Common.Resolution'],
-      businessValue: this.parseFloat(fields['Microsoft.VSTS.Common.BusinessValue']),
-      timeCriticality: this.parseFloat(fields['Microsoft.VSTS.Common.TimeCriticality']),
+      risk: fieldsAny['Microsoft.VSTS.Common.Risk'],
+      resolution: fieldsAny['Microsoft.VSTS.Common.Resolution'],
+      businessValue: this.parseFloat(
+        fieldsAny['Microsoft.VSTS.Common.BusinessValue'],
+      ),
+      timeCriticality: this.parseFloat(
+        fieldsAny['Microsoft.VSTS.Common.TimeCriticality'],
+      ),
 
       // Custom fields - Extract all WEF (Work item Extension Framework) fields as JSON
-      customFields: this.extractCustomFields(rawData),
+      customFields: this.extractCustomFields(rawData) || undefined,
 
       // Store complete raw JSON for backup
       rawJson: JSON.stringify(rawData),
@@ -680,7 +752,14 @@ export class AzureDevOpsClient {
   /**
    * Extract all relationships from relations array in raw data
    */
-  private extractAllRelationshipsFromRaw(workItemId: number, relations: any[]): Array<{
+  private extractAllRelationshipsFromRaw(
+    workItemId: number,
+    relations: Array<{
+      rel: string
+      url: string
+      attributes?: Record<string, unknown>
+    }>,
+  ): Array<{
     sourceId: number
     targetId: number
     relationshipType: string
@@ -697,18 +776,20 @@ export class AzureDevOpsClient {
       attributes?: string
     }> = []
 
-    relations.forEach(relation => {
+    relations.forEach((relation) => {
       if (relation.rel && relation.url) {
         // Extract target work item ID from URL
         const urlMatch = relation.url.match(/workItems\/(\d+)$/)
-        if (urlMatch) {
+        if (urlMatch && urlMatch[1]) {
           const targetId = parseInt(urlMatch[1], 10)
           if (!isNaN(targetId)) {
             relationships.push({
               sourceId: workItemId,
               targetId: targetId,
               relationshipType: relation.rel,
-              attributes: relation.attributes ? JSON.stringify(relation.attributes) : undefined
+              attributes: relation.attributes
+                ? JSON.stringify(relation.attributes)
+                : undefined,
             })
           }
         }
@@ -716,7 +797,10 @@ export class AzureDevOpsClient {
     })
 
     if (relationships.length > 0) {
-      if (this.logger) this.logger.debug(`📊 Extracted ${relationships.length} relationships for work item ${workItemId}`)
+      if (this.logger)
+        this.logger.debug(
+          `📊 Extracted ${relationships.length} relationships for work item ${workItemId}`,
+        )
     }
     return relationships
   }
@@ -724,21 +808,28 @@ export class AzureDevOpsClient {
   /**
    * Extract custom fields (WEF extensions and other non-standard fields) as JSON string
    */
-  private extractCustomFields(rawData: any): string | null {
-    const customFields: Record<string, any> = {}
-    
+  private extractCustomFields(rawData: Record<string, unknown>): string | null {
+    const customFields: Record<string, unknown> = {}
+
     // Extract all WEF (Work item Extension Framework) fields
-    Object.keys(rawData).forEach(key => {
-      if (key.startsWith('WEF_') || 
-          key.startsWith('Custom.') ||
-          key.startsWith('Microsoft.VSTS.Scheduling.StartDate') ||
-          key.startsWith('Microsoft.VSTS.Scheduling.FinishDate') ||
-          (key.includes('_') && !key.startsWith('System.') && !key.startsWith('Microsoft.VSTS.Common.') && !key.startsWith('Microsoft.VSTS.Scheduling.'))) {
+    Object.keys(rawData).forEach((key) => {
+      if (
+        key.startsWith('WEF_') ||
+        key.startsWith('Custom.') ||
+        key.startsWith('Microsoft.VSTS.Scheduling.StartDate') ||
+        key.startsWith('Microsoft.VSTS.Scheduling.FinishDate') ||
+        (key.includes('_') &&
+          !key.startsWith('System.') &&
+          !key.startsWith('Microsoft.VSTS.Common.') &&
+          !key.startsWith('Microsoft.VSTS.Scheduling.'))
+      ) {
         customFields[key] = rawData[key]
       }
     })
 
-    return Object.keys(customFields).length > 0 ? JSON.stringify(customFields) : null
+    return Object.keys(customFields).length > 0
+      ? JSON.stringify(customFields)
+      : null
   }
 
   /**
@@ -756,8 +847,8 @@ export class AzureDevOpsClient {
       createdDate: new Date(restComment.createdDate),
       modifiedBy: restComment.raw.modifiedBy
         ? typeof restComment.raw.modifiedBy === 'object' &&
-          restComment.raw.modifiedBy.displayName
-          ? restComment.raw.modifiedBy.displayName
+          (restComment.raw.modifiedBy as any).displayName
+          ? (restComment.raw.modifiedBy as any).displayName
           : restComment.raw.modifiedBy
         : null,
       modifiedDate: restComment.modifiedDate
@@ -769,13 +860,16 @@ export class AzureDevOpsClient {
   /**
    * Helper methods for data extraction from raw REST data
    */
-  private extractPersonNameFromRaw(person: any): string {
+  private extractPersonNameFromRaw(person: unknown): string {
     if (!person) return 'Unassigned'
     if (typeof person === 'string') return person
-    return person.uniqueName || person.displayName || 'Unassigned'
+    const personObj = person as any
+    return personObj.uniqueName || personObj.displayName || 'Unassigned'
   }
 
-  private extractParentIdFromRaw(relations: any[]): number | undefined {
+  private extractParentIdFromRaw(
+    relations: Array<{ rel: string; url: string }>,
+  ): number | undefined {
     if (!relations || !Array.isArray(relations)) return undefined
 
     const parentRelation = relations.find(
@@ -790,7 +884,7 @@ export class AzureDevOpsClient {
     return undefined
   }
 
-  private hasAttachmentsFromRaw(relations: any[]): boolean {
+  private hasAttachmentsFromRaw(relations: Array<{ rel: string }>): boolean {
     if (!relations || !Array.isArray(relations)) return false
     return relations.some((rel) => rel.rel === 'AttachedFile')
   }
@@ -845,11 +939,12 @@ export class AzureDevOpsClient {
             }
           },
           ResiliencePolicySelector.getPolicy('auth'),
-          'retry-cb-timeout'
+          'retry-cb-timeout',
         )
       } catch (error) {
         // If query fails, mark as invalid
-        if (this.logger) this.logger.warn(`Failed to validate email ${email}:`, error)
+        if (this.logger)
+          this.logger.warn(`Failed to validate email ${email}:`, error as any)
         invalid.push(email)
       }
     }

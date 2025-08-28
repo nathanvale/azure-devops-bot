@@ -47,6 +47,10 @@ export default [
         clearInterval: 'readonly',
         URL: 'readonly',
         NodeJS: 'readonly',
+        performance: 'readonly',
+        AzureAuth: 'readonly',
+        fetch: 'readonly',
+        btoa: 'readonly',
       },
     },
     plugins: {
@@ -93,6 +97,24 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        exports: 'writable',
+        module: 'writable',
+        require: 'readonly',
+        global: 'readonly',
+      },
+    },
+  },
+  {
+    // Override rules for test files
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   eslintConfigPrettier,

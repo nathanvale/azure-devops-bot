@@ -1,19 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 import type { ResiliencePolicy } from '@orchestr8/resilience'
+
 import { performance } from 'perf_hooks'
+
+import { ProductionResilienceAdapter } from '@orchestr8/resilience'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+
 import {
   authenticationPolicy,
   syncOperationsPolicy,
   batchOperationsPolicy,
   rateLimitAwarePolicy,
-  ResiliencePolicySelector
+  ResiliencePolicySelector,
 } from '../resilience-policies'
 
 describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
   let adapter: ProductionResilienceAdapter
   let initialMemory: number
-  
+
   beforeEach(() => {
     adapter = new ProductionResilienceAdapter()
     initialMemory = process.memoryUsage().heapUsed
@@ -32,21 +35,21 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
         authenticationPolicy,
         syncOperationsPolicy,
         batchOperationsPolicy,
-        rateLimitAwarePolicy
+        rateLimitAwarePolicy,
       ]
-      
+
       const iterations = 1000
       const startTime = performance.now()
 
       for (let i = 0; i < iterations; i++) {
         for (const policy of policies) {
           // Simulate policy evaluation overhead
-          const isRetryable = policy.retry.retryOn(new Error('test error'))
+          const isRetryable = policy.retry ? true : false // retryOn doesn't exist in current interface
           const hasTimeout = !!policy.timeout
           const hasCircuitBreaker = !!policy.circuitBreaker
-          
+
           expect(typeof isRetryable).toBe('boolean')
-          expect(typeof hasTimeout).toBe('boolean')  
+          expect(typeof hasTimeout).toBe('boolean')
           expect(typeof hasCircuitBreaker).toBe('boolean')
         }
       }
@@ -66,13 +69,14 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
-        }
+        },
       }
 
       const operation = async () => {
         // Create some temporary data that should be GCed
-        const tempData = Array(100).fill(0).map((_, i) => ({ id: i, data: `item-${i}` }))
+        const tempData = Array(100)
+          .fill(0)
+          .map((_, i) => ({ id: i, data: `item-${i}` }))
         return tempData.length
       }
 
@@ -85,7 +89,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
       }
 
       expect(results).toHaveLength(iterations)
-      expect(results.every(r => r === 100)).toBe(true)
+      expect(results.every((r) => r === 100)).toBe(true)
 
       // Force garbage collection
       if (global.gc) {
@@ -107,34 +111,35 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
         },
         circuitBreaker: {
           key: 'concurrent-test',
           failureThreshold: 5,
           recoveryTime: 1000,
           sampleSize: 10,
-          halfOpenPolicy: 'single-probe'
-        }
+          halfOpenPolicy: 'single-probe',
+        },
       }
 
       const operation = async (id: number) => {
         // Simulate some data processing
-        const data = Array(50).fill(0).map((_, i) => ({ 
-          id: i + (id * 50), 
-          processed: true,
-          timestamp: Date.now()
-        }))
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 10))
+        const data = Array(50)
+          .fill(0)
+          .map((_, i) => ({
+            id: i + id * 50,
+            processed: true,
+            timestamp: Date.now(),
+          }))
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 10))
         return data
       }
 
       const concurrentOps = 50
       const startTime = performance.now()
 
-      const promises = Array(concurrentOps).fill(0).map((_, i) => 
-        adapter.applyPolicy(() => operation(i), testPolicy)
-      )
+      const promises = Array(concurrentOps)
+        .fill(0)
+        .map((_, i) => adapter.applyPolicy(() => operation(i), testPolicy))
 
       const results = await Promise.all(promises)
       const duration = performance.now() - startTime
@@ -142,7 +147,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
       expect(results).toHaveLength(concurrentOps)
       results.forEach((result, i) => {
         expect(result).toHaveLength(50)
-        expect(result[0].id).toBe(i * 50)
+        expect(result[0]?.id).toBe(i * 50)
       })
 
       // Should complete concurrently in reasonable time
@@ -163,13 +168,13 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
     it('should handle rapid policy switching efficiently', async () => {
       const policies = [
         authenticationPolicy,
-        syncOperationsPolicy, 
+        syncOperationsPolicy,
         batchOperationsPolicy,
-        rateLimitAwarePolicy
+        rateLimitAwarePolicy,
       ]
 
       const operation = async (value: number) => {
-        await new Promise(resolve => setTimeout(resolve, 1))
+        await new Promise((resolve) => setTimeout(resolve, 1))
         return value * 2
       }
 
@@ -179,7 +184,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
 
       for (let i = 0; i < iterations; i++) {
         const policy = policies[i % policies.length]
-        const result = await adapter.applyPolicy(() => operation(i), policy)
+        const result = await adapter.applyPolicy(() => operation(i), policy!)
         results.push(result)
       }
 
@@ -198,7 +203,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
 
     it('should maintain performance under retry scenarios', async () => {
       let callCount = 0
-      
+
       const retryPolicy: ResiliencePolicy = {
         retry: {
           maxAttempts: 3,
@@ -206,10 +211,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
           maxDelay: 50,
           backoffStrategy: 'exponential',
           jitterStrategy: 'none',
-          retryOn: (error: any) => {
-            return error.message === 'retry-me'
-          }
-        }
+        },
       }
 
       const flakyOperation = async () => {
@@ -226,7 +228,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
 
       expect(result).toBe('success-after-3-attempts')
       expect(callCount).toBe(3)
-      
+
       // Should complete retries within reasonable time including delays
       expect(duration).toBeLessThan(500) // Should be fast with small delays
     })
@@ -239,15 +241,14 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
         },
         circuitBreaker: {
           key: 'state-transition-test',
           failureThreshold: 2,
           recoveryTime: 100,
           sampleSize: 5,
-          halfOpenPolicy: 'single-probe'
-        }
+          halfOpenPolicy: 'single-probe',
+        },
       }
 
       const failingOperation = async () => {
@@ -266,13 +267,13 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
       for (let i = 0; i < 3; i++) {
         try {
           await adapter.applyPolicy(failingOperation, cbPolicy)
-        } catch (error) {
+        } catch {
           failureCount++
         }
       }
 
       // Wait for recovery time
-      await new Promise(resolve => setTimeout(resolve, 150))
+      await new Promise((resolve) => setTimeout(resolve, 150))
 
       // Try success operation
       try {
@@ -280,14 +281,15 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
         if (result === 'success') {
           successCount++
         }
-      } catch (error) {
+      } catch {
         // Circuit may still be open
       }
 
       const totalTime = performance.now() - startTime
 
       expect(failureCount).toBeGreaterThan(0)
-      
+      expect(successCount).toBeGreaterThan(0) // Should recover after failures
+
       // Circuit breaker operations should be efficient
       expect(totalTime).toBeLessThan(1000) // Including recovery wait time
     })
@@ -302,20 +304,21 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
-        }
+        },
       }
 
       const operation = async (iteration: number) => {
         // Create objects that should be garbage collected
-        const largeData = Array(1000).fill(0).map((_, i) => ({
-          iteration,
-          index: i,
-          data: `large-string-data-${iteration}-${i}`.repeat(10)
-        }))
-        
+        const largeData = Array(1000)
+          .fill(0)
+          .map((_, i) => ({
+            iteration,
+            index: i,
+            data: `large-string-data-${iteration}-${i}`.repeat(10),
+          }))
+
         // Process the data
-        const processed = largeData.filter(item => item.index % 2 === 0)
+        const processed = largeData.filter((item) => item.index % 2 === 0)
         return processed.length
       }
 
@@ -327,9 +330,12 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
       const results: number[] = []
 
       for (let i = 0; i < iterations; i++) {
-        const result = await adapter.applyPolicy(() => operation(i), baselinePolicy)
+        const result = await adapter.applyPolicy(
+          () => operation(i),
+          baselinePolicy,
+        )
         results.push(result)
-        
+
         // Periodic garbage collection
         if (i % 10 === 0 && global.gc) {
           global.gc()
@@ -345,7 +351,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
       const memoryGrowth = finalMemory - baselineMemory
 
       expect(results).toHaveLength(iterations)
-      expect(results.every(r => r === 500)).toBe(true) // 1000 items, half filtered
+      expect(results.every((r) => r === 500)).toBe(true) // 1000 items, half filtered
 
       // Memory growth should be reasonable (< 20MB for 50 iterations with large data)
       expect(memoryGrowth).toBeLessThan(20 * 1024 * 1024)
@@ -354,24 +360,24 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
     it('should handle policy evaluation memory efficiently', () => {
       const selectionIterations = 10000
       const policyTypes = ['auth', 'sync', 'batch', 'rateLimit', 'unknown']
-      
+
       const startMemory = process.memoryUsage().heapUsed
 
       // Simulate heavy policy selection usage
       for (let i = 0; i < selectionIterations; i++) {
-        const policyType = policyTypes[i % policyTypes.length]
+        const policyType = policyTypes[i % policyTypes.length]!
         const policy = ResiliencePolicySelector.getPolicy(policyType)
-        
+
         // Access policy properties to ensure they're allocated
         const retryConfig = policy.retry
         const cbConfig = policy.circuitBreaker
         const timeoutConfig = policy.timeout
-        
+
         // Simulate policy evaluation
-        const hasRetries = retryConfig.maxAttempts > 1
+        const hasRetries = (retryConfig?.maxAttempts || 0) > 1
         const hasCircuitBreaker = !!cbConfig
         const hasTimeout = !!timeoutConfig
-        
+
         expect(typeof hasRetries).toBe('boolean')
         expect(typeof hasCircuitBreaker).toBe('boolean')
         expect(typeof hasTimeout).toBe('boolean')
@@ -402,8 +408,7 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
-        }
+        },
       }
 
       const simpleOperation = async () => 'benchmark-result'
@@ -417,15 +422,20 @@ describe('ProductionResilienceAdapter Memory Usage and Performance', () => {
 
         // Benchmark policy application
         const applyStart = performance.now()
-        const result = await testAdapter.applyPolicy(simpleOperation, simplePolicy)
+        const result = await testAdapter.applyPolicy(
+          simpleOperation,
+          simplePolicy,
+        )
         const applyEnd = performance.now()
         policyApplicationTimes.push(applyEnd - applyStart)
 
         expect(result).toBe('benchmark-result')
       }
 
-      const avgCreationTime = adapterCreationTimes.reduce((a, b) => a + b, 0) / iterations
-      const avgApplicationTime = policyApplicationTimes.reduce((a, b) => a + b, 0) / iterations
+      const avgCreationTime =
+        adapterCreationTimes.reduce((a, b) => a + b, 0) / iterations
+      const avgApplicationTime =
+        policyApplicationTimes.reduce((a, b) => a + b, 0) / iterations
 
       // Adapter creation should be fast
       expect(avgCreationTime).toBeLessThan(5) // Less than 5ms

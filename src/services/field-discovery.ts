@@ -1,9 +1,6 @@
-import type {
-  AzureDevOpsRestClient} from '../packages/azure-devops-client/dist/index.js';
+import type { AzureDevOpsRestClient } from '../packages/azure-devops-client/dist/index.js'
 
-import {
-  type WorkItem,
-} from '../packages/azure-devops-client/dist/index.js'
+import { type WorkItem } from '../packages/azure-devops-client/dist/index.js'
 
 export interface FieldAnalysisResult {
   totalFields: number

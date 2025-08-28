@@ -30,7 +30,7 @@ The Azure DevOps Bot CLI provides a professional, flexible command-line interfac
 ✅ **Multiple Output Formats** - Text, JSON, and Markdown formats  
 ✅ **Visual Progress Indicators** - Spinners and progress bars for long operations  
 ✅ **Enhanced Error Messages** - Contextual guidance and troubleshooting tips  
-✅ **Backward Compatible** - Existing scripts and PM2 configurations work unchanged  
+✅ **Backward Compatible** - Existing scripts and PM2 configurations work unchanged
 
 ## Installation & Setup
 
@@ -85,18 +85,19 @@ azure-devops-bot [options] [query]
 
 ### Global Options
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--version` | `-V` | Display version number | - |
-| `--help` | `-h` | Display help information | - |
-| `--verbose` | `-v` | Detailed output with comprehensive logging | false |
-| `--quiet` | `-q` | Minimal output showing only essential information | false |
-| `--debug` | `-d` | Maximum verbosity including debug logs and API traces | false |
-| `--format <type>` | `-f` | Output format: text, json, or markdown | text |
+| Option            | Short | Description                                           | Default |
+| ----------------- | ----- | ----------------------------------------------------- | ------- |
+| `--version`       | `-V`  | Display version number                                | -       |
+| `--help`          | `-h`  | Display help information                              | -       |
+| `--verbose`       | `-v`  | Detailed output with comprehensive logging            | false   |
+| `--quiet`         | `-q`  | Minimal output showing only essential information     | false   |
+| `--debug`         | `-d`  | Maximum verbosity including debug logs and API traces | false   |
+| `--format <type>` | `-f`  | Output format: text, json, or markdown                | text    |
 
 ### Query Parameter
 
 The `[query]` parameter accepts natural language queries or commands:
+
 - `"my work items"` - Your assigned work items
 - `"sprint status"` - Current sprint overview
 - `"summary"` - Default summary view
@@ -151,11 +152,11 @@ azure-devops-bot "my work items"
 
 # Output:
 # 📋 Work Items (5 found):
-# 
+#
 #   1. Implement user authentication
 #      [Active] • @jane.doe
 #      Implement OAuth2 authentication flow...
-# 
+#
 #   2. Fix database migration issue
 #      [Resolved] • @john.smith
 #      Migration script failing on production...
@@ -195,16 +196,16 @@ azure-devops-bot --format markdown "sprint report"
 
 # Output:
 # # Azure DevOps Work Items Report
-# 
+#
 # *Generated: 2025-08-27T10:00:00Z*
 # *Query: sprint report*
-# 
+#
 # ## Summary
-# 
+#
 # Found **15** work items.
-# 
+#
 # ## Work Items
-# 
+#
 # ### 1. Implement user authentication
 # - **ID:** 12345
 # - **State:** Active
@@ -384,25 +385,26 @@ The CLI is optimized for AI agent consumption:
 
 ```javascript
 // AI agent integration example
-const { exec } = require('child_process');
+const { exec } = require('child_process')
 
 async function getWorkItems() {
   return new Promise((resolve, reject) => {
-    exec('azure-devops-bot --quiet --format json "my work items"', 
+    exec(
+      'azure-devops-bot --quiet --format json "my work items"',
       (error, stdout, stderr) => {
         if (error) {
-          reject(JSON.parse(stderr));
+          reject(JSON.parse(stderr))
         } else {
-          resolve(JSON.parse(stdout));
+          resolve(JSON.parse(stdout))
         }
-      }
-    );
-  });
+      },
+    )
+  })
 }
 
 // Usage in AI agent
-const workItems = await getWorkItems();
-console.log(`Found ${workItems.count} work items to process`);
+const workItems = await getWorkItems()
+console.log(`Found ${workItems.count} work items to process`)
 ```
 
 ### MCP Protocol Integration
@@ -426,17 +428,17 @@ If you're extending the codebase, migrate from direct console output to the CLI 
 #### Before (Direct console.log)
 
 ```javascript
-console.log('🔍 Validating email addresses...');
-console.log(`✅ Validated ${emails.length} emails`);
-console.error('❌ Error:', error.message);
+console.log('🔍 Validating email addresses...')
+console.log(`✅ Validated ${emails.length} emails`)
+console.error('❌ Error:', error.message)
 ```
 
 #### After (Using OutputManager)
 
 ```javascript
-outputManager.startSpinner('Validating email addresses...');
-outputManager.stopSpinner(`Validated ${emails.length} emails`);
-outputManager.error('Validation failed', error);
+outputManager.startSpinner('Validating email addresses...')
+outputManager.stopSpinner(`Validated ${emails.length} emails`)
+outputManager.error('Validation failed', error)
 ```
 
 ### Migration Benefits
@@ -456,6 +458,7 @@ outputManager.error('Validation failed', error);
 **Problem**: "Azure DevOps authentication validation failed"
 
 **Solutions**:
+
 - Verify PAT token is valid and not expired
 - Ensure token has "Work Items (read & write)" permissions
 - Check organization and project names are correct
@@ -466,6 +469,7 @@ outputManager.error('Validation failed', error);
 **Problem**: "Email validation failed"
 
 **Solutions**:
+
 - Verify email addresses match Azure DevOps account exactly
 - Check for typos and case sensitivity
 - Ensure user has access to the specified project
@@ -476,6 +480,7 @@ outputManager.error('Validation failed', error);
 **Problem**: Queries taking longer than expected
 
 **Solutions**:
+
 - Check if initial sync has completed
 - Verify SQLite database isn't corrupted
 - Increase sync interval for large projects
@@ -486,6 +491,7 @@ outputManager.error('Validation failed', error);
 **Problem**: Output not in expected format
 
 **Solutions**:
+
 - Verify `--format` value is: text, json, or markdown
 - Check for typos in format specification
 - Ensure terminal supports colors (for text format)
@@ -513,10 +519,10 @@ azure-devops-bot --verbose "sync status"
 
 ```typescript
 interface CLIConfiguration {
-  verbosity: VerbosityLevel;  // 0-3 (QUIET to DEBUG)
-  format: OutputFormat;        // 'text' | 'json' | 'markdown'
-  debug: boolean;              // Debug mode flag
-  quiet: boolean;              // Quiet mode flag
+  verbosity: VerbosityLevel // 0-3 (QUIET to DEBUG)
+  format: OutputFormat // 'text' | 'json' | 'markdown'
+  debug: boolean // Debug mode flag
+  quiet: boolean // Quiet mode flag
 }
 ```
 
@@ -530,12 +536,12 @@ class OutputManager {
   error(message: string, details?: any): void
   warn(message: string, details?: any): void
   debug(message: string, details?: any): void
-  
+
   // Progress methods
   startSpinner(text: string): void
   updateSpinner(text: string): void
   stopSpinner(successMessage?: string): void
-  
+
   // Formatting methods
   formatResult(data: any): void
   box(message: string, title?: string): void
@@ -550,11 +556,11 @@ class ProgressManager {
   startProgress(label: string, total: number): void
   updateProgress(current: number, statusText?: string): void
   completeProgress(message?: string): void
-  
+
   // Indeterminate progress
   startIndeterminate(label: string): void
   stopIndeterminate(message?: string): void
-  
+
   // Reporting
   reportProgress(current: number, total: number, operation: string): void
 }
@@ -592,4 +598,4 @@ class ProgressManager {
 
 ---
 
-*Built for speed, designed for simplicity, optimized for AI agents.*
+_Built for speed, designed for simplicity, optimized for AI agents._

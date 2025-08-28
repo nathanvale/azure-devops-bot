@@ -12,6 +12,7 @@ This is the technical specification for the spec detailed in @.agent-os/specs/20
 The current comment sync code exists but isn't populating the database. Investigation shows the sync runs but data doesn't persist.
 
 **Root Cause Analysis Required:**
+
 - Verify REST API returns comments with proper authentication
 - Check if comment IDs are being parsed correctly (string vs number)
 - Ensure transaction commits are happening
@@ -22,8 +23,9 @@ The current comment sync code exists but isn't populating the database. Investig
 Current implementation stores raw JSON but doesn't extract all available fields. We need comprehensive field mapping.
 
 **Fields Currently Missing:**
+
 - Work item relations (System.Relations)
-- Work item links (_links beyond basic URL)
+- Work item links (\_links beyond basic URL)
 - Custom organization fields
 - Board lane states
 - Pull request associations
@@ -38,6 +40,7 @@ Current implementation stores raw JSON but doesn't extract all available fields.
 ### Logging Requirements
 
 Use the existing logger pattern from `src/utils/logger.ts`:
+
 - Component-based logging
 - Structured metadata
 - Performance metrics
@@ -71,7 +74,7 @@ private async syncSingleWorkItemCommentsWithTracking(
   errorAggregator: ErrorAggregator,
 ): Promise<number> {
   const logger = getLogger()
-  
+
   try {
     logger.debug('Fetching comments for work item', {
       component: 'sync-service',
@@ -79,9 +82,9 @@ private async syncSingleWorkItemCommentsWithTracking(
       expectedCount: workItem.commentCount || 0,
       operation: 'fetch_comments'
     })
-    
+
     const comments = await this.client.fetchWorkItemComments(workItem.id)
-    
+
     if (comments.length > 0) {
       logger.debug('Storing comments batch', {
         component: 'sync-service',
@@ -89,9 +92,9 @@ private async syncSingleWorkItemCommentsWithTracking(
         commentCount: comments.length,
         operation: 'store_comments'
       })
-      
+
       await this.db.storeWorkItemComments(comments)
-      
+
       logger.info('Comments stored successfully', {
         component: 'sync-service',
         workItemId: workItem.id,
@@ -99,7 +102,7 @@ private async syncSingleWorkItemCommentsWithTracking(
         operation: 'comments_stored'
       })
     }
-    
+
     return comments.length
   } catch (error) {
     logger.error('Failed to sync comments', {
@@ -119,29 +122,29 @@ private async syncSingleWorkItemCommentsWithTracking(
 // Fix in database.ts for storeWorkItemComments
 async storeWorkItemComments(comments: WorkItemCommentData[]): Promise<void> {
   if (comments.length === 0) return
-  
+
   const logger = getLogger()
   const BATCH_SIZE = 50
-  
+
   logger.info('Starting comment storage', {
     component: 'database-service',
     totalComments: comments.length,
     batches: Math.ceil(comments.length / BATCH_SIZE),
     operation: 'store_comments_start'
   })
-  
+
   for (let i = 0; i < comments.length; i += BATCH_SIZE) {
     const batch = comments.slice(i, i + BATCH_SIZE)
     const batchNumber = Math.floor(i / BATCH_SIZE) + 1
-    
+
     try {
       await this.prisma.$transaction(
         batch.map((comment) => {
           // Ensure ID is properly typed
-          const commentId = typeof comment.id === 'string' 
-            ? parseInt(comment.id, 10) 
+          const commentId = typeof comment.id === 'string'
+            ? parseInt(comment.id, 10)
             : comment.id
-          
+
           logger.debug('Processing comment', {
             component: 'database-service',
             commentId,
@@ -149,7 +152,7 @@ async storeWorkItemComments(comments: WorkItemCommentData[]): Promise<void> {
             textLength: comment.text?.length || 0,
             operation: 'process_comment'
           })
-          
+
           return this.prisma.workItemComment.upsert({
             where: { id: commentId },
             update: {
@@ -171,7 +174,7 @@ async storeWorkItemComments(comments: WorkItemCommentData[]): Promise<void> {
           })
         }),
       )
-      
+
       logger.debug('Comment batch stored', {
         component: 'database-service',
         batchNumber,
@@ -188,7 +191,7 @@ async storeWorkItemComments(comments: WorkItemCommentData[]): Promise<void> {
       throw error
     }
   }
-  
+
   logger.info('All comments stored successfully', {
     component: 'database-service',
     totalStored: comments.length,
@@ -207,14 +210,14 @@ private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
   const raw = restWorkItem.raw as any
   const fields = raw.fields || {}
   const logger = getLogger()
-  
+
   logger.debug('Transforming work item', {
     component: 'azure-devops-client',
     workItemId: raw.id,
     fieldCount: Object.keys(fields).length,
     operation: 'transform_work_item'
   })
-  
+
   // Extract standard fields
   const standardFields = {
     id: raw.id,
@@ -224,19 +227,19 @@ private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
     assignedTo: fields['System.AssignedTo']?.displayName || 'Unassigned',
     lastUpdatedAt: new Date(fields['System.ChangedDate']),
     description: fields['System.Description'],
-    
+
     // Sprint/Board Info
     iterationPath: fields['System.IterationPath'],
     areaPath: fields['System.AreaPath'],
     boardColumn: fields['System.BoardColumn'],
     boardColumnDone: fields['System.BoardColumnDone'] === 'True',
     boardLane: fields['System.BoardLane'],
-    
+
     // Priority/Tags
     priority: fields['Microsoft.VSTS.Common.Priority'],
     severity: fields['Microsoft.VSTS.Common.Severity'],
     tags: fields['System.Tags'],
-    
+
     // All dates
     createdDate: fields['System.CreatedDate'] ? new Date(fields['System.CreatedDate']) : undefined,
     changedDate: fields['System.ChangedDate'] ? new Date(fields['System.ChangedDate']) : undefined,
@@ -244,30 +247,30 @@ private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
     resolvedDate: fields['Microsoft.VSTS.Common.ResolvedDate'] ? new Date(fields['Microsoft.VSTS.Common.ResolvedDate']) : undefined,
     activatedDate: fields['Microsoft.VSTS.Common.ActivatedDate'] ? new Date(fields['Microsoft.VSTS.Common.ActivatedDate']) : undefined,
     stateChangeDate: fields['Microsoft.VSTS.Common.StateChangeDate'] ? new Date(fields['Microsoft.VSTS.Common.StateChangeDate']) : undefined,
-    
+
     // People
     createdBy: fields['System.CreatedBy']?.displayName,
     changedBy: fields['System.ChangedBy']?.displayName,
     closedBy: fields['Microsoft.VSTS.Common.ClosedBy']?.displayName,
     resolvedBy: fields['Microsoft.VSTS.Common.ResolvedBy']?.displayName,
     activatedBy: fields['Microsoft.VSTS.Common.ActivatedBy']?.displayName,
-    
+
     // Work tracking
     storyPoints: fields['Microsoft.VSTS.Scheduling.StoryPoints'],
     effort: fields['Microsoft.VSTS.Scheduling.Effort'],
     remainingWork: fields['Microsoft.VSTS.Scheduling.RemainingWork'],
     completedWork: fields['Microsoft.VSTS.Scheduling.CompletedWork'],
     originalEstimate: fields['Microsoft.VSTS.Scheduling.OriginalEstimate'],
-    
+
     // Content fields
     acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'],
     reproSteps: fields['Microsoft.VSTS.TCM.ReproSteps'],
     systemInfo: fields['Microsoft.VSTS.TCM.SystemInfo'],
     resolution: fields['Microsoft.VSTS.Common.Resolution'],
-    
+
     // Related items
     parentId: this.extractParentId(raw.relations),
-    
+
     // Azure DevOps metadata
     rev: raw.rev,
     reason: fields['System.Reason'],
@@ -280,16 +283,16 @@ private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
     nodeId: fields['System.NodeId'],
     stackRank: fields['Microsoft.VSTS.Common.StackRank'],
     valueArea: fields['Microsoft.VSTS.Common.ValueArea'],
-    
+
     // Risk and business fields
     risk: fields['Microsoft.VSTS.Common.Risk'],
     businessValue: fields['Microsoft.VSTS.Common.BusinessValue'],
     timeCriticality: fields['Microsoft.VSTS.Common.TimeCriticality'],
-    
+
     // Always preserve complete raw JSON
     rawJson: JSON.stringify(raw)
   }
-  
+
   // Extract custom fields dynamically
   const customFields = this.extractCustomFields(fields)
   if (Object.keys(customFields).length > 0) {
@@ -301,7 +304,7 @@ private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
       operation: 'extract_custom_fields'
     })
   }
-  
+
   return {
     ...standardFields,
     customFields: JSON.stringify(customFields)
@@ -310,29 +313,29 @@ private transformRestWorkItem(restWorkItem: RestWorkItemData): WorkItemData {
 
 private extractParentId(relations: any[]): number | undefined {
   if (!relations || !Array.isArray(relations)) return undefined
-  
-  const parentRelation = relations.find(r => 
+
+  const parentRelation = relations.find(r =>
     r.rel === 'System.LinkTypes.Hierarchy-Reverse'
   )
-  
+
   if (parentRelation && parentRelation.url) {
     const match = parentRelation.url.match(/\/workItems\/(\d+)$/)
     return match ? parseInt(match[1], 10) : undefined
   }
-  
+
   return undefined
 }
 
 private extractCustomFields(fields: any): Record<string, any> {
   const customFields: Record<string, any> = {}
-  
+
   // Extract any field that doesn't start with System. or Microsoft.
   for (const [key, value] of Object.entries(fields)) {
     if (!key.startsWith('System.') && !key.startsWith('Microsoft.')) {
       customFields[key] = value
     }
   }
-  
+
   return customFields
 }
 ```
@@ -346,18 +349,18 @@ private extractCustomFields(fields: any): Record<string, any> {
 private extractRelations(rawWorkItem: any): WorkItemRelation[] {
   const relations: WorkItemRelation[] = []
   const logger = getLogger()
-  
+
   if (!rawWorkItem.relations || !Array.isArray(rawWorkItem.relations)) {
     return relations
   }
-  
+
   logger.debug('Extracting relations', {
     component: 'azure-devops-client',
     workItemId: rawWorkItem.id,
     relationCount: rawWorkItem.relations.length,
     operation: 'extract_relations'
   })
-  
+
   for (const relation of rawWorkItem.relations) {
     const targetMatch = relation.url?.match(/\/workItems\/(\d+)$/)
     if (targetMatch) {
@@ -369,21 +372,21 @@ private extractRelations(rawWorkItem: any): WorkItemRelation[] {
       })
     }
   }
-  
+
   return relations
 }
 
 // Store relations in database
 async storeWorkItemRelations(relations: WorkItemRelation[]): Promise<void> {
   if (relations.length === 0) return
-  
+
   const logger = getLogger()
   logger.info('Storing work item relations', {
     component: 'database-service',
     relationCount: relations.length,
     operation: 'store_relations'
   })
-  
+
   await this.prisma.workItemRelation.createMany({
     data: relations,
     skipDuplicates: true
@@ -400,20 +403,20 @@ async storeWorkItemRelations(relations: WorkItemRelation[]): Promise<void> {
 async getWorkItemsByAssignee(email: string, state?: string) {
   const logger = getLogger()
   const startTime = Date.now()
-  
+
   logger.debug('Querying work items by assignee', {
     component: 'database-service',
     assignee: email,
     state: state || 'all',
     operation: 'query_by_assignee'
   })
-  
+
   try {
     const where: any = { assignedTo: email }
     if (state && state !== 'all') {
       where.state = state
     }
-    
+
     const items = await this.prisma.workItem.findMany({
       where,
       orderBy: { changedDate: 'desc' },
@@ -421,7 +424,7 @@ async getWorkItemsByAssignee(email: string, state?: string) {
         comments: true
       }
     })
-    
+
     logger.info('Query completed', {
       component: 'database-service',
       assignee: email,
@@ -429,7 +432,7 @@ async getWorkItemsByAssignee(email: string, state?: string) {
       durationMs: Date.now() - startTime,
       operation: 'query_by_assignee_complete'
     })
-    
+
     return items
   } catch (error) {
     logger.error('Query failed', {
@@ -446,17 +449,17 @@ async getWorkItemsByAssignee(email: string, state?: string) {
 async getWorkItemsForCurrentSprint() {
   const logger = getLogger()
   const startTime = Date.now()
-  
+
   // Determine current sprint (example logic - adjust for your org)
   const currentDate = new Date()
   const sprintPattern = `%Sprint%` // Adjust pattern for your naming
-  
+
   logger.debug('Querying current sprint items', {
     component: 'database-service',
     pattern: sprintPattern,
     operation: 'query_current_sprint'
   })
-  
+
   const items = await this.prisma.workItem.findMany({
     where: {
       iterationPath: {
@@ -477,27 +480,27 @@ async getWorkItemsForCurrentSprint() {
       }
     }
   })
-  
+
   logger.info('Current sprint query completed', {
     component: 'database-service',
     resultCount: items.length,
     durationMs: Date.now() - startTime,
     operation: 'query_current_sprint_complete'
   })
-  
+
   return items
 }
 
 // Query with relationships
 async getWorkItemWithRelations(workItemId: number) {
   const logger = getLogger()
-  
+
   logger.debug('Fetching work item with relations', {
     component: 'database-service',
     workItemId,
     operation: 'query_with_relations'
   })
-  
+
   // Get work item
   const workItem = await this.prisma.workItem.findUnique({
     where: { id: workItemId },
@@ -505,12 +508,12 @@ async getWorkItemWithRelations(workItemId: number) {
       comments: true
     }
   })
-  
+
   if (!workItem) return null
-  
+
   // Get relations
   const relations = await this.prisma.$queryRaw`
-    SELECT 
+    SELECT
       r.*,
       w.title as targetTitle,
       w.state as targetState,
@@ -518,10 +521,10 @@ async getWorkItemWithRelations(workItemId: number) {
     FROM work_item_relations r
     LEFT JOIN work_items w ON r.target_id = w.id
     WHERE r.source_id = ${workItemId}
-    
+
     UNION
-    
-    SELECT 
+
+    SELECT
       r.*,
       w.title as targetTitle,
       w.state as targetState,
@@ -530,7 +533,7 @@ async getWorkItemWithRelations(workItemId: number) {
     LEFT JOIN work_items w ON r.source_id = w.id
     WHERE r.target_id = ${workItemId}
   `
-  
+
   return {
     ...workItem,
     relations
@@ -562,23 +565,23 @@ All operations should use the existing resilience patterns:
 async performOperationWithResilience(operation: string, fn: () => Promise<any>) {
   const logger = getLogger()
   const startTime = Date.now()
-  
+
   try {
     logger.debug(`Starting ${operation}`, {
       component: 'sync-service',
       operation: operation,
       timestamp: new Date().toISOString()
     })
-    
+
     const result = await fn()
-    
+
     logger.info(`${operation} completed`, {
       component: 'sync-service',
       operation: operation,
       durationMs: Date.now() - startTime,
       success: true
     })
-    
+
     return result
   } catch (error) {
     logger.error(`${operation} failed`, {
@@ -588,7 +591,7 @@ async performOperationWithResilience(operation: string, fn: () => Promise<any>) 
       durationMs: Date.now() - startTime,
       retryable: true
     })
-    
+
     throw error
   }
 }
@@ -597,6 +600,7 @@ async performOperationWithResilience(operation: string, fn: () => Promise<any>) 
 ## External Dependencies
 
 No new external dependencies required. Uses existing:
+
 - Prisma ORM
 - SQLite
 - Existing logger utilities

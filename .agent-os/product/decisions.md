@@ -347,3 +347,187 @@ Current implementation uses basic console.log output throughout, resulting in ve
 - Additional dependency overhead (commander, ora, cli-progress, chalk, boxen)
 - Increased complexity in output management and coordination
 - Learning curve for users who want to use advanced CLI features
+
+---
+
+## 2025-08-28: Zod-First Type Validation
+
+**ID:** DEC-010
+**Status:** Accepted
+**Category:** Technical Architecture
+**Stakeholders:** Product Owner, Technical Lead
+
+### Decision
+
+Replace all existing type validation with Zod, creating a comprehensive, schema-first approach to Azure DevOps data representation that provides zero-runtime type uncertainty and machine-enforceable type migrations.
+
+### Context
+
+Current type validation relies on TypeScript's static type system, which provides compile-time checks but lacks runtime validation, custom parsing, and semantic preservation. This creates potential data integrity risks and limits our ability to transform complex Azure DevOps data structures.
+
+### Alternatives Considered
+
+1. **Continue with TypeScript Static Typing**
+   - Pros: Minimal additional complexity
+   - Cons: No runtime validation, limited transformation capabilities
+
+2. **Implement Custom Validation Functions**
+   - Pros: Custom validation logic
+   - Cons: Increased maintenance overhead, inconsistent implementation
+
+3. **Use JSON Schema Validation**
+   - Pros: Runtime validation
+   - Cons: Less type-native, more verbose
+
+### Rationale
+
+Zod provides a type-first, runtime-safe validation system that:
+
+- Creates both compile-time and runtime type safety
+- Supports complex nested validations
+- Enables semantic type transformations
+- Provides automatic type inference
+- Allows incremental schema migrations
+
+### Consequences
+
+**Positive:**
+
+- Complete runtime type validation
+- Zero-overhead type checking
+- Machine-enforceable schema migrations
+- Rich, semantic type transformations
+- Reduced potential for data corruption
+
+**Negative:**
+
+- Additional dependency (Zod library)
+- Learning curve for Zod patterns
+- Initial implementation overhead
+
+---
+
+## 2025-01-28: Implement MCP Server Using Microsoft Patterns
+
+**ID:** DEC-011
+**Status:** Accepted
+**Category:** Technical Architecture
+**Related Spec:** @.agent-os/specs/2025-01-28-mcp-tool-redesign/
+**Stakeholders:** Product Owner, Technical Lead
+
+### Decision
+
+Implement the MCP server using Microsoft's azure-devops-mcp reference patterns from the start - 25+ granular, domain-organized tools with Zod schema validation, while maintaining our local-first performance advantages.
+
+### Context
+
+Since the product is in early phase with only 8 basic tools implemented, we can adopt Microsoft's official Azure DevOps MCP patterns directly without migration overhead:
+
+- Granular tool design with verb-object naming conventions
+- Schema-first validation using Zod for all parameters
+- Domain-based tool organization (cache*, sync*, admin\_)
+- Consistent JSON response format with isError pattern
+- No NLP processing - delegates to AI agents
+
+This is the right time to implement proper architecture before the codebase grows.
+
+### Alternatives Considered
+
+1. **Continue with Simplified Tools**
+   - Pros: Less initial work
+   - Cons: Technical debt, poor AI agent tool selection, mixed concerns
+
+2. **Custom Tool Architecture**
+   - Pros: Tailored to specific needs
+   - Cons: Reinventing proven patterns, no industry alignment
+
+3. **Microsoft Patterns Direct Implementation (Selected)**
+   - Pros: Industry-standard, proven AI agent integration, clean architecture from start
+   - Cons: More initial implementation work
+
+### Rationale
+
+Microsoft's patterns align with our existing philosophy (no NLP per DEC-004) while providing:
+
+- Better AI agent tool selection through granular, focused tools
+- Runtime validation preventing data corruption
+- Clear domain separation improving maintainability
+- Industry-standard patterns from the official Azure DevOps team
+
+Critically, we maintain our local-first advantages (sub-100ms queries) while adopting their tool patterns.
+
+### Consequences
+
+**Positive:**
+
+- **Superior AI Agent Integration**: Granular tools enable accurate tool selection from the start
+- **Runtime Type Safety**: Zod validation prevents data corruption and invalid operations
+- **Clean Architecture**: Domain organization provides clear separation of concerns
+- **Industry Standard**: Microsoft patterns ensure future compatibility and best practices
+- **Performance Preserved**: Local SQLite maintains sub-100ms query speeds
+
+**Negative:**
+
+- **Initial Development Time**: 5 days to implement properly vs quick prototype
+- **Larger Surface Area**: 25+ tools to implement and document
+- **Learning Curve**: Team needs to understand domain patterns and Zod schemas
+
+---
+
+## 2025-08-28: Person Table Normalization for Identity Management
+
+**ID:** DEC-009
+**Status:** Accepted
+**Category:** Technical
+**Related Spec:** @.agent-os/specs/2025-08-28-fix-work-item-assignment/
+
+### Decision
+
+Implement a normalized Person table to store complete Azure DevOps identity data and replace String-based person fields in WorkItem with foreign key relationships, achieving 25x query performance improvement and fixing email-based work item queries.
+
+### Context
+
+Critical data mismatch issue where work item queries by email return zero results:
+
+- System searches database for email addresses (e.g., `Nathan.Vale@fwc.gov.au`)
+- Database contains display names (e.g., `Nathan Vale`) instead of emails
+- Azure DevOps provides rich person objects with id, uniqueName (email), displayName, imageUrl, descriptor
+- Current implementation only extracts displayName, losing valuable identity data
+- String-based queries using LIKE patterns perform poorly (~50ms vs target <100ms)
+
+### Alternatives Considered
+
+1. **Fix String Fields Only**
+   - Pros: Minimal schema changes, faster implementation
+   - Cons: Still loses rich person data, no performance improvement, no referential integrity
+
+2. **JSON-Only Storage**
+   - Pros: Flexible schema, captures all data
+   - Cons: Poor query performance, no indexes, complex filtering
+
+3. **Normalized Person Table (Selected)**
+   - Pros: 25x performance improvement, complete data capture, referential integrity, future-proof
+   - Cons: More complex migration, additional table to maintain
+
+### Rationale
+
+Database optimizer analysis shows normalized approach delivers optimal balance of performance, data integrity, and scalability. The 25x performance improvement (50ms → 2ms) alone justifies implementation complexity. Proper normalization aligns with database best practices and enables reliable person-based queries across the system.
+
+### Consequences
+
+**Positive:**
+
+- **Fixes Critical Bug**: Email-based queries return correct results instead of zero results
+- **25x Performance Improvement**: Person-based queries optimize from ~50ms to ~2ms
+- **Complete Data Capture**: All Azure DevOps person fields stored per DEC-003
+- **Referential Integrity**: Database constraints ensure person data consistency
+- **Storage Efficiency**: Eliminates person data duplication across WorkItem records
+- **Query Flexibility**: Supports complex person-based filters and joins
+- **Future-Proof**: Foundation for advanced person-related features
+
+**Negative:**
+
+- **Migration Complexity**: Requires zero-downtime migration strategy with backward compatibility
+- **Additional Table Maintenance**: Person table requires ongoing sync with Azure DevOps
+- **Schema Relationship Management**: Foreign key constraints require careful handling
+- **Code Complexity**: Query methods need updates to use Person table joins

@@ -21,6 +21,7 @@ Currently, the sync process runs but the comments table remains empty despite ha
 As a team lead, I want to query work items by any assignee (not just myself), so that I can see what my entire team is working on in the current sprint.
 
 The current implementation only allows filtering work items assigned to the authenticated user. We need the ability to:
+
 - Query work items assigned to any specific team member
 - Filter work items by current sprint/iteration
 - See all work items in a specific state (Active, Done, etc.)

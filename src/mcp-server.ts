@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-import * as dotenv from 'dotenv'
-
-// Load environment variables from .env file
-dotenv.config()
+// Only load dotenv if environment variables haven't been loaded yet
+// This prevents duplicate messages when tsx --env-file is used
+if (!process.env.AZURE_DEVOPS_PAT) {
+  const dotenv = await import('dotenv')
+  dotenv.config()
+}
 
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 
@@ -14,10 +16,10 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import { initializeLogger, LoggerFactory } from './utils/logger.js'
 import { AzureDevOpsClient } from './services/azure-devops.js'
 import { DatabaseService } from './services/database.js'
 import { SyncService } from './services/sync-service.js'
+import { initializeLogger, LoggerFactory } from './utils/logger.js'
 import { SyncMetrics } from './utils/sync-metrics.js'
 
 export class AzureDevOpsMCPServer {
@@ -90,6 +92,91 @@ export class AzureDevOpsMCPServer {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: [
+          // Cache domain (local database, read-only normalized views)
+          {
+            name: 'cache_list_my_work_items',
+            description:
+              'List cached work items assigned to configured user emails (optionally filter by states). Returns normalized JSON records.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                states: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description:
+                    'Optional list of state filters (case-sensitive).',
+                },
+                top: {
+                  type: 'number',
+                  description:
+                    'Maximum number of items to return (default 50, max 500).',
+                  minimum: 1,
+                  maximum: 500,
+                },
+              },
+            },
+          },
+          {
+            name: 'cache_list_iteration_work_items',
+            description:
+              'List cached work items for a given iteration path or the current sprint (use iteration="current").',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                iteration: {
+                  type: 'string',
+                  description:
+                    'Iteration path or "current" to auto-detect most recent active sprint.',
+                },
+                top: {
+                  type: 'number',
+                  description:
+                    'Maximum number of items to return (default 100, max 500).',
+                  minimum: 1,
+                  maximum: 500,
+                },
+              },
+              required: ['iteration'],
+            },
+          },
+          {
+            name: 'cache_get_work_item',
+            description:
+              'Get a single cached work item by ID (normalized shape).',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                id: { type: 'number', description: 'Work item ID' },
+                includeRaw: {
+                  type: 'boolean',
+                  description: 'Include rawJson backup (default false).',
+                },
+              },
+              required: ['id'],
+            },
+          },
+          {
+            name: 'cache_sync_summary',
+            description:
+              'Return structured JSON summary of recent sync metrics (no markdown).',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                includeHistory: {
+                  type: 'boolean',
+                  description:
+                    'Include recent sync executions (default false).',
+                },
+                historyLimit: {
+                  type: 'number',
+                  description:
+                    'Number of historical syncs (default 5, max 20).',
+                  minimum: 1,
+                  maximum: 20,
+                },
+              },
+            },
+          },
           {
             name: 'wit_force_sync_work_items',
             description:
@@ -220,7 +307,8 @@ export class AzureDevOpsMCPServer {
           },
           {
             name: 'wit_sync_status',
-            description: 'Get comprehensive sync status, metrics, and error reports',
+            description:
+              'Get comprehensive sync status, metrics, and error reports',
             inputSchema: {
               type: 'object',
               properties: {
@@ -253,7 +341,8 @@ export class AzureDevOpsMCPServer {
           },
           {
             name: 'wit_get_current_sprint_items',
-            description: 'Get work items for the current sprint (auto-detected)',
+            description:
+              'Get work items for the current sprint (auto-detected)',
             inputSchema: {
               type: 'object',
               properties: {},
@@ -267,7 +356,8 @@ export class AzureDevOpsMCPServer {
               properties: {
                 state: {
                   type: 'string',
-                  description: 'Work item state (e.g., "Active", "New", "Closed")',
+                  description:
+                    'Work item state (e.g., "Active", "New", "Closed")',
                 },
               },
               required: ['state'],
@@ -289,7 +379,8 @@ export class AzureDevOpsMCPServer {
           },
           {
             name: 'wit_get_work_item_with_relations',
-            description: 'Get a single work item with all relationships and links',
+            description:
+              'Get a single work item with all relationships and links',
             inputSchema: {
               type: 'object',
               properties: {
@@ -310,6 +401,15 @@ export class AzureDevOpsMCPServer {
 
       try {
         switch (name) {
+          // Cache tools
+          case 'cache_list_my_work_items':
+            return await this.handleCacheListMyWorkItems(args)
+          case 'cache_list_iteration_work_items':
+            return await this.handleCacheListIterationWorkItems(args)
+          case 'cache_get_work_item':
+            return await this.handleCacheGetWorkItem(args)
+          case 'cache_sync_summary':
+            return await this.handleCacheSyncSummary(args)
           case 'wit_force_sync_work_items':
             return await this.handleForceSyncWorkItems(args)
 
@@ -366,6 +466,172 @@ export class AzureDevOpsMCPServer {
         }
       }
     })
+  }
+
+  // ---------- Normalization Helpers (cache domain) ----------
+  private normalizeWorkItem(raw: Record<string, unknown>) {
+    if (!raw) return null
+    // Narrowing helper
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r: any = raw
+    const tagsArray = r.tags
+      ? Array.isArray(raw.tags)
+        ? (r.tags as string[])
+        : String(r.tags)
+            .split(/[,;]/)
+            .map((t: string) => t.trim())
+            .filter(Boolean)
+      : []
+    return {
+      id: r.id,
+      title: r.title || '',
+      type: r.type || r.workItemType || '',
+      state: r.state || '',
+      iterationPath: r.iterationPath || null,
+      areaPath: r.areaPath || null,
+      parentId: r.parentId || null,
+      assignedTo: r.assignedToPerson
+        ? {
+            id: r.assignedToPerson.id,
+            name: r.assignedToPerson.displayName,
+            email: r.assignedToPerson.uniqueName,
+          }
+        : r.assignedTo
+          ? { id: null, name: r.assignedTo, email: r.assignedTo }
+          : null,
+      priority: r.priority ?? null,
+      severity: r.severity ?? null,
+      storyPoints: r.storyPoints ?? null,
+      remainingWork: r.remainingWork ?? null,
+      boardColumn: r.boardColumn || null,
+      boardColumnDone: !!r.boardColumnDone,
+      teamProject: r.teamProject || null,
+      tags: tagsArray,
+      url: r.azureUrl || r.url || null,
+      updatedAt: r.changedDate || r.lastUpdatedAt || null,
+      createdDate: r.createdDate || null,
+      closedDate: r.closedDate || null,
+      metrics: {
+        commentCount: r.commentCount ?? 0,
+        hasAttachments: !!r.hasAttachments,
+      },
+    }
+  }
+
+  // ---------- Cache Tool Handlers ----------
+  private async handleCacheListMyWorkItems(args?: {
+    states?: string[]
+    top?: number
+  }) {
+    const states = Array.isArray(args?.states)
+      ? args!.states.filter(Boolean)
+      : []
+    const top = Math.min(Math.max(args?.top || 50, 1), 500)
+    const all = await this.db.getWorkItemsForUsers(this.userEmails)
+    const filtered =
+      states.length > 0 ? all.filter((w) => states.includes(w.state)) : all
+    const trimmed = filtered.slice(0, top)
+    const normalized = trimmed.map((w) => this.normalizeWorkItem(w))
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(
+            {
+              count: normalized.length,
+              totalMatched: filtered.length,
+              filtersApplied: { states: states },
+              items: normalized,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    }
+  }
+
+  private async handleCacheListIterationWorkItems(args?: {
+    iteration?: string
+    top?: number
+  }) {
+    const iteration = args?.iteration
+    if (!iteration) throw new Error('iteration is required')
+    const top = Math.min(Math.max(args?.top || 100, 1), 500)
+    let items
+    if (iteration.toLowerCase() === 'current') {
+      items = await this.db.getCurrentSprintItems()
+    } else {
+      items = await this.db.getWorkItemsByIteration(iteration)
+    }
+    const trimmed = items.slice(0, top)
+    const normalized = trimmed.map((w) => this.normalizeWorkItem(w))
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(
+            {
+              iterationRequested: iteration,
+              count: normalized.length,
+              totalMatched: items.length,
+              items: normalized,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    }
+  }
+
+  private async handleCacheGetWorkItem(args?: {
+    id?: number
+    includeRaw?: boolean
+  }) {
+    const id = args?.id
+    if (!id) throw new Error('id is required')
+    const record = await this.db.getWorkItemById(id)
+    if (!record) throw new Error(`Work item ${id} not found in cache`)
+    const normalized = this.normalizeWorkItem(record)
+    const payload: { item: unknown; rawJson?: string | null } = {
+      item: normalized,
+    }
+    if (args?.includeRaw) payload.rawJson = record.rawJson || null
+    return {
+      content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+    }
+  }
+
+  private async handleCacheSyncSummary(args?: {
+    includeHistory?: boolean
+    historyLimit?: number
+  }) {
+    const includeHistory = !!args?.includeHistory
+    const historyLimit = Math.min(Math.max(args?.historyLimit || 5, 1), 20)
+    const summary = await this.syncMetrics.getSyncSummary().catch(() => null)
+    const latest = await this.syncMetrics.getLatestSync().catch(() => null)
+    const history: unknown[] = []
+    if (includeHistory) {
+      const recent = await this.syncMetrics
+        .getRecentSyncs(historyLimit)
+        .catch(() => [])
+      history.push(...recent)
+    }
+    const payload = {
+      summary,
+      latest,
+      history: includeHistory ? history : undefined,
+      generatedAt: new Date().toISOString(),
+    }
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(payload, null, 2),
+        },
+      ],
+    }
   }
 
   private async handleForceSyncWorkItems(args?: { concurrency?: number }) {
@@ -571,10 +837,10 @@ export class AzureDevOpsMCPServer {
     try {
       // Get summary statistics
       const summary = await this.syncMetrics.getSyncSummary()
-      
+
       // Get latest sync
       const latestSync = await this.syncMetrics.getLatestSync()
-      
+
       let statusText = `# Azure DevOps Sync Status\n\n`
 
       // Current Status Summary
@@ -601,9 +867,10 @@ export class AzureDevOpsMCPServer {
         // Error Breakdown
         if (latestSync.totalErrors > 0) {
           statusText += `### Error Breakdown\n`
-          const errorTypes = Object.entries(latestSync.errorsByType)
-            .sort(([,a], [,b]) => b - a)
-          
+          const errorTypes = Object.entries(latestSync.errorsByType).sort(
+            ([, a], [, b]) => b - a,
+          )
+
           for (const [errorType, count] of errorTypes) {
             statusText += `- **${errorType}**: ${count} occurrences\n`
           }
@@ -618,9 +885,9 @@ export class AzureDevOpsMCPServer {
       if (Object.keys(summary.errorTrends).length > 0) {
         statusText += `## Error Trends (24h)\n`
         const sortedTrends = Object.entries(summary.errorTrends)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 10)
-        
+
         for (const [errorType, count] of sortedTrends) {
           statusText += `- **${errorType}**: ${count} occurrences\n`
         }
@@ -630,17 +897,21 @@ export class AzureDevOpsMCPServer {
       // Recent History
       if (includeHistory) {
         const recentSyncs = await this.syncMetrics.getRecentSyncs(historyLimit)
-        
+
         if (recentSyncs.length > 0) {
           statusText += `## Recent Sync History (${recentSyncs.length})\n\n`
           statusText += `| Start Time | Duration | Type | Status | Success Rate | Errors |\n`
           statusText += `|------------|----------|------|--------|--------------|--------|\n`
-          
+
           for (const sync of recentSyncs) {
-            const startTime = sync.startTime.toISOString().substring(0, 19).replace('T', ' ')
+            const startTime = sync.startTime
+              .toISOString()
+              .substring(0, 19)
+              .replace('T', ' ')
             const duration = `${Math.round(sync.durationMs / 1000)}s`
-            const status = sync.status.charAt(0).toUpperCase() + sync.status.slice(1)
-            
+            const status =
+              sync.status.charAt(0).toUpperCase() + sync.status.slice(1)
+
             statusText += `| ${startTime} | ${duration} | ${sync.syncType} | ${status} | ${sync.successRate}% | ${sync.totalErrors} |\n`
           }
           statusText += `\n`
@@ -649,25 +920,31 @@ export class AzureDevOpsMCPServer {
 
       // Recommendations
       statusText += `## Recommendations\n`
-      
+
       if (summary.avgSuccessRate < 95) {
         statusText += `⚠️  **Low Success Rate**: Current average success rate is ${summary.avgSuccessRate}%. Consider investigating error patterns.\n`
       }
-      
+
       if (summary.recentFailures > 3) {
         statusText += `⚠️  **High Failure Count**: ${summary.recentFailures} failed syncs in the last 24 hours. Check PAT token and network connectivity.\n`
       }
-      
+
       if (summary.avgDuration > 60000) {
         statusText += `⚠️  **Slow Syncs**: Average sync duration is ${Math.round(summary.avgDuration / 1000)}s. Consider reducing concurrency or checking network performance.\n`
       }
-      
-      const topError = Object.entries(summary.errorTrends).sort(([,a], [,b]) => b - a)[0]
+
+      const topError = Object.entries(summary.errorTrends).sort(
+        ([, a], [, b]) => b - a,
+      )[0]
       if (topError && topError[1] > 5) {
         statusText += `⚠️  **Recurring Error**: ${topError[0]} has occurred ${topError[1]} times recently. This may need attention.\n`
       }
-      
-      if (summary.avgSuccessRate >= 95 && summary.recentFailures <= 1 && summary.avgDuration <= 60000) {
+
+      if (
+        summary.avgSuccessRate >= 95 &&
+        summary.recentFailures <= 1 &&
+        summary.avgDuration <= 60000
+      ) {
         statusText += `✅ **System Healthy**: Sync performance is within acceptable parameters.\n`
       }
 
@@ -679,12 +956,11 @@ export class AzureDevOpsMCPServer {
           },
         ],
       }
-
     } catch (error) {
       this.logger.error('Failed to get sync status', {
         component: 'mcp-server',
         error: error instanceof Error ? error.message : String(error),
-        operation: 'sync_status'
+        operation: 'sync_status',
       })
 
       return {
@@ -716,7 +992,7 @@ export class AzureDevOpsMCPServer {
     }
   }
 
-  private async handleGetCurrentSprintItems(args?: {}) {
+  private async handleGetCurrentSprintItems(_args?: Record<string, unknown>) {
     const items = await this.db.getCurrentSprintItems()
 
     return {
@@ -789,7 +1065,7 @@ export class AzureDevOpsMCPServer {
   async start() {
     // Initialize logger first
     await initializeLogger('mcp-server')
-    
+
     // Configure user emails for Azure DevOps queries
     this.userEmails = this.getConfiguredEmails()
     AzureDevOpsClient.setUserEmails(this.userEmails)
@@ -797,10 +1073,12 @@ export class AzureDevOpsMCPServer {
     this.logger.info('MCP Server starting', {
       userEmails: this.userEmails,
       emailCount: this.userEmails.length,
-      operation: 'server_startup'
+      operation: 'server_startup',
     })
 
-    console.error(`Configured to filter for work items assigned to: ${this.userEmails.join(', ')}`)
+    console.error(
+      `Configured to filter for work items assigned to: ${this.userEmails.join(', ')}`,
+    )
 
     // Start background sync using detailed sync (shows interval message)
     await this.syncService.startBackgroundSync(true)
@@ -810,29 +1088,29 @@ export class AzureDevOpsMCPServer {
     if (shouldSync) {
       this.logger.info('Starting initial sync', {
         operation: 'initial_sync',
-        syncRequired: true
+        syncRequired: true,
       })
-      
+
       console.error('Performing initial detailed sync...')
       await this.syncService.performSyncDetailed()
     } else {
       this.logger.debug('Skipping initial sync', {
-        operation: 'initial_sync', 
-        syncRequired: false
+        operation: 'initial_sync',
+        syncRequired: false,
       })
     }
 
     this.logger.info('MCP Server connecting to transport', {
       transport: 'stdio',
-      operation: 'server_connect'
+      operation: 'server_connect',
     })
 
     const transport = new StdioServerTransport()
     await this.server.connect(transport)
-    
+
     this.logger.info('MCP Server ready', {
       operation: 'server_ready',
-      success: true
+      success: true,
     })
   }
 

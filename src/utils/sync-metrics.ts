@@ -1,5 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import type { PrismaClient } from '@prisma/client'
+
 import type { ErrorSummary } from './error-aggregator.js'
+
 import { getLogger } from './logger.js'
 
 export interface SyncMetricsData {
@@ -35,7 +37,7 @@ export class SyncMetrics {
     errorSummary: ErrorSummary,
     syncType: string = 'detailed',
     avgResponseTime?: number,
-    rateLimitHits: number = 0
+    rateLimitHits: number = 0,
   ): Promise<SyncMetricsData> {
     const { syncMetrics, errorsByType, totalErrors } = errorSummary
 
@@ -75,6 +77,7 @@ export class SyncMetrics {
 
       return {
         ...storedMetrics,
+        avgResponseTime: storedMetrics.avgResponseTime ?? undefined,
         errorsByType: JSON.parse(storedMetrics.errorsByType),
       }
     } catch (error) {
@@ -93,7 +96,7 @@ export class SyncMetrics {
   async getLatestSync(syncType?: string): Promise<SyncMetricsData | null> {
     try {
       const whereClause = syncType ? { syncType } : {}
-      
+
       const latestSync = await this.prisma.syncMetric.findFirst({
         where: whereClause,
         orderBy: { startTime: 'desc' },
@@ -121,17 +124,20 @@ export class SyncMetrics {
   /**
    * Get sync metrics for the last N syncs
    */
-  async getRecentSyncs(limit: number = 10, syncType?: string): Promise<SyncMetricsData[]> {
+  async getRecentSyncs(
+    limit: number = 10,
+    syncType?: string,
+  ): Promise<SyncMetricsData[]> {
     try {
       const whereClause = syncType ? { syncType } : {}
-      
+
       const recentSyncs = await this.prisma.syncMetric.findMany({
         where: whereClause,
         orderBy: { startTime: 'desc' },
         take: limit,
       })
 
-      return recentSyncs.map(sync => ({
+      return recentSyncs.map((sync) => ({
         ...sync,
         errorsByType: JSON.parse(sync.errorsByType),
         avgResponseTime: sync.avgResponseTime || undefined,
@@ -161,7 +167,7 @@ export class SyncMetrics {
     try {
       // Get basic counts
       const totalSyncs = await this.prisma.syncMetric.count()
-      
+
       // Get recent metrics (last 24 hours)
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
       const recentSyncs = await this.prisma.syncMetric.findMany({
@@ -174,13 +180,17 @@ export class SyncMetrics {
       })
 
       // Calculate averages
-      const avgSuccessRate = recentSyncs.length > 0
-        ? recentSyncs.reduce((sum, sync) => sum + sync.successRate, 0) / recentSyncs.length
-        : 0
+      const avgSuccessRate =
+        recentSyncs.length > 0
+          ? recentSyncs.reduce((sum, sync) => sum + sync.successRate, 0) /
+            recentSyncs.length
+          : 0
 
-      const avgDuration = recentSyncs.length > 0
-        ? recentSyncs.reduce((sum, sync) => sum + sync.durationMs, 0) / recentSyncs.length
-        : 0
+      const avgDuration =
+        recentSyncs.length > 0
+          ? recentSyncs.reduce((sum, sync) => sum + sync.durationMs, 0) /
+            recentSyncs.length
+          : 0
 
       // Get last sync time
       const latestSync = await this.prisma.syncMetric.findFirst({
@@ -188,7 +198,9 @@ export class SyncMetrics {
       })
 
       // Count recent failures (success rate < 90%)
-      const recentFailures = recentSyncs.filter(sync => sync.successRate < 90).length
+      const recentFailures = recentSyncs.filter(
+        (sync) => sync.successRate < 90,
+      ).length
 
       // Aggregate error trends
       const errorTrends: Record<string, number> = {}
@@ -244,7 +256,7 @@ export class SyncMetrics {
             where: {
               syncType,
               id: {
-                notIn: recentIds.map(r => r.id),
+                notIn: recentIds.map((r) => r.id),
               },
             },
           })

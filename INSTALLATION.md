@@ -181,6 +181,7 @@ azure-devops-bot --help
 ### For CI/CD
 
 Use npx directly:
+
 ```bash
 npx azure-devops-bot --quiet --format json "my work items"
 ```
@@ -190,6 +191,7 @@ npx azure-devops-bot --quiet --format json "my work items"
 ### Issue: "command not found"
 
 **Solution**: Check if the command is in your PATH:
+
 ```bash
 echo $PATH
 npm config get prefix
@@ -200,6 +202,7 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 ### Issue: "Permission denied"
 
 **Solution**: Make the file executable:
+
 ```bash
 chmod +x src/index.ts
 chmod +x bin/azure-devops-bot
@@ -208,6 +211,7 @@ chmod +x bin/azure-devops-bot
 ### Issue: "Cannot find module"
 
 **Solution**: Ensure dependencies are installed and built:
+
 ```bash
 pnpm install
 pnpm build
@@ -216,6 +220,7 @@ pnpm build
 ### Issue: "tsx: command not found"
 
 **Solution**: Install tsx globally:
+
 ```bash
 npm install -g tsx
 ```

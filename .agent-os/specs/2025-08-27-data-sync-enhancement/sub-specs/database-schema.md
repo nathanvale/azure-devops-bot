@@ -20,11 +20,11 @@ model WorkItemRelation {
   attributes    String?  // JSON string for additional attributes
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
   sourceWorkItem WorkItem @relation("SourceRelations", fields: [sourceId], references: [id], onDelete: Cascade)
   targetWorkItem WorkItem @relation("TargetRelations", fields: [targetId], references: [id], onDelete: Cascade)
-  
+
   @@unique([sourceId, targetId, relationType])
   @@index([sourceId])
   @@index([targetId])
@@ -41,10 +41,10 @@ model WorkItemLink {
   state        String?  // For PR: Open, Merged, Closed
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
   workItem     WorkItem @relation(fields: [workItemId], references: [id], onDelete: Cascade)
-  
+
   @@unique([workItemId, url])
   @@index([workItemId])
   @@index([linkType])
@@ -59,7 +59,7 @@ model WorkItemLink {
 
 model WorkItem {
   // ... existing fields ...
-  
+
   // Additional fields for complete Azure DevOps coverage
   boardLane         String?  @map("board_lane")
   activatedBy       String?  @map("activated_by")
@@ -67,15 +67,15 @@ model WorkItem {
   risk              String?
   businessValue     Float?   @map("business_value")
   timeCriticality   Float?   @map("time_criticality")
-  
+
   // Store custom fields as JSON
   customFields      String?  @map("custom_fields") // JSON string
-  
+
   // Enhanced relations
   sourceRelations   WorkItemRelation[] @relation("SourceRelations")
   targetRelations   WorkItemRelation[] @relation("TargetRelations")
   links             WorkItemLink[]
-  
+
   // ... rest of existing model ...
 }
 ```
@@ -87,7 +87,7 @@ model WorkItem {
 
 model WorkItem {
   // ... existing fields and indexes ...
-  
+
   @@index([assignedTo, state])
   @@index([iterationPath, state])
   @@index([areaPath])
@@ -95,7 +95,7 @@ model WorkItem {
   @@index([parentId])
   @@index([type, state])
   @@index([priority, state])
-  
+
   // ... rest of model ...
 }
 ```
@@ -114,16 +114,16 @@ CREATE TABLE IF NOT EXISTS "work_item_relations" (
     "attributes" TEXT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "work_item_relations_source_id_fkey" 
-        FOREIGN KEY ("source_id") REFERENCES "work_items" ("id") 
+    CONSTRAINT "work_item_relations_source_id_fkey"
+        FOREIGN KEY ("source_id") REFERENCES "work_items" ("id")
         ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "work_item_relations_target_id_fkey" 
-        FOREIGN KEY ("target_id") REFERENCES "work_items" ("id") 
+    CONSTRAINT "work_item_relations_target_id_fkey"
+        FOREIGN KEY ("target_id") REFERENCES "work_items" ("id")
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Create unique constraint
-CREATE UNIQUE INDEX "work_item_relations_source_id_target_id_relation_type_key" 
+CREATE UNIQUE INDEX "work_item_relations_source_id_target_id_relation_type_key"
     ON "work_item_relations"("source_id", "target_id", "relation_type");
 
 -- Create indexes
@@ -141,13 +141,13 @@ CREATE TABLE IF NOT EXISTS "work_item_links" (
     "state" TEXT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "work_item_links_work_item_id_fkey" 
-        FOREIGN KEY ("work_item_id") REFERENCES "work_items" ("id") 
+    CONSTRAINT "work_item_links_work_item_id_fkey"
+        FOREIGN KEY ("work_item_id") REFERENCES "work_items" ("id")
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Create unique constraint
-CREATE UNIQUE INDEX "work_item_links_work_item_id_url_key" 
+CREATE UNIQUE INDEX "work_item_links_work_item_id_url_key"
     ON "work_item_links"("work_item_id", "url");
 
 -- Create indexes
@@ -164,26 +164,28 @@ ALTER TABLE "work_items" ADD COLUMN "time_criticality" REAL;
 ALTER TABLE "work_items" ADD COLUMN "custom_fields" TEXT;
 
 -- Create performance indexes
-CREATE INDEX IF NOT EXISTS "work_items_assignee_state_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_assignee_state_idx"
     ON "work_items"("assigned_to", "state");
-CREATE INDEX IF NOT EXISTS "work_items_iteration_state_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_iteration_state_idx"
     ON "work_items"("iteration_path", "state");
-CREATE INDEX IF NOT EXISTS "work_items_area_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_area_idx"
     ON "work_items"("area_path");
-CREATE INDEX IF NOT EXISTS "work_items_board_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_board_idx"
     ON "work_items"("board_column", "board_column_done");
-CREATE INDEX IF NOT EXISTS "work_items_parent_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_parent_idx"
     ON "work_items"("parent_id");
-CREATE INDEX IF NOT EXISTS "work_items_type_state_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_type_state_idx"
     ON "work_items"("type", "state");
-CREATE INDEX IF NOT EXISTS "work_items_priority_state_idx" 
+CREATE INDEX IF NOT EXISTS "work_items_priority_state_idx"
     ON "work_items"("priority", "state");
 ```
 
 ## Data Types and Constraints
 
 ### Relation Types
+
 Common Azure DevOps relation types to store:
+
 - `System.LinkTypes.Hierarchy-Forward` (Child)
 - `System.LinkTypes.Hierarchy-Reverse` (Parent)
 - `System.LinkTypes.Related` (Related)
@@ -193,7 +195,9 @@ Common Azure DevOps relation types to store:
 - `System.LinkTypes.Dependency-Reverse` (Predecessor)
 
 ### Link Types
+
 Common link types to track:
+
 - `PullRequest` - Associated pull requests
 - `Build` - Related builds
 - `Branch` - Source control branches
@@ -203,6 +207,7 @@ Common link types to track:
 - `ExternalLink` - External URLs
 
 ### Custom Fields JSON Structure
+
 ```json
 {
   "Custom.FieldName1": "value1",
@@ -218,7 +223,7 @@ Common link types to track:
 
 ```sql
 -- Query work items with their comments count
-SELECT 
+SELECT
   w.*,
   COUNT(c.id) as comment_count
 FROM work_items w
@@ -226,7 +231,7 @@ LEFT JOIN work_item_comments c ON w.id = c.work_item_id
 GROUP BY w.id;
 
 -- Query work items with their relationships
-SELECT 
+SELECT
   w.*,
   json_group_array(
     json_object(
@@ -241,7 +246,7 @@ LEFT JOIN work_items tw ON r.target_id = tw.id
 GROUP BY w.id;
 
 -- Query current sprint items with parent info
-SELECT 
+SELECT
   w.*,
   p.title as parent_title,
   p.state as parent_state

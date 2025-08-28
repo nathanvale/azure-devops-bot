@@ -1,15 +1,19 @@
 import { ErrorAggregator } from '../utils/error-aggregator.js'
 import { getLogger } from '../utils/logger.js'
 import { SyncMetrics } from '../utils/sync-metrics.js'
-import { AzureDevOpsClient, type WorkItemData } from './azure-devops.js'
+import type {
+  ComprehensiveWorkItemData,
+  ComprehensiveWorkItemDataWithPersons,
+} from '../types/database.js'
+import { AzureDevOpsClient, WorkItemData, WorkItemDataWithPersons } from './azure-devops.js'
 import { DatabaseService } from './database.js'
 
 export class SyncService {
-  private client: AzureDevOpsClient
-  private db: DatabaseService
-  private syncInterval: NodeJS.Timeout | null = null
+  protected client: AzureDevOpsClient
+  protected db: DatabaseService
+  protected syncInterval: NodeJS.Timeout | null = null
   private syncMetrics: SyncMetrics
-  private logger = getLogger()
+  protected logger = getLogger()
 
   constructor() {
     this.client = new AzureDevOpsClient()
@@ -40,7 +44,7 @@ export class SyncService {
     try {
       // Step 1: Discover work item IDs using fast WIQL query
       const workItemIds = await this.client.fetchWorkItems()
-      const idList = workItemIds.map((item: WorkItemData) => item.id)
+      const idList = workItemIds.map((item: ComprehensiveWorkItemData) => Number(item.id))
 
       this.logger.info('Work items discovered for detailed sync', {
         component: 'sync-service',
@@ -80,14 +84,22 @@ export class SyncService {
         },
         tableData: tableVerification,
       })
-      
+
       // Log table verification results
       console.log('\n📊 Database Table Verification:')
       console.log(`  ✅ Work Items: ${tableVerification.workItems} records`)
-      console.log(`  ${tableVerification.comments > 0 ? '✅' : '⚠️ '} Comments: ${tableVerification.comments} records`)
-      console.log(`  ${tableVerification.relations > 0 ? '✅' : '⚠️ '} Relations: ${tableVerification.relations} records`)
-      console.log(`  ${tableVerification.links > 0 ? '✅' : '⚠️ '} Links: ${tableVerification.links} records`)
-      console.log(`  ${tableVerification.syncMetrics > 0 ? '✅' : '⚠️ '} Sync Metrics: ${tableVerification.syncMetrics} records\n`)
+      console.log(
+        `  ${tableVerification.comments > 0 ? '✅' : '⚠️ '} Comments: ${tableVerification.comments} records`,
+      )
+      console.log(
+        `  ${tableVerification.relations > 0 ? '✅' : '⚠️ '} Relations: ${tableVerification.relations} records`,
+      )
+      console.log(
+        `  ${tableVerification.links > 0 ? '✅' : '⚠️ '} Links: ${tableVerification.links} records`,
+      )
+      console.log(
+        `  ${tableVerification.syncMetrics > 0 ? '✅' : '⚠️ '} Sync Metrics: ${tableVerification.syncMetrics} records\n`,
+      )
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
@@ -114,7 +126,7 @@ export class SyncService {
     idList: number[],
     concurrencyLimit: number,
     errorAggregator: ErrorAggregator,
-  ): Promise<WorkItemData[]> {
+  ): Promise<WorkItemDataWithPersons[]> {
     if (!idList || idList.length === 0) {
       return []
     }
@@ -132,7 +144,7 @@ export class SyncService {
 
       // Record success for each work item that was fetched
       workItems.forEach((workItem) => {
-        errorAggregator.recordSuccess(workItem.id)
+        errorAggregator.recordSuccess(Number(Number(workItem.id)))
       })
 
       // Record errors for any work items that couldn't be fetched
@@ -203,9 +215,9 @@ export class SyncService {
 
       try {
         const needsSync = await this.db.needsCommentSync(
-          workItem.id,
+          Number(workItem.id),
           workItem.commentCount || 0,
-          workItem.changedDate || null,
+          workItem.changedDate ? new Date(workItem.changedDate) : null,
           lastSyncTime,
         )
 
@@ -215,10 +227,10 @@ export class SyncService {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error)
-        errorAggregator.recordError(errorMessage, workItem.id)
+        errorAggregator.recordError(errorMessage, Number(workItem.id))
         this.logger.warn('Failed to check comment sync status', {
           component: 'sync-service',
-          workItemId: workItem.id,
+          workItemId: Number(workItem.id),
           error: errorMessage,
           operation: 'comment_sync_check',
         })
@@ -243,7 +255,6 @@ export class SyncService {
     // Process comment sync with controlled concurrency
     const queue = [...workItemsNeedingSync]
     const inProgress = new Set<Promise<void>>()
-    const totalToSync = workItemsNeedingSync.length
 
     while (queue.length > 0 || inProgress.size > 0) {
       // Start new tasks up to concurrency limit
@@ -256,12 +267,12 @@ export class SyncService {
           .then((commentCount) => {
             syncedCount++
             totalCommentsProcessed += commentCount
-            errorAggregator.recordSuccess(workItem.id)
+            errorAggregator.recordSuccess(Number(workItem.id))
           })
           .catch((error) => {
             const errorMessage =
               error instanceof Error ? error.message : String(error)
-            errorAggregator.recordError(errorMessage, workItem.id)
+            errorAggregator.recordError(errorMessage, Number(workItem.id))
           })
           .finally(() => {
             inProgress.delete(promise)
@@ -287,10 +298,10 @@ export class SyncService {
 
   private async syncSingleWorkItemCommentsWithTracking(
     workItem: WorkItemData,
-    errorAggregator: ErrorAggregator,
+    _errorAggregator: ErrorAggregator,
   ): Promise<number> {
     try {
-      const comments = await this.client.fetchWorkItemComments(workItem.id)
+      const comments = await this.client.fetchWorkItemComments(Number(workItem.id))
       await this.db.storeWorkItemComments(comments)
       return comments.length
     } catch (error) {
@@ -298,7 +309,7 @@ export class SyncService {
         error instanceof Error ? error.message : String(error)
       this.logger.warn('Failed to sync comments for work item', {
         component: 'sync-service',
-        workItemId: workItem.id,
+        workItemId: Number(workItem.id),
         error: errorMessage,
         operation: 'single_comment_sync',
       })
@@ -327,9 +338,9 @@ export class SyncService {
 
       try {
         const needsSync = await this.db.needsCommentSync(
-          workItem.id,
+          Number(workItem.id),
           workItem.commentCount || 0,
-          workItem.changedDate || null,
+          workItem.changedDate ? new Date(workItem.changedDate) : null,
           lastSyncTime,
         )
 
@@ -338,7 +349,7 @@ export class SyncService {
         }
       } catch (error) {
         console.warn(
-          `⚠️  Failed to check sync status for work item ${workItem.id}:`,
+          `⚠️  Failed to check sync status for work item ${Number(workItem.id)}:`,
           error,
         )
       }
@@ -383,7 +394,7 @@ export class SyncService {
           })
           .catch((error) => {
             console.warn(
-              `⚠️  Failed to sync comments for work item ${workItem.id}:`,
+              `⚠️  Failed to sync comments for work item ${Number(workItem.id)}:`,
               error,
             )
           })
@@ -415,7 +426,7 @@ export class SyncService {
   private async syncSingleWorkItemComments(
     workItem: WorkItemData,
   ): Promise<number> {
-    const comments = await this.client.fetchWorkItemComments(workItem.id)
+    const comments = await this.client.fetchWorkItemComments(Number(workItem.id))
     await this.db.storeWorkItemComments(comments)
     return comments.length
   }
@@ -497,13 +508,14 @@ export class SyncService {
     syncMetrics: number
   }> {
     try {
-      const [workItems, comments, relations, links, syncMetrics] = await Promise.all([
-        this.db.client.workItem.count(),
-        this.db.client.workItemComment.count(),
-        this.db.client.workItemRelation.count(),
-        this.db.client.workItemLink.count(),
-        this.db.client.syncMetric.count(),
-      ])
+      const [workItems, comments, relations, links, syncMetrics] =
+        await Promise.all([
+          this.db.client.workItem.count(),
+          this.db.client.workItemComment.count(),
+          this.db.client.workItemRelation.count(),
+          this.db.client.workItemLink.count(),
+          this.db.client.syncMetric.count(),
+        ])
 
       return {
         workItems,
@@ -517,7 +529,7 @@ export class SyncService {
         component: 'sync-service',
         error: error instanceof Error ? error.message : String(error),
       })
-      
+
       // Return zeros on error
       return {
         workItems: 0,

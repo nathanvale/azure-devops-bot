@@ -1,11 +1,4 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  vi,
-  type MockedFunction,
-} from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 import type { WorkItemComment } from '../src/types/comments.js'
 import type { AzureDevOpsClientConfig } from '../src/types/config.js'

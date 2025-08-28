@@ -13,11 +13,13 @@ Transform Azure DevOps into an AI-powered, always-available data source. Get ins
 ## 🚀 Quick Start - 5 Minutes to First Query
 
 ### Prerequisites
+
 - Node.js 18+ and pnpm installed
 - Azure DevOps Personal Access Token (PAT)
 - Claude Desktop or VS Code with Copilot
 
 ### Step 1: Clone and Install
+
 ```bash
 git clone https://github.com/nathanvale/azure-devops-bot.git
 cd azure-devops-bot
@@ -25,28 +27,33 @@ pnpm install
 ```
 
 ### Step 2: Get Your PAT Token
+
 1. Go to [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com/fwcdev/_usersSettings/tokens)
 2. Create token with **"Work Items (read & write)"** scope
 3. Copy the token
 
 ### Step 3: Set Environment Variable
+
 ```bash
 export AZURE_DEVOPS_PAT="your-token-here"
 ```
 
 ### Step 4: Test the Server
+
 ```bash
 pnpm mcp --emails=your.email@fwc.gov.au
 # You should see: "✅ MCP server started successfully"
 ```
 
 ### Step 5: Connect Your Client
+
 - [🤖 Claude Desktop Setup](#-claude-desktop-setup) (Recommended)
 - [💻 VS Code Setup](#-vs-code-setup)
 
 ## 🤖 Claude Desktop Setup
 
 ### Configuration Location
+
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux**: `~/.config/claude/claude_desktop_config.json`
@@ -73,7 +80,7 @@ pnpm mcp --emails=your.email@fwc.gov.au
 
 3. **Restart Claude Desktop**
 4. Look for the MCP indicator (🔌) in the chat interface
-5. Try: *"Show my active work items"*
+5. Try: _"Show my active work items"_
 
 ## 💻 VS Code Setup
 
@@ -139,13 +146,14 @@ graph LR
     A[Claude Desktop<br/>or VS Code] -->|MCP Protocol<br/>stdio| B[Azure DevOps Bot<br/>MCP Server]
     B -->|REST API| C[Azure DevOps<br/>Organization]
     B -->|Prisma ORM| D[SQLite DB<br/>Local Cache]
-    
+
     B -->|2min sync| C
     D -->|<100ms| B
     C -->|Initial sync<br/>≤30s for 1000+ items| D
 ```
 
 **Data Flow:**
+
 1. MCP clients send tool requests via stdio transport
 2. Server checks local SQLite for instant responses (<100ms)
 3. Background sync every 2 minutes keeps data fresh
@@ -158,74 +166,87 @@ All tools return JSON responses for AI processing. No natural language processin
 ### Core Tools
 
 #### 🔄 `wit_force_sync_work_items`
+
 Force immediate sync with Azure DevOps (bypasses 2-minute interval)
 
 **Parameters:**
+
 ```json
 {
-  "concurrency": 5  // Optional: 1-20, default 5
+  "concurrency": 5 // Optional: 1-20, default 5
 }
 ```
 
 #### 👤 `wit_my_work_items`
+
 Get all work items assigned to configured users
 
 **Parameters:** None
 
-**Usage:** *"Show my active work items"*
+**Usage:** _"Show my active work items"_
 
 #### 📋 `wit_get_work_item`
+
 Get single work item by ID with all fields
 
 **Parameters:**
+
 ```json
 {
   "id": 12345
 }
 ```
 
-**Usage:** *"Get details for work item 12345"*
+**Usage:** _"Get details for work item 12345"_
 
 #### 📦 `wit_get_work_items_batch_by_ids`
+
 Get multiple work items by IDs in a single request
 
 **Parameters:**
+
 ```json
 {
   "ids": [12345, 12346, 12347]
 }
 ```
 
-**Usage:** *"Get work items 12345, 12346, and 12347"*
+**Usage:** _"Get work items 12345, 12346, and 12347"_
 
 #### 💬 `wit_list_work_item_comments`
+
 Get all comments for a work item
 
 **Parameters:**
+
 ```json
 {
   "id": 12345
 }
 ```
 
-**Usage:** *"Show comments for work item 12345"*
+**Usage:** _"Show comments for work item 12345"_
 
 #### 🏃‍♂️ `wit_get_work_items_for_iteration`
+
 Get all work items for a specific sprint/iteration
 
 **Parameters:**
+
 ```json
 {
   "iterationPath": "Sprint 24"
 }
 ```
 
-**Usage:** *"Show all work items in Sprint 24"*
+**Usage:** _"Show all work items in Sprint 24"_
 
 #### ✍️ `wit_add_work_item_comment`
+
 Add a comment to a work item
 
 **Parameters:**
+
 ```json
 {
   "id": 12345,
@@ -233,12 +254,14 @@ Add a comment to a work item
 }
 ```
 
-**Usage:** *"Add comment 'Testing complete' to work item 12345"*
+**Usage:** _"Add comment 'Testing complete' to work item 12345"_
 
 #### 🔗 `wit_link_work_item_to_pull_request`
+
 Link a work item to an existing pull request
 
 **Parameters:**
+
 ```json
 {
   "workItemId": 12345,
@@ -246,31 +269,33 @@ Link a work item to an existing pull request
 }
 ```
 
-**Usage:** *"Link work item 12345 to PR 678"*
+**Usage:** _"Link work item 12345 to PR 678"_
 
 ## ⚡ Performance Benchmarks
 
-| Metric | Target | Actual | Status |
-|--------|--------|---------|--------|
-| **Full Sync** | ≤30 seconds | 10-30 seconds | ✅ |
-| **Query Response** | ≤100ms | Sub-100ms | ✅ |
-| **Memory Usage** | Stable | No leaks detected | ✅ |
-| **Uptime** | 99.9% | 24/7 with PM2 | ✅ |
+| Metric             | Target      | Actual            | Status |
+| ------------------ | ----------- | ----------------- | ------ |
+| **Full Sync**      | ≤30 seconds | 10-30 seconds     | ✅     |
+| **Query Response** | ≤100ms      | Sub-100ms         | ✅     |
+| **Memory Usage**   | Stable      | No leaks detected | ✅     |
+| **Uptime**         | 99.9%       | 24/7 with PM2     | ✅     |
 
-*Validated with 1,056+ real work items from fwcdev organization*
+_Validated with 1,056+ real work items from fwcdev organization_
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
 #### PAT Authentication Failed
+
 - **Symptom**: "Authentication failed" error
-- **Solution**: 
+- **Solution**:
   1. Verify PAT has "Work Items (read & write)" scope
   2. Check PAT hasn't expired
   3. Ensure PAT is for correct organization (fwcdev)
 
 #### MCP Server Not Appearing in Claude/VS Code
+
 - **Symptom**: No MCP indicator or tools available
 - **Check**:
   1. Server is running: `pnpm mcp --emails=test@fwc.gov.au`
@@ -278,6 +303,7 @@ Link a work item to an existing pull request
   3. Restart Claude Desktop/VS Code after config changes
 
 #### Performance Issues
+
 - **Symptom**: Slow queries (>100ms)
 - **Solution**:
   1. Check SQLite database size: `ls -lh prisma/dev.db`
@@ -285,6 +311,7 @@ Link a work item to an existing pull request
   3. Check memory usage in PM2: `pm2 monit`
 
 ### Debug Mode
+
 ```bash
 # Run with debug output
 DEBUG=* pnpm mcp --emails=your.email@fwc.gov.au
@@ -314,6 +341,7 @@ pm2 save
 ```
 
 ### Commands
+
 ```bash
 pm2 status           # Check service status
 pm2 logs azure-devops-bot  # View logs
@@ -322,6 +350,7 @@ pm2 monit           # Performance monitoring
 ```
 
 **Production Features:**
+
 - Automatic crash recovery
 - Memory leak detection
 - Boot persistence (macOS LaunchAgent)
@@ -330,17 +359,20 @@ pm2 monit           # Performance monitoring
 ## 🏢 Architecture & Configuration
 
 ### Target Organization
+
 - **Organization**: `fwcdev`
 - **Project**: `Customer Services Platform`
 - **API Version**: `7.0`
 
 ### Database Schema
+
 - **Engine**: SQLite with Prisma ORM
 - **Work Items**: Comprehensive metadata storage
 - **Comments**: Separate table with full history
 - **Sync Status**: Tracks last update timestamps
 
 ### MCP Protocol Implementation
+
 - **Version**: MCP 1.15+
 - **Transport**: stdio (Standard Input/Output)
 - **Authentication**: PAT-based
@@ -349,12 +381,14 @@ pm2 monit           # Performance monitoring
 ## 🧪 Testing
 
 ### Test Coverage
+
 - **Unit Tests**: 212 tests covering all services
 - **Performance Tests**: Production environment validation
 - **Integration Tests**: MCP server protocol testing
 - **Database Tests**: SQLite and Prisma testing
 
 ### Running Tests
+
 ```bash
 # Run all tests
 pnpm test
@@ -410,4 +444,4 @@ This project is specifically designed for the FWC development team. For issues o
 
 ---
 
-*Built with ❤️ for the FWC development team. Production validated and ready for 24/7 operation.*
+_Built with ❤️ for the FWC development team. Production validated and ready for 24/7 operation._

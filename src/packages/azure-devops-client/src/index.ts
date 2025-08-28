@@ -12,9 +12,9 @@ export type * from './types/api-responses.js'
 export type * from './types/comments.js'
 
 export type * from './types/config.js'
+export type * from './types/person.js'
 // Types
 export type * from './types/work-items.js'
-export type * from './types/person.js'
 
 // Utilities
 export {

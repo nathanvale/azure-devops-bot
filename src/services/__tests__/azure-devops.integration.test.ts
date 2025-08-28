@@ -30,7 +30,6 @@ describe('AzureDevOpsClient - Integration Tests', () => {
       // not being properly intercepted by MSW in the test environment.
       // The actual functionality works in production but the test infrastructure
       // needs to be updated to properly mock axios instances.
-      
       // This test would also be slow due to resilience policies
       // const result = await client.addWorkItemComment(1234, 'Test comment')
       // expect(result).toBeDefined()

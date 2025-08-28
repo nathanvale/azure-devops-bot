@@ -3,16 +3,16 @@ export enum ErrorType {
   RATE_LIMIT = 'RATE_LIMIT',
   NETWORK = 'NETWORK',
   SERVER = 'SERVER',
-  VALIDATION = 'VALIDATION'
+  VALIDATION = 'VALIDATION',
 }
 
 export interface ClassifiedError {
-  type: ErrorType;
-  code: string;
-  message: string;
-  retryable: boolean;
-  retryDelayMs?: number;
-  originalError: Error;
+  type: ErrorType
+  code: string
+  message: string
+  retryable: boolean
+  retryDelayMs?: number
+  originalError: Error
 }
 
 /**
@@ -20,34 +20,41 @@ export interface ClassifiedError {
  * Used in RetryOn functions for intelligent error-type-aware retry decisions
  */
 export class ErrorClassifier {
-  static classify(error: any): ClassifiedError {
+  static classify(error: unknown): ClassifiedError {
+    const err = error as any
+    
     // Handle timeout errors from resilience adapter
-    if (error.name === 'TimeoutError') {
+    if (err?.name === 'TimeoutError') {
       return {
         type: ErrorType.NETWORK,
         code: 'TIMEOUT_ERROR',
-        message: `Request timeout: ${error.message}`,
+        message: `Request timeout: ${err?.message || 'Unknown timeout error'}`,
         retryable: true,
         retryDelayMs: 5000,
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
-    
+
     // Note: Retry exhausted errors should not occur for auth errors anymore due to retryOn predicate
     // But handle them as a fallback
-    if (error.message && error.message.includes('Retry exhausted')) {
+    if (err?.message && err.message.includes('Retry exhausted')) {
       return {
         type: ErrorType.AUTHENTICATION,
         code: 'AUTH_FAILED',
-        message: 'Authentication failed after retry attempts. This should not normally occur.',
+        message:
+          'Authentication failed after retry attempts. This should not normally occur.',
         retryable: false,
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
-    
+
     // Try multiple ways to get status code - prioritize statusCode for AzureDevOpsError
-    const status = error.statusCode || error.status || error.response?.status || error.cause?.status
-    
+    const status =
+      err?.statusCode ||
+      err?.status ||
+      err?.response?.status ||
+      err?.cause?.status
+
     // Authentication errors (401, 403)
     if (status === 401 || status === 403) {
       return {
@@ -55,36 +62,36 @@ export class ErrorClassifier {
         code: status === 401 ? 'INVALID_TOKEN' : 'INSUFFICIENT_PERMISSIONS',
         message: this.getAuthErrorMessage(status),
         retryable: false,
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
 
     // Rate limiting errors (429)
     if (status === 429) {
-      const resetTime = error.headers?.['x-ratelimit-reset'];
-      const retryAfter = error.headers?.['retry-after'];
-      const delayMs = this.calculateRateLimitDelay(resetTime, retryAfter);
-      
+      const resetTime = err?.headers?.['x-ratelimit-reset']
+      const retryAfter = err?.headers?.['retry-after']
+      const delayMs = this.calculateRateLimitDelay(resetTime, retryAfter)
+
       return {
         type: ErrorType.RATE_LIMIT,
         code: 'RATE_LIMITED',
         message: `Rate limit exceeded. Server requests retry after ${delayMs}ms`,
         retryable: true,
         retryDelayMs: delayMs,
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
 
     // Network errors (connection issues, timeouts)
-    if (this.isNetworkError(error)) {
+    if (this.isNetworkError(err)) {
       return {
         type: ErrorType.NETWORK,
         code: 'NETWORK_ERROR',
-        message: `Network connectivity issue: ${error.code || error.message}`,
+        message: `Network connectivity issue: ${err?.code || err?.message || 'Unknown network error'}`,
         retryable: true,
         retryDelayMs: 1000, // Base delay for exponential backoff
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
 
     // Server errors (5xx)
@@ -92,11 +99,11 @@ export class ErrorClassifier {
       return {
         type: ErrorType.SERVER,
         code: 'SERVER_ERROR',
-        message: `Azure DevOps server error: ${status} ${error.statusText}`,
+        message: `Azure DevOps server error: ${status} ${err?.statusText || 'Server Error'}`,
         retryable: true,
         retryDelayMs: 2000, // Base delay for server errors
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
 
     // Client validation errors (4xx except 401, 403, 429)
@@ -104,20 +111,20 @@ export class ErrorClassifier {
       return {
         type: ErrorType.VALIDATION,
         code: 'CLIENT_ERROR',
-        message: `Request validation failed: ${status} ${error.statusText}`,
+        message: `Request validation failed: ${status} ${err?.statusText || 'Client Error'}`,
         retryable: false,
-        originalError: error
-      };
+        originalError: err as Error,
+      }
     }
 
     // Unknown errors - treat as non-retryable for safety
     return {
       type: ErrorType.VALIDATION,
       code: 'UNKNOWN_ERROR',
-      message: `Unclassified error: ${error.message || 'Unknown error occurred'}`,
+      message: `Unclassified error: ${err?.message || 'Unknown error occurred'}`,
       retryable: false,
-      originalError: error
-    };
+      originalError: err instanceof Error ? err : new Error(String(err)),
+    }
   }
 
   /**
@@ -126,46 +133,52 @@ export class ErrorClassifier {
    */
   static createRetryPredicate() {
     return (error: unknown): boolean => {
-      const classified = ErrorClassifier.classify(error);
-      
+      const classified = ErrorClassifier.classify(error)
+
       // Log the classification for observability
-      console.debug(`Error classified as ${classified.type}, retryable: ${classified.retryable}`);
-      
-      return classified.retryable;
-    };
+      console.debug(
+        `Error classified as ${classified.type}, retryable: ${classified.retryable}`,
+      )
+
+      return classified.retryable
+    }
   }
 
   /**
    * Checks if error represents a network connectivity issue
    */
-  private static isNetworkError(error: any): boolean {
+  private static isNetworkError(error: unknown): boolean {
+    const err = error as any
     // Only treat as network error if it has specific network error codes
     return (
-      error.code === 'ECONNRESET' ||
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ENOTFOUND' ||
-      error.code === 'ECONNABORTED'
-    );
+      err?.code === 'ECONNRESET' ||
+      err?.code === 'ECONNREFUSED' ||
+      err?.code === 'ETIMEDOUT' ||
+      err?.code === 'ENOTFOUND' ||
+      err?.code === 'ECONNABORTED'
+    )
   }
 
   /**
    * Calculates delay for rate limit retries using Azure DevOps headers
    */
-  private static calculateRateLimitDelay(resetTime?: string, retryAfter?: string): number {
+  private static calculateRateLimitDelay(
+    resetTime?: string,
+    retryAfter?: string,
+  ): number {
     if (retryAfter) {
       // Retry-After header in seconds
-      return Math.min(parseInt(retryAfter) * 1000, 300000); // Max 5 minutes
+      return Math.min(parseInt(retryAfter) * 1000, 300000) // Max 5 minutes
     }
-    
+
     if (resetTime) {
       // X-RateLimit-Reset as Unix timestamp
-      const resetTimestamp = parseInt(resetTime) * 1000;
-      const now = Date.now();
-      return Math.max(1000, Math.min(resetTimestamp - now, 300000)); // Min 1s, max 5min
+      const resetTimestamp = parseInt(resetTime) * 1000
+      const now = Date.now()
+      return Math.max(1000, Math.min(resetTimestamp - now, 300000)) // Min 1s, max 5min
     }
-    
-    return 60000; // Default 1 minute delay if no headers
+
+    return 60000 // Default 1 minute delay if no headers
   }
 
   /**
@@ -173,11 +186,11 @@ export class ErrorClassifier {
    */
   private static getAuthErrorMessage(status: number): string {
     if (status === 401) {
-      return 'PAT token is invalid or expired. Please verify AZURE_DEVOPS_PAT environment variable contains a valid Personal Access Token.';
+      return 'PAT token is invalid or expired. Please verify AZURE_DEVOPS_PAT environment variable contains a valid Personal Access Token.'
     }
     if (status === 403) {
-      return 'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" scope enabled in Azure DevOps.';
+      return 'PAT token lacks required permissions. Please ensure the token has "Work Items (read)" scope enabled in Azure DevOps.'
     }
-    return 'Authentication failed with unexpected error. Please check PAT token and network connectivity.';
+    return 'Authentication failed with unexpected error. Please check PAT token and network connectivity.'
   }
 }

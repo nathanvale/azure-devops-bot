@@ -49,7 +49,7 @@ async function main() {
     // Fetch some work items to get their IDs
     client = new AzureDevOpsClient()
     const workItems = await client.fetchWorkItems()
-    sampleWorkItemIds = workItems.slice(0, sampleCount).map((item) => item.id)
+    sampleWorkItemIds = workItems.slice(0, sampleCount).map((item) => typeof item.id === 'string' ? parseInt(item.id) : item.id)
 
     console.log(`🎯 Selected work items: ${sampleWorkItemIds.join(', ')}\n`)
   } else {

@@ -1,30 +1,33 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { AzureDevOpsRestClient } from '../../packages/azure-devops-client/src/client.js'
-import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 import type { ResiliencePolicy } from '@orchestr8/resilience'
+
 import { performance } from 'perf_hooks'
-import { server } from '../../mocks/server.js'
+
+import { ProductionResilienceAdapter } from '@orchestr8/resilience'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+
 import { azureDevOpsHandlers } from '../../mocks/handlers/azure-devops.handlers.js'
+import { server } from '../../mocks/server.js'
+import { AzureDevOpsRestClient } from '../../packages/azure-devops-client/src/client.js'
 
 describe('Authentication Performance with @orchestr8/resilience', () => {
   let client: AzureDevOpsRestClient
   let resilience: ProductionResilienceAdapter
-  
+
   const testConfig = {
     organization: 'test-org',
-    project: 'test-project', 
-    pat: 'test-pat-token'
+    project: 'test-project',
+    pat: 'test-pat-token',
   }
 
   beforeEach(async () => {
     // Use MSW server for consistent testing
     server.use(...azureDevOpsHandlers)
-    
+
     resilience = new ProductionResilienceAdapter()
     client = new AzureDevOpsRestClient(testConfig)
-    
+
     // Wait a bit for async logger initialization
-    await new Promise(resolve => setTimeout(resolve, 150))
+    await new Promise((resolve) => setTimeout(resolve, 150))
   })
 
   afterEach(() => {
@@ -40,22 +43,18 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
         },
-        timeout: {
-          duration: 5000, // 5 second timeout
-          operationName: 'auth-validation'
-        }
+        timeout: 5000, // 5 second timeout
       }
 
       const startTime = performance.now()
-      
+
       // Execute authentication validation with resilience
       const profile = await resilience.applyPolicy(
         () => client.getCurrentUserProfile(),
-        authPolicy
+        authPolicy,
       )
-      
+
       const authDuration = performance.now() - startTime
 
       expect(profile).toBeDefined()
@@ -79,7 +78,7 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
       expect(directProfile).toBeDefined()
       expect(resilienceProfile).toBeDefined()
       expect(directProfile.displayName).toBe(resilienceProfile.displayName)
-      
+
       // Resilience overhead should be minimal (<50ms)
       expect(overhead).toBeLessThan(50)
       expect(resilienceDuration).toBeLessThan(200)
@@ -89,18 +88,20 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
       const concurrentCount = 10
       const startTime = performance.now()
 
-      const promises = Array(concurrentCount).fill(0).map(async (_, i) => {
-        // Each call should complete authentication validation
-        const profile = await client.getCurrentUserProfile()
-        return { index: i, profile }
-      })
+      const promises = Array(concurrentCount)
+        .fill(0)
+        .map(async (_, i) => {
+          // Each call should complete authentication validation
+          const profile = await client.getCurrentUserProfile()
+          return { index: i, profile }
+        })
 
       const results = await Promise.all(promises)
       const totalDuration = performance.now() - startTime
       const avgDurationPerAuth = totalDuration / concurrentCount
 
       expect(results).toHaveLength(concurrentCount)
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.profile).toBeDefined()
         expect(result.profile.displayName).toBeDefined()
       })
@@ -118,31 +119,23 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
           initialDelay: 100,
           maxDelay: 1000,
           backoffStrategy: 'exponential',
-          jitterStrategy: 'full',
-          retryOn: (error: any) => {
-            // Should not retry authentication errors
-            const status = error.response?.status || error.status
-            return status !== 401 && status !== 403 && status >= 500
-          }
+          jitterStrategy: 'full-jitter',
         },
-        timeout: {
-          duration: 10000,
-          operationName: 'auth-with-retry-policy'
-        }
+        timeout: 10000,
       }
 
       const startTime = performance.now()
-      
+
       const profile = await resilience.applyPolicy(
         () => client.getCurrentUserProfile(),
-        authPolicy
+        authPolicy,
       )
-      
+
       const duration = performance.now() - startTime
 
       expect(profile).toBeDefined()
       expect(profile.displayName).toBeDefined()
-      
+
       // Should complete quickly since no retries needed for success
       expect(duration).toBeLessThan(200)
     })
@@ -152,21 +145,24 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
       const operations = [
         () => client.getCurrentUserProfile(),
         () => client.getWorkItem(12345).catch(() => ({ id: 12345 })), // Mock work item
-        () => client.queryWorkItems('SELECT [Id] FROM WorkItems').catch(() => ({ workItems: [] }))
+        () =>
+          client
+            .queryWorkItems('SELECT [Id] FROM WorkItems')
+            .catch(() => ({ workItems: [] })),
       ]
 
       const startTime = performance.now()
-      
+
       // Execute operations that all require authentication validation
       const results = await Promise.all(
-        operations.map(async op => {
+        operations.map(async (op) => {
           const opStart = performance.now()
           const result = await op()
           const opDuration = performance.now() - opStart
           return { result, duration: opDuration }
-        })
+        }),
       )
-      
+
       const totalDuration = performance.now() - startTime
 
       expect(results).toHaveLength(3)
@@ -192,9 +188,9 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
           const authStart = performance.now()
           const profile = await client.getCurrentUserProfile()
           const authEnd = performance.now()
-          
-          totalAuthTime += (authEnd - authStart)
-          
+
+          totalAuthTime += authEnd - authStart
+
           if (profile && profile.displayName) {
             successCount++
           }
@@ -223,35 +219,31 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
           maxDelay: 0,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: () => false
         },
         circuitBreaker: {
           key: 'auth-circuit-test',
           failureThreshold: 2,
           recoveryTime: 500,
           sampleSize: 5,
-          halfOpenPolicy: 'single-probe'
+          halfOpenPolicy: 'single-probe',
         },
-        timeout: {
-          duration: 1000,
-          operationName: 'auth-circuit-test'
-        }
+        timeout: 1000,
       }
 
       // First call should succeed
       const startTime = performance.now()
-      
+
       try {
         const profile = await resilience.applyPolicy(
           () => client.getCurrentUserProfile(),
-          cbPolicy
+          cbPolicy,
         )
-        
+
         const duration = performance.now() - startTime
-        
+
         expect(profile).toBeDefined()
         expect(duration).toBeLessThan(200)
-      } catch (error) {
+      } catch {
         // Circuit breaker should fail fast
         const duration = performance.now() - startTime
         expect(duration).toBeLessThan(100) // Should fail very quickly
@@ -268,29 +260,22 @@ describe('Authentication Performance with @orchestr8/resilience', () => {
           maxDelay: 1000,
           backoffStrategy: 'fixed',
           jitterStrategy: 'none',
-          retryOn: (error: any) => {
-            const status = error.response?.status || error.status
-            return status === 429 // Only retry rate limits
-          }
         },
-        timeout: {
-          duration: 5000,
-          operationName: 'rate-limit-auth'
-        }
+        timeout: 5000,
       }
 
       const startTime = performance.now()
-      
+
       const profile = await resilience.applyPolicy(
         () => client.getCurrentUserProfile(),
-        rateLimitPolicy
+        rateLimitPolicy,
       )
-      
+
       const duration = performance.now() - startTime
 
       expect(profile).toBeDefined()
       expect(profile.displayName).toBeDefined()
-      
+
       // Should complete without hitting rate limits in test environment
       expect(duration).toBeLessThan(300)
     })

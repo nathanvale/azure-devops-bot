@@ -24,9 +24,7 @@ export default defineConfig({
       '**/*production*.test.ts',
       '**/*debug*.test.ts',
     ],
-    exclude: [
-      'node_modules/**/*.test.ts',
-    ],
+    exclude: ['node_modules/**/*.test.ts'],
     testTimeout: 300000, // 5 minutes timeout for performance tests
     // Performance tests should not run in parallel to ensure accurate timing
     maxConcurrency: 1,

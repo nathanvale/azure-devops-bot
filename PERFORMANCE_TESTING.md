@@ -15,25 +15,25 @@ This project includes comprehensive performance and benchmark tests that validat
    - Memory usage monitoring during load testing
    - Timeout: 3 minutes
 
-2. **src/utils/__tests__/sync-performance-benchmark.test.ts**
+2. **src/utils/**tests**/sync-performance-benchmark.test.ts**
    - Sync operation performance benchmarks
    - Validates 30x performance improvement claims
    - Tests batch operations vs individual calls
 
-3. **src/utils/__tests__/authentication-performance.test.ts**
+3. **src/utils/**tests**/authentication-performance.test.ts**
    - Authentication performance with resilience
    - Pre-flight authentication validation
    - Circuit breaker and rate limiting performance
 
-4. **src/utils/__tests__/logger-security-performance.test.ts**
+4. **src/utils/**tests**/logger-security-performance.test.ts**
    - Logger security and performance tests
    - Logging operation overhead measurements
 
-5. **src/utils/__tests__/resilience-telemetry-performance.test.ts**
+5. **src/utils/**tests**/resilience-telemetry-performance.test.ts**
    - Resilience telemetry integration performance
    - Policy application overhead testing
 
-6. **src/utils/__tests__/resilience-adapter-performance.test.ts**
+6. **src/utils/**tests**/resilience-adapter-performance.test.ts**
    - ProductionResilienceAdapter memory usage
    - Adapter creation and policy application benchmarks
 
@@ -86,6 +86,7 @@ Performance tests are excluded from regular CI runs but can be triggered:
 Performance tests are excluded from regular test runs via:
 
 1. **vitest.config.ts** - Default configuration excludes performance tests:
+
    ```typescript
    exclude: [
      '**/performance/**/*.test.ts',
@@ -135,7 +136,7 @@ If performance tests are timing out:
 If performance tests are accidentally running in CI:
 
 1. Verify the exclude patterns in vitest.config.ts
-2. Check that test files follow naming convention (*performance*.test.ts)
+2. Check that test files follow naming convention (_performance_.test.ts)
 3. Ensure CI is using the default vitest config, not the performance one
 
 ### WallabyJS Running Performance Tests

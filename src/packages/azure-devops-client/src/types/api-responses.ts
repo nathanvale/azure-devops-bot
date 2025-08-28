@@ -7,10 +7,9 @@ export interface AzureDevOpsApiResponse<T = unknown> {
   value: T[]
 }
 
-export interface WorkItemBatchResponse
-  extends AzureDevOpsApiResponse<WorkItem> {}
+export type WorkItemBatchResponse = AzureDevOpsApiResponse<WorkItem>
 
-export interface WorkItemQueryResponse extends WorkItemQueryResult {}
+export type WorkItemQueryResponse = WorkItemQueryResult
 
 export interface WorkItemCommentsApiResponse {
   comments: WorkItemComment[]

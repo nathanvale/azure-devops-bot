@@ -37,8 +37,9 @@ pnpm mcp --emails=your.email@fwc.gov.au
 ```
 
 **Expected output:**
+
 ```
-✅ Email validation passed for: your.email@fwc.gov.au  
+✅ Email validation passed for: your.email@fwc.gov.au
 🔄 Starting background sync (2 minute intervals)
 ✅ MCP server started successfully
 ```
@@ -52,6 +53,7 @@ pnpm mcp --emails=your.email@fwc.gov.au
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 2. **Add this configuration:**
+
    ```json
    {
      "mcpServers": {
@@ -69,11 +71,12 @@ pnpm mcp --emails=your.email@fwc.gov.au
 
 3. **Restart Claude Desktop**
 
-4. **Test:** Look for MCP indicator 🔌 and try: *"Show my active work items"*
+4. **Test:** Look for MCP indicator 🔌 and try: _"Show my active work items"_
 
 ### Option B: VS Code
 
 1. **Create** `.vscode/mcp.json` in your workspace:
+
    ```json
    {
      "servers": {
@@ -94,11 +97,12 @@ pnpm mcp --emails=your.email@fwc.gov.au
 
 3. **Click Tools** → Select azure-devops-bot tools
 
-4. **Test:** Ask *"Show my active work items"*
+4. **Test:** Ask _"Show my active work items"_
 
 ## ✅ Success!
 
 You should now see:
+
 - MCP server indicator in your client
 - 8 Azure DevOps tools available
 - Instant work item responses (<100ms)
@@ -112,14 +116,17 @@ You should now see:
 ## 🔧 Quick Troubleshooting
 
 ### PAT Token Issues
+
 - **Error**: "Authentication failed"
 - **Fix**: Verify token has "Work Items (read & write)" scope
 
 ### Server Not Found
+
 - **Error**: No MCP tools appearing
 - **Fix**: Check absolute path in configuration and restart client
 
-### Performance Issues  
+### Performance Issues
+
 - **Error**: Slow responses
 - **Fix**: Wait for initial sync to complete (~30 seconds)
 
@@ -132,4 +139,4 @@ You should now see:
 
 ---
 
-*Total setup time: ~5 minutes | Ready for production use*
+_Total setup time: ~5 minutes | Ready for production use_

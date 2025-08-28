@@ -1,5 +1,6 @@
-import { getLogger } from './logger.js'
 import type { Logger } from '@orchestr8/logger'
+
+import { getLogger } from './logger.js'
 
 export interface ErrorSummary {
   totalErrors: number
@@ -30,7 +31,7 @@ export class ErrorAggregator {
     timestamp: Date
     retryCount?: number
   }> = []
-  
+
   private syncMetrics = {
     totalAttempted: 0,
     totalSucceeded: 0,
@@ -51,9 +52,10 @@ export class ErrorAggregator {
       } catch {
         // Fallback to console if global logger not initialized
         // Use originalConsole if available (for quiet mode), otherwise regular console
-        const originalConsole = (global as any).originalConsole;
-        const safeConsole = originalConsole || console;
-        
+        const originalConsole = (global as { originalConsole?: typeof console })
+          .originalConsole
+        const safeConsole = originalConsole || console
+
         this.logger = {
           debug: safeConsole.debug?.bind?.(safeConsole) || (() => {}),
           info: safeConsole.info?.bind?.(safeConsole) || (() => {}),
@@ -72,7 +74,7 @@ export class ErrorAggregator {
   recordSuccess(workItemId?: number): void {
     this.syncMetrics.totalSucceeded++
     this.syncMetrics.totalAttempted++
-    
+
     this.logger.debug('Operation succeeded', {
       component: 'error-aggregator',
       workItemId,
@@ -83,10 +85,14 @@ export class ErrorAggregator {
   /**
    * Record an error with categorization
    */
-  recordError(error: Error | string, workItemId?: number, retryCount?: number): void {
+  recordError(
+    error: Error | string,
+    workItemId?: number,
+    retryCount?: number,
+  ): void {
     const errorMessage = error instanceof Error ? error.message : error
     const errorType = this.categorizeError(errorMessage)
-    
+
     const errorRecord = {
       type: errorType,
       message: errorMessage,
@@ -94,11 +100,11 @@ export class ErrorAggregator {
       timestamp: new Date(),
       retryCount,
     }
-    
+
     this.errors.push(errorRecord)
     this.syncMetrics.totalFailed++
     this.syncMetrics.totalAttempted++
-    
+
     this.logger.error('Operation failed', {
       component: 'error-aggregator',
       errorType,
@@ -114,8 +120,12 @@ export class ErrorAggregator {
    */
   private categorizeError(errorMessage: string): string {
     const message = errorMessage.toLowerCase()
-    
-    if (message.includes('401') || message.includes('unauthorized') || message.includes('authentication')) {
+
+    if (
+      message.includes('401') ||
+      message.includes('unauthorized') ||
+      message.includes('authentication')
+    ) {
       return 'AUTHENTICATION'
     }
     if (message.includes('429') || message.includes('rate limit')) {
@@ -139,7 +149,7 @@ export class ErrorAggregator {
     if (message.includes('validation') || message.includes('invalid')) {
       return 'VALIDATION'
     }
-    
+
     return 'UNKNOWN'
   }
 
@@ -148,28 +158,33 @@ export class ErrorAggregator {
    */
   generateSummary(): ErrorSummary {
     this.syncMetrics.endTime = new Date()
-    this.syncMetrics.durationMs = this.syncMetrics.endTime.getTime() - this.syncMetrics.startTime.getTime()
+    const durationMs = this.syncMetrics.endTime.getTime() - this.syncMetrics.startTime.getTime()
     
+    // Create final metrics with duration
+    const finalMetrics = { ...this.syncMetrics, durationMs }
+
     // Count errors by type
     const errorsByType: Record<string, number> = {}
     for (const error of this.errors) {
       errorsByType[error.type] = (errorsByType[error.type] || 0) + 1
     }
-    
-    const successRate = this.syncMetrics.totalAttempted > 0 
-      ? (this.syncMetrics.totalSucceeded / this.syncMetrics.totalAttempted) * 100 
-      : 0
+
+    const successRate =
+      this.syncMetrics.totalAttempted > 0
+        ? (this.syncMetrics.totalSucceeded / this.syncMetrics.totalAttempted) *
+          100
+        : 0
 
     const summary: ErrorSummary = {
       totalErrors: this.errors.length,
       errorsByType,
       errorDetails: [...this.errors],
       syncMetrics: {
-        ...this.syncMetrics,
+        ...finalMetrics,
         successRate: Math.round(successRate * 100) / 100, // Round to 2 decimals
-      }
+      },
     }
-    
+
     // Log comprehensive summary
     this.logger.info('Sync operation completed', {
       component: 'error-aggregator',
@@ -181,22 +196,22 @@ export class ErrorAggregator {
         durationMs: summary.syncMetrics.durationMs,
         errorsByType,
         totalErrors: summary.totalErrors,
-      }
+      },
     })
-    
+
     // Log detailed error breakdown if there are errors
     if (this.errors.length > 0) {
       this.logger.warn('Sync completed with errors', {
         component: 'error-aggregator',
         errorBreakdown: errorsByType,
-        sampleErrors: this.errors.slice(0, 5).map(e => ({
+        sampleErrors: this.errors.slice(0, 5).map((e) => ({
           type: e.type,
           message: e.message.substring(0, 100),
           workItemId: e.workItemId,
-        }))
+        })),
       })
     }
-    
+
     return summary
   }
 
@@ -204,9 +219,11 @@ export class ErrorAggregator {
    * Get current metrics without completing the sync
    */
   getCurrentMetrics() {
-    const successRate = this.syncMetrics.totalAttempted > 0 
-      ? (this.syncMetrics.totalSucceeded / this.syncMetrics.totalAttempted) * 100 
-      : 0
+    const successRate =
+      this.syncMetrics.totalAttempted > 0
+        ? (this.syncMetrics.totalSucceeded / this.syncMetrics.totalAttempted) *
+          100
+        : 0
 
     return {
       ...this.syncMetrics,
@@ -227,7 +244,7 @@ export class ErrorAggregator {
       startTime: new Date(),
       endTime: undefined,
     }
-    
+
     this.logger.info('Error aggregator reset for new sync operation', {
       component: 'error-aggregator',
     })

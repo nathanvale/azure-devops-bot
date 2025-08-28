@@ -22,7 +22,7 @@ As a system administrator, I want authentication and network errors handled diff
 
 The circuit breaker should trip quickly for authentication errors (after 2-3 failures) but be more tolerant of transient network issues. Different error types should have different retry strategies and failure thresholds.
 
-### Clear Diagnostic Information  
+### Clear Diagnostic Information
 
 As a troubleshooting developer, I want structured error information that clearly identifies the root cause of failures, so that I can quickly resolve authentication or configuration issues.
 
@@ -31,7 +31,7 @@ PAT token validation should provide specific error codes and messages. System lo
 ## Spec Scope
 
 1. **Blocking Authentication Validation** - Make PAT token validation synchronous and halt operations on authentication failure
-2. **Circuit Breaker Configuration** - Lower failure threshold for authentication errors (3 failures) vs network errors (12 failures)  
+2. **Circuit Breaker Configuration** - Lower failure threshold for authentication errors (3 failures) vs network errors (12 failures)
 3. **Error-Type-Aware Retry Logic** - Different retry strategies based on error classification (auth, rate-limit, network, server)
 4. **Structured Error Handling** - Consistent error types with specific codes and actionable messages
 5. **Early Failure Detection** - Stop sync operations immediately when authentication is invalid instead of processing hundreds of doomed requests
@@ -47,7 +47,7 @@ PAT token validation should provide specific error codes and messages. System lo
 ## Expected Deliverable
 
 1. **Reliable Sync Process** - Sync operations complete successfully or fail fast with clear error messages
-2. **Intelligent Circuit Breaking** - System stops retrying quickly for authentication errors but tolerates transient network issues  
+2. **Intelligent Circuit Breaking** - System stops retrying quickly for authentication errors but tolerates transient network issues
 3. **Zero Cascade Failures** - Authentication failures block sync operations immediately instead of causing hundreds of individual failures
 4. **Structured Error Information** - All error conditions return consistent error objects with specific codes and actionable messages
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
+
 import { DatabaseService } from '../database.js'
 
 describe('New MCP Tools - Smoke Tests', () => {
@@ -33,7 +34,9 @@ describe('New MCP Tools - Smoke Tests', () => {
   describe('Query Method Signatures', () => {
     it('getWorkItemsByAssignee should accept string parameter', async () => {
       // Should not throw for method signature
-      const result = await db.getWorkItemsByAssignee('test@example.com').catch(() => [])
+      const result = await db
+        .getWorkItemsByAssignee('test@example.com')
+        .catch(() => [])
       expect(Array.isArray(result)).toBe(true)
     })
 
@@ -68,9 +71,9 @@ describe('New MCP Tools - Smoke Tests', () => {
 
   describe('Database Performance Logging', () => {
     it('should have logger instance', () => {
-      // @ts-ignore - accessing private member for testing
+      // @ts-expect-error - accessing private member for testing
       expect(db.logger).toBeDefined()
-      // @ts-ignore 
+      // @ts-expect-error - accessing private member for testing
       expect(typeof db.logger.info).toBe('function')
     })
   })

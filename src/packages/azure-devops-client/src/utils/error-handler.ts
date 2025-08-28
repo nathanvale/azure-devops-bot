@@ -1,18 +1,16 @@
 import type { AxiosError } from 'axios'
 
-import type { AzureDevOpsApiErrorResponse } from '../types/api-responses.js'
-
 export class AzureDevOpsError extends Error {
   public readonly code: string
   public readonly statusCode?: number
-  public readonly response?: any
+  public readonly response?: Record<string, unknown>
   public readonly isRetryable: boolean
 
   constructor(
     message: string,
     code: string,
     statusCode?: number,
-    response?: any,
+    response?: Record<string, unknown>,
     isRetryable = false,
   ) {
     super(message)
@@ -33,7 +31,7 @@ export class AuthenticationError extends AzureDevOpsError {
   constructor(
     message = 'Authentication failed. Please check your Personal Access Token.',
   ) {
-    super(message, 'AUTH_ERROR', 401, null, false)
+    super(message, 'AUTH_ERROR', 401, undefined, false)
     this.name = 'AuthenticationError'
   }
 }
@@ -42,7 +40,7 @@ export class RateLimitError extends AzureDevOpsError {
   public readonly retryAfter?: number
 
   constructor(message = 'Rate limit exceeded', retryAfter?: number) {
-    super(message, 'RATE_LIMIT_ERROR', 429, null, true)
+    super(message, 'RATE_LIMIT_ERROR', 429, undefined, true)
     this.name = 'RateLimitError'
     this.retryAfter = retryAfter
   }
@@ -50,21 +48,21 @@ export class RateLimitError extends AzureDevOpsError {
 
 export class ValidationError extends AzureDevOpsError {
   constructor(message: string) {
-    super(message, 'VALIDATION_ERROR', 400, null, false)
+    super(message, 'VALIDATION_ERROR', 400, undefined, false)
     this.name = 'ValidationError'
   }
 }
 
 export class NetworkError extends AzureDevOpsError {
   constructor(message = 'Network error occurred') {
-    super(message, 'NETWORK_ERROR', undefined, null, true)
+    super(message, 'NETWORK_ERROR', undefined, undefined, true)
     this.name = 'NetworkError'
   }
 }
 
 export class TimeoutError extends AzureDevOpsError {
   constructor(message = 'Request timeout') {
-    super(message, 'TIMEOUT_ERROR', undefined, null, true)
+    super(message, 'TIMEOUT_ERROR', undefined, undefined, true)
     this.name = 'TimeoutError'
   }
 }
@@ -77,7 +75,7 @@ export class WorkItemNotFoundError extends AzureDevOpsError {
       `Work item ${workItemId} not found`,
       'WORK_ITEM_NOT_FOUND',
       404,
-      null,
+      undefined,
       false,
     )
     this.name = 'WorkItemNotFoundError'
@@ -89,7 +87,7 @@ export class InvalidQueryError extends AzureDevOpsError {
   public readonly query: string
 
   constructor(query: string, message = 'Invalid WIQL query syntax') {
-    super(message, 'INVALID_QUERY', 400, null, false)
+    super(message, 'INVALID_QUERY', 400, undefined, false)
     this.name = 'InvalidQueryError'
     this.query = query
   }
@@ -97,7 +95,7 @@ export class InvalidQueryError extends AzureDevOpsError {
 
 export class ServerError extends AzureDevOpsError {
   constructor(message = 'Azure DevOps server error', statusCode = 500) {
-    super(message, 'SERVER_ERROR', statusCode, null, true)
+    super(message, 'SERVER_ERROR', statusCode, undefined, true)
     this.name = 'ServerError'
   }
 }
@@ -127,7 +125,7 @@ export class ErrorHandler {
         error.message,
         'UNKNOWN_ERROR',
         undefined,
-        null,
+        undefined,
         true,
       )
     }
@@ -146,18 +144,20 @@ export class ErrorHandler {
       case 401:
         throw new AuthenticationError()
 
-      case 404:
+      case 404: {
         const workItemId = this.extractWorkItemId(error.config?.url)
         if (workItemId) {
           throw new WorkItemNotFoundError(workItemId)
         }
         throw new AzureDevOpsError(errorMessage, 'NOT_FOUND', 404)
+      }
 
-      case 429:
+      case 429: {
         const retryAfter = this.extractRetryAfter(
           error.response.headers as Record<string, string>,
         )
         throw new RateLimitError(errorMessage, retryAfter)
+      }
 
       case 500:
       case 502:
@@ -165,39 +165,56 @@ export class ErrorHandler {
       case 504:
         throw new ServerError(errorMessage, status)
 
-      default:
+      default: {
         const isRetryable = status >= 500 || status === 408 || status === 429
         throw new AzureDevOpsError(
           errorMessage,
           `HTTP_${status}`,
           status,
-          data,
+          data as Record<string, unknown> | undefined,
           isRetryable,
         )
+      }
     }
   }
 
   /**
    * Extracts error message from Azure DevOps API response
    */
-  private static extractErrorMessage(data: any): string {
+  private static extractErrorMessage(data: unknown): string {
     if (typeof data === 'string') {
       return data
     }
 
-    if (data && typeof data === 'object') {
+    if (data && typeof data === 'object' && data !== null) {
+      const errorData = data as Record<string, unknown>
+
       // Azure DevOps error format
-      if (data.message) {
-        return data.message
+      if (typeof errorData.message === 'string') {
+        return errorData.message
       }
 
       // Alternative error formats
-      if (data.error && data.error.message) {
-        return data.error.message
+      if (
+        errorData.error &&
+        typeof errorData.error === 'object' &&
+        errorData.error !== null
+      ) {
+        const nestedError = errorData.error as Record<string, unknown>
+        if (typeof nestedError.message === 'string') {
+          return nestedError.message
+        }
       }
 
-      if (data.value && data.value.message) {
-        return data.value.message
+      if (
+        errorData.value &&
+        typeof errorData.value === 'object' &&
+        errorData.value !== null
+      ) {
+        const valueError = errorData.value as Record<string, unknown>
+        if (typeof valueError.message === 'string') {
+          return valueError.message
+        }
       }
 
       // Fallback to JSON string
@@ -214,10 +231,15 @@ export class ErrorHandler {
   /**
    * Checks if error indicates invalid WIQL query
    */
-  private static isInvalidQueryError(data: any): boolean {
-    if (data && typeof data === 'object') {
-      const message = data.message?.toLowerCase() || ''
-      const typeKey = data.typeKey?.toLowerCase() || ''
+  private static isInvalidQueryError(data: unknown): boolean {
+    if (data && typeof data === 'object' && data !== null) {
+      const errorData = data as Record<string, unknown>
+      const message = (
+        typeof errorData.message === 'string' ? errorData.message : ''
+      ).toLowerCase()
+      const typeKey = (
+        typeof errorData.typeKey === 'string' ? errorData.typeKey : ''
+      ).toLowerCase()
 
       return (
         message.includes('query') ||

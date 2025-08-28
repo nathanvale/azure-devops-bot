@@ -91,6 +91,7 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
 ### TDD Approach
 
 Each major task follows Test-Driven Development:
+
 1. **Write Tests First**: Comprehensive test coverage before implementation
 2. **Implement to Pass**: Build minimal functionality to satisfy tests
 3. **Refactor and Enhance**: Improve implementation while maintaining test coverage
@@ -114,6 +115,7 @@ Each major task follows Test-Driven Development:
 ### Quality Gates
 
 Each task must meet these criteria before completion:
+
 - All new unit tests passing with coverage >80%
 - Integration tests demonstrate real-world usage
 - Performance tests validate CLI responsiveness
@@ -126,6 +128,7 @@ Each task must meet these criteria before completion:
 ### Testing Strategy
 
 Following Agent OS DEC-005 (light coverage) and DEC-006 (no database mocking):
+
 - **Unit Tests**: Focus on CLI logic, formatters, and output management
 - **Integration Tests**: Test component coordination and CLI workflows
 - **E2E Tests**: Validate complete user scenarios with real process spawning
@@ -135,6 +138,7 @@ Following Agent OS DEC-005 (light coverage) and DEC-006 (no database mocking):
 ### Error Handling Strategy
 
 Enhanced error handling throughout implementation:
+
 - **Configuration Errors**: Clear setup guidance with examples
 - **API Errors**: Structured error information with troubleshooting steps
 - **Format Errors**: Validation with suggestions for correction

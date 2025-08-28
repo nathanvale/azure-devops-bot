@@ -1,6 +1,6 @@
 /**
  * Performance Testing Utilities
- * 
+ *
  * Provides comprehensive performance monitoring and benchmarking tools
  * for validating Azure DevOps Bot production requirements.
  */
@@ -51,7 +51,7 @@ export class MemoryMonitor {
         heapTotal: usage.heapTotal,
         heapUsed: usage.heapUsed,
         external: usage.external,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
     }, intervalMs)
   }
@@ -76,7 +76,7 @@ export class MemoryMonitor {
       heapTotal: usage.heapTotal,
       heapUsed: usage.heapUsed,
       external: usage.external,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 
@@ -93,14 +93,17 @@ export class MemoryMonitor {
     samples: MemoryUsage[]
   } {
     if (this.samples.length < 2) {
-      throw new Error('Insufficient samples for analysis. Need at least 2 samples.')
+      throw new Error(
+        'Insufficient samples for analysis. Need at least 2 samples.',
+      )
     }
 
-    const heapUsages = this.samples.map(s => s.heapUsed)
-    const initialHeap = heapUsages[0]
-    const finalHeap = heapUsages[heapUsages.length - 1]
+    const heapUsages = this.samples.map((s) => s.heapUsed)
+    const initialHeap = heapUsages[0]!
+    const finalHeap = heapUsages[heapUsages.length - 1]!
     const peakHeap = Math.max(...heapUsages)
-    const avgHeap = heapUsages.reduce((sum, heap) => sum + heap, 0) / heapUsages.length
+    const avgHeap =
+      heapUsages.reduce((sum, heap) => sum + heap, 0) / heapUsages.length
 
     const heapGrowth = finalHeap - initialHeap
     const growthPercentage = (heapGrowth / initialHeap) * 100
@@ -115,7 +118,7 @@ export class MemoryMonitor {
       peakHeap,
       avgHeap,
       possibleLeak,
-      samples: [...this.samples]
+      samples: [...this.samples],
     }
   }
 
@@ -148,18 +151,20 @@ export class PerformanceTimer {
     if (this.startTime === 0) {
       throw new Error('Timer not started. Call start() first.')
     }
-    
+
     const duration = performance.now() - this.startTime
     this.measurements.push(duration)
     this.startTime = 0
-    
+
     return duration
   }
 
   /**
    * Time a function execution
    */
-  async time<T>(fn: () => Promise<T> | T): Promise<{ result: T; duration: number }> {
+  async time<T>(
+    fn: () => Promise<T> | T,
+  ): Promise<{ result: T; duration: number }> {
     this.start()
     const result = await fn()
     const duration = this.end()
@@ -176,7 +181,7 @@ export class PerformanceTimer {
 
     const sorted = [...this.measurements].sort((a, b) => a - b)
     const total = sorted.reduce((sum, time) => sum + time, 0)
-    
+
     return {
       min: Math.min(...sorted),
       max: Math.max(...sorted),
@@ -184,7 +189,7 @@ export class PerformanceTimer {
       p95: this.percentile(sorted, 95),
       p99: this.percentile(sorted, 99),
       count: sorted.length,
-      total
+      total,
     }
   }
 
@@ -193,7 +198,7 @@ export class PerformanceTimer {
    */
   private percentile(sortedArray: number[], percentile: number): number {
     const index = Math.ceil((percentile / 100) * sortedArray.length) - 1
-    return sortedArray[Math.max(0, index)]
+    return sortedArray[Math.max(0, index)] || 0
   }
 
   /**
@@ -232,7 +237,7 @@ export class LoadTestOrchestrator {
       duration: number // milliseconds
       concurrency: number
       intervalMs: number
-    }
+    },
   ): Promise<{
     results: T[]
     performanceMetrics: PerformanceMetrics
@@ -242,21 +247,23 @@ export class LoadTestOrchestrator {
     const { duration, concurrency, intervalMs } = options
     const results: T[] = []
     const errors: Error[] = []
-    
+
     // Start memory monitoring
     this.memoryMonitor.startMonitoring(1000)
-    
+
     const endTime = Date.now() + duration
     const workers: Promise<void>[] = []
 
     // Create concurrent workers
     for (let i = 0; i < concurrency; i++) {
-      workers.push(this.createWorker(operation, endTime, intervalMs, results, errors))
+      workers.push(
+        this.createWorker(operation, endTime, intervalMs, results, errors),
+      )
     }
 
     // Wait for all workers to complete
     await Promise.all(workers)
-    
+
     // Stop monitoring and analyze
     this.memoryMonitor.stopMonitoring()
     const memoryAnalysis = this.memoryMonitor.analyzeMemoryUsage()
@@ -266,7 +273,7 @@ export class LoadTestOrchestrator {
       results,
       performanceMetrics,
       memoryAnalysis,
-      errors
+      errors,
     }
   }
 
@@ -278,7 +285,7 @@ export class LoadTestOrchestrator {
     options: {
       batchSize: number
       delayBetweenBatches?: number
-    }
+    },
   ): Promise<{
     results: T[]
     performanceMetrics: PerformanceMetrics
@@ -291,10 +298,11 @@ export class LoadTestOrchestrator {
     // Process operations in batches
     for (let i = 0; i < operations.length; i += batchSize) {
       const batch = operations.slice(i, i + batchSize)
-      
+
       const batchPromises = batch.map(async (operation) => {
         try {
-          const { result, duration } = await this.performanceTimer.time(operation)
+          const { result, duration } =
+            await this.performanceTimer.time(operation)
           results.push(result)
           return { result, duration }
         } catch (error) {
@@ -304,17 +312,17 @@ export class LoadTestOrchestrator {
       })
 
       await Promise.all(batchPromises)
-      
+
       // Delay between batches if specified
       if (delayBetweenBatches > 0 && i + batchSize < operations.length) {
-        await new Promise(resolve => setTimeout(resolve, delayBetweenBatches))
+        await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches))
       }
     }
 
     return {
       results,
       performanceMetrics: this.performanceTimer.getMetrics(),
-      errors
+      errors,
     }
   }
 
@@ -326,7 +334,7 @@ export class LoadTestOrchestrator {
     endTime: number,
     intervalMs: number,
     results: T[],
-    errors: Error[]
+    errors: Error[],
   ): Promise<void> {
     while (Date.now() < endTime) {
       try {
@@ -335,9 +343,9 @@ export class LoadTestOrchestrator {
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)))
       }
-      
+
       // Wait before next operation
-      await new Promise(resolve => setTimeout(resolve, intervalMs))
+      await new Promise((resolve) => setTimeout(resolve, intervalMs))
     }
   }
 }
@@ -354,20 +362,20 @@ export class BenchmarkValidator {
   validateSyncPerformance(
     measuredTimeMs: number,
     workItemCount: number,
-    requiredMaxSeconds: number = 30
+    requiredMaxSeconds: number = 30,
   ): BenchmarkResult {
     const measuredSeconds = measuredTimeMs / 1000
     const passed = measuredSeconds <= requiredMaxSeconds
-    
+
     const result: BenchmarkResult = {
       name: 'Sync Performance',
       passed,
       measured: measuredSeconds,
       required: requiredMaxSeconds,
       unit: 'seconds',
-      details: `Synced ${workItemCount} work items in ${measuredSeconds.toFixed(2)}s (required: ≤${requiredMaxSeconds}s)`
+      details: `Synced ${workItemCount} work items in ${measuredSeconds.toFixed(2)}s (required: ≤${requiredMaxSeconds}s)`,
     }
-    
+
     this.results.push(result)
     return result
   }
@@ -377,19 +385,19 @@ export class BenchmarkValidator {
    */
   validateQueryPerformance(
     metrics: PerformanceMetrics,
-    requiredMaxMs: number = 100
+    requiredMaxMs: number = 100,
   ): BenchmarkResult {
     const passed = metrics.p95 <= requiredMaxMs
-    
+
     const result: BenchmarkResult = {
       name: 'Query Performance',
       passed,
       measured: metrics.p95,
       required: requiredMaxMs,
       unit: 'ms',
-      details: `P95: ${metrics.p95.toFixed(1)}ms, Avg: ${metrics.avg.toFixed(1)}ms, Max: ${metrics.max.toFixed(1)}ms (required: ≤${requiredMaxMs}ms)`
+      details: `P95: ${metrics.p95.toFixed(1)}ms, Avg: ${metrics.avg.toFixed(1)}ms, Max: ${metrics.max.toFixed(1)}ms (required: ≤${requiredMaxMs}ms)`,
     }
-    
+
     this.results.push(result)
     return result
   }
@@ -399,20 +407,20 @@ export class BenchmarkValidator {
    */
   validateMemoryUsage(
     memoryAnalysis: ReturnType<MemoryMonitor['analyzeMemoryUsage']>,
-    maxGrowthMB: number = 100
+    maxGrowthMB: number = 100,
   ): BenchmarkResult {
     const growthMB = memoryAnalysis.heapGrowth / (1024 * 1024)
     const passed = !memoryAnalysis.possibleLeak && growthMB <= maxGrowthMB
-    
+
     const result: BenchmarkResult = {
       name: 'Memory Usage',
       passed,
       measured: growthMB,
       required: maxGrowthMB,
       unit: 'MB',
-      details: `Heap growth: ${growthMB.toFixed(1)}MB, Leak detected: ${memoryAnalysis.possibleLeak} (required: ≤${maxGrowthMB}MB, no leaks)`
+      details: `Heap growth: ${growthMB.toFixed(1)}MB, Leak detected: ${memoryAnalysis.possibleLeak} (required: ≤${maxGrowthMB}MB, no leaks)`,
     }
-    
+
     this.results.push(result)
     return result
   }
@@ -434,15 +442,15 @@ export class BenchmarkValidator {
     failedTests: number
     results: BenchmarkResult[]
   } {
-    const passedTests = this.results.filter(r => r.passed).length
+    const passedTests = this.results.filter((r) => r.passed).length
     const failedTests = this.results.length - passedTests
-    
+
     return {
       passed: failedTests === 0,
       totalTests: this.results.length,
       passedTests,
       failedTests,
-      results: [...this.results]
+      results: [...this.results],
     }
   }
 
@@ -451,18 +459,18 @@ export class BenchmarkValidator {
    */
   generateReport(): string {
     const status = this.getOverallStatus()
-    
+
     let report = '📊 Performance Benchmark Report\n'
     report += '='.repeat(50) + '\n'
     report += `Overall Status: ${status.passed ? '✅ PASSED' : '❌ FAILED'}\n`
     report += `Tests: ${status.passedTests}/${status.totalTests} passed\n\n`
-    
-    status.results.forEach(result => {
+
+    status.results.forEach((result) => {
       const icon = result.passed ? '✅' : '❌'
       report += `${icon} ${result.name}: ${result.measured.toFixed(2)}${result.unit}\n`
       report += `   ${result.details}\n\n`
     })
-    
+
     return report
   }
 
@@ -481,12 +489,12 @@ export function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB']
   let size = bytes
   let unitIndex = 0
-  
+
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024
     unitIndex++
   }
-  
+
   return `${size.toFixed(1)} ${units[unitIndex]}`
 }
 
@@ -494,5 +502,5 @@ export function formatBytes(bytes: number): string {
  * Sleep utility for delays in tests
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

@@ -1,17 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { AzureDevOpsProvider } from '../src/provider.js'
+
 import type { AzureDevOpsClientConfig } from '../src/types/config.js'
-import type { AzureDevOpsPerson, WorkItem } from '../src/types/work-items.js'
 import type { PersonData } from '../src/types/person.js'
+import type { AzureDevOpsPerson, WorkItem } from '../src/types/work-items.js'
+
+import { AzureDevOpsProvider } from '../src/provider.js'
 
 describe('Person Data Extraction', () => {
   let provider: AzureDevOpsProvider
-  
+
   beforeEach(() => {
     const config: AzureDevOpsClientConfig = {
       organization: 'test-org',
       project: 'test-project',
-      pat: 'test-pat'
+      pat: 'test-pat',
     }
     provider = new AzureDevOpsProvider(config)
   })
@@ -23,11 +25,12 @@ describe('Person Data Extraction', () => {
         displayName: 'Nathan Vale',
         uniqueName: 'Nathan.Vale@fwc.gov.au',
         url: 'https://spsprodcus2.vssps.visualstudio.com/_apis/Identities/fe71887b-c2c7-60bd-8688-00d137e0b5f5',
-        imageUrl: 'https://dev.azure.com/fwcdev/_api/_common/identityImage?id=fe71887b-c2c7-60bd-8688-00d137e0b5f5',
-        descriptor: 'msa.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1'
+        imageUrl:
+          'https://dev.azure.com/fwcdev/_api/_common/identityImage?id=fe71887b-c2c7-60bd-8688-00d137e0b5f5',
+        descriptor: 'msa.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1',
       }
 
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const personData = provider.extractPersonData(azurePerson)
 
       expect(personData).toEqual<PersonData>({
@@ -35,20 +38,21 @@ describe('Person Data Extraction', () => {
         displayName: 'Nathan Vale',
         uniqueName: 'Nathan.Vale@fwc.gov.au',
         url: 'https://spsprodcus2.vssps.visualstudio.com/_apis/Identities/fe71887b-c2c7-60bd-8688-00d137e0b5f5',
-        imageUrl: 'https://dev.azure.com/fwcdev/_api/_common/identityImage?id=fe71887b-c2c7-60bd-8688-00d137e0b5f5',
+        imageUrl:
+          'https://dev.azure.com/fwcdev/_api/_common/identityImage?id=fe71887b-c2c7-60bd-8688-00d137e0b5f5',
         descriptor: 'msa.ZmU3MTg4N2ItYzJjNy03MGJkLTg2ODgtMDBkMTM3ZTBiNWY1',
-        inactive: false // Default value
+        inactive: false, // Default value
       })
     })
 
     it('should handle undefined person gracefully', () => {
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const personData = provider.extractPersonData(undefined)
       expect(personData).toBeNull()
     })
 
     it('should handle string input by returning null', () => {
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const personData = provider.extractPersonData('Nathan Vale')
       expect(personData).toBeNull()
     })
@@ -57,11 +61,13 @@ describe('Person Data Extraction', () => {
       const partialPerson: Partial<AzureDevOpsPerson> = {
         id: 'user-id',
         displayName: 'Test User',
-        uniqueName: 'test.user@example.com'
+        uniqueName: 'test.user@example.com',
       }
 
-      // @ts-ignore - accessing private method for testing
-      const personData = provider.extractPersonData(partialPerson as AzureDevOpsPerson)
+      // @ts-expect-error - accessing private method for testing
+      const personData = provider.extractPersonData(
+        partialPerson as AzureDevOpsPerson,
+      )
 
       expect(personData).toEqual<PersonData>({
         id: 'user-id',
@@ -70,7 +76,7 @@ describe('Person Data Extraction', () => {
         url: undefined,
         imageUrl: undefined,
         descriptor: undefined,
-        inactive: false
+        inactive: false,
       })
     })
 
@@ -81,10 +87,10 @@ describe('Person Data Extraction', () => {
         uniqueName: 'active@example.com',
         url: 'https://example.com',
         imageUrl: 'https://example.com/image.png',
-        descriptor: 'descriptor-value'
+        descriptor: 'descriptor-value',
       }
 
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const personData = provider.extractPersonData(person)
 
       expect(personData?.inactive).toBe(false)
@@ -110,7 +116,7 @@ describe('Person Data Extraction', () => {
             uniqueName: 'assigned@example.com',
             url: 'https://example.com/assigned',
             imageUrl: 'https://example.com/assigned.png',
-            descriptor: 'assigned-descriptor'
+            descriptor: 'assigned-descriptor',
           },
           'System.CreatedBy': {
             id: 'created-person-id',
@@ -118,7 +124,7 @@ describe('Person Data Extraction', () => {
             uniqueName: 'created@example.com',
             url: 'https://example.com/created',
             imageUrl: 'https://example.com/created.png',
-            descriptor: 'created-descriptor'
+            descriptor: 'created-descriptor',
           },
           'System.ChangedBy': {
             id: 'changed-person-id',
@@ -126,7 +132,7 @@ describe('Person Data Extraction', () => {
             uniqueName: 'changed@example.com',
             url: 'https://example.com/changed',
             imageUrl: 'https://example.com/changed.png',
-            descriptor: 'changed-descriptor'
+            descriptor: 'changed-descriptor',
           },
           'Microsoft.VSTS.Common.ClosedBy': {
             id: 'closed-person-id',
@@ -134,7 +140,7 @@ describe('Person Data Extraction', () => {
             uniqueName: 'closed@example.com',
             url: 'https://example.com/closed',
             imageUrl: 'https://example.com/closed.png',
-            descriptor: 'closed-descriptor'
+            descriptor: 'closed-descriptor',
           },
           'Microsoft.VSTS.Common.ResolvedBy': {
             id: 'resolved-person-id',
@@ -142,12 +148,12 @@ describe('Person Data Extraction', () => {
             uniqueName: 'resolved@example.com',
             url: 'https://example.com/resolved',
             imageUrl: 'https://example.com/resolved.png',
-            descriptor: 'resolved-descriptor'
-          }
-        }
+            descriptor: 'resolved-descriptor',
+          },
+        },
       }
 
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const workItemData = provider.mapWorkItemToDataWithPersons(workItem)
 
       // Check that all person objects are extracted
@@ -158,7 +164,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/assigned',
         imageUrl: 'https://example.com/assigned.png',
         descriptor: 'assigned-descriptor',
-        inactive: false
+        inactive: false,
       })
 
       expect(workItemData.createdByPerson).toEqual<PersonData>({
@@ -168,7 +174,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/created',
         imageUrl: 'https://example.com/created.png',
         descriptor: 'created-descriptor',
-        inactive: false
+        inactive: false,
       })
 
       expect(workItemData.changedByPerson).toEqual<PersonData>({
@@ -178,7 +184,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/changed',
         imageUrl: 'https://example.com/changed.png',
         descriptor: 'changed-descriptor',
-        inactive: false
+        inactive: false,
       })
 
       expect(workItemData.closedByPerson).toEqual<PersonData>({
@@ -188,7 +194,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/closed',
         imageUrl: 'https://example.com/closed.png',
         descriptor: 'closed-descriptor',
-        inactive: false
+        inactive: false,
       })
 
       expect(workItemData.resolvedByPerson).toEqual<PersonData>({
@@ -198,7 +204,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/resolved',
         imageUrl: 'https://example.com/resolved.png',
         descriptor: 'resolved-descriptor',
-        inactive: false
+        inactive: false,
       })
 
       // Check that legacy string fields are still populated for backward compatibility
@@ -220,11 +226,11 @@ describe('Person Data Extraction', () => {
           'System.State': 'New',
           'System.WorkItemType': 'Bug',
           'System.CreatedDate': '2025-01-01T00:00:00Z',
-          'System.ChangedDate': '2025-01-01T00:00:00Z'
-        }
+          'System.ChangedDate': '2025-01-01T00:00:00Z',
+        },
       }
 
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const workItemData = provider.mapWorkItemToDataWithPersons(workItem)
 
       expect(workItemData.assignedToPerson).toBeNull()
@@ -261,7 +267,7 @@ describe('Person Data Extraction', () => {
             uniqueName: 'activated@example.com',
             url: 'https://example.com/activated',
             imageUrl: 'https://example.com/activated.png',
-            descriptor: 'activated-descriptor'
+            descriptor: 'activated-descriptor',
           },
           'System.AuthorizedAs': {
             id: 'authorized-person-id',
@@ -269,12 +275,12 @@ describe('Person Data Extraction', () => {
             uniqueName: 'authorized@example.com',
             url: 'https://example.com/authorized',
             imageUrl: 'https://example.com/authorized.png',
-            descriptor: 'authorized-descriptor'
-          }
-        }
+            descriptor: 'authorized-descriptor',
+          },
+        },
       }
 
-      // @ts-ignore - accessing private method for testing
+      // @ts-expect-error - accessing private method for testing
       const workItemData = provider.mapWorkItemToDataWithPersons(workItem)
 
       expect(workItemData.activatedByPerson).toEqual<PersonData>({
@@ -284,7 +290,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/activated',
         imageUrl: 'https://example.com/activated.png',
         descriptor: 'activated-descriptor',
-        inactive: false
+        inactive: false,
       })
 
       expect(workItemData.authorizedAsPerson).toEqual<PersonData>({
@@ -294,7 +300,7 @@ describe('Person Data Extraction', () => {
         url: 'https://example.com/authorized',
         imageUrl: 'https://example.com/authorized.png',
         descriptor: 'authorized-descriptor',
-        inactive: false
+        inactive: false,
       })
     })
   })

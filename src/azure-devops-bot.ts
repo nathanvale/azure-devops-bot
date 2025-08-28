@@ -1,19 +1,18 @@
-import dotenv from 'dotenv'
 import { AzureDevOpsClient } from './services/azure-devops.js'
 import { DatabaseService } from './services/database.js'
 import { QueryEngine } from './services/query-engine.js'
 import { SyncService } from './services/sync-service.js'
 import { LoggerFactory } from './utils/logger.js'
 
-// Load environment variables
-dotenv.config()
+// Environment variables are loaded in index.ts or via tsx --env-file
+// No need to load dotenv here - it causes duplicate messages
 
 export class AzureDevOpsBot {
   protected syncService: SyncService
   protected db: DatabaseService
   protected queryEngine: QueryEngine
   private userEmails: string[] = []
-  private _logger?: any
+  private _logger?: ReturnType<typeof LoggerFactory.createForComponent>
 
   private get logger() {
     if (!this._logger) {
@@ -37,23 +36,23 @@ export class AzureDevOpsBot {
           error: 'missing_user_emails',
           required: true,
           examples: ['Jane.Citizen@fwc.gov.au,ITEX-JC@fwc.gov.au'],
-        }
+        },
       )
       console.error(
-        '\n❌ Error: AZURE_DEVOPS_USER_EMAILS environment variable is required\n'
+        '\n❌ Error: AZURE_DEVOPS_USER_EMAILS environment variable is required\n',
       )
       console.error('Please set your email address(es) for Azure DevOps:')
       console.error('  - These are the email addresses used in Azure DevOps')
       console.error(
-        '  - Multiple emails can be provided, comma-separated (e.g., user@company.com,alias@company.com)'
+        '  - Multiple emails can be provided, comma-separated (e.g., user@company.com,alias@company.com)',
       )
       console.error('')
       console.error('Examples:')
       console.error(
-        '  export AZURE_DEVOPS_USER_EMAILS="jane.doe@company.com,jdoe@company.com"'
+        '  export AZURE_DEVOPS_USER_EMAILS="jane.doe@company.com,jdoe@company.com"',
       )
       console.error(
-        '  AZURE_DEVOPS_USER_EMAILS="user@company.com" azure-devops-bot'
+        '  AZURE_DEVOPS_USER_EMAILS="user@company.com" azure-devops-bot',
       )
       console.error('')
       process.exit(1)
@@ -61,14 +60,17 @@ export class AzureDevOpsBot {
 
     const emails = envEmails
       .split(',')
-      .map(email => email.trim())
-      .filter(email => email.length > 0)
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0)
 
     if (emails.length === 0) {
-      this.logger.error('No valid email addresses found in AZURE_DEVOPS_USER_EMAILS', {
-        raw_value: envEmails,
-        required_min: 1,
-      })
+      this.logger.error(
+        'No valid email addresses found in AZURE_DEVOPS_USER_EMAILS',
+        {
+          raw_value: envEmails,
+          required_min: 1,
+        },
+      )
       console.error('❌ Error: No valid email addresses found')
       process.exit(1)
     }
@@ -90,7 +92,8 @@ export class AzureDevOpsBot {
       AzureDevOpsClient.setUserEmails(userEmails)
 
       const azureClient = new AzureDevOpsClient()
-      const { valid, invalid } = await azureClient.validateUserEmails(userEmails)
+      const { valid, invalid } =
+        await azureClient.validateUserEmails(userEmails)
 
       if (invalid.length > 0) {
         console.error('\n❌ Email validation failed!')
@@ -107,7 +110,7 @@ export class AzureDevOpsBot {
       }
 
       console.log(
-        `✅ All email addresses validated successfully: ${valid.join(', ')}`
+        `✅ All email addresses validated successfully: ${valid.join(', ')}`,
       )
 
       // Start background sync

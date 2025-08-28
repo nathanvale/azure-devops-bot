@@ -18,7 +18,7 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
 - [x] 2. Implement Authentication Validation Service with @orchestr8/logger
   - [x] 2.1 Write tests for AuthValidationService with success and failure scenarios
   - [x] 2.2 Create AuthValidationService with @orchestr8/resilience authentication policy
-  - [x] 2.3 Implement PAT token validation using Azure DevOps /_apis/profile/profiles/me endpoint
+  - [x] 2.3 Implement PAT token validation using Azure DevOps /\_apis/profile/profiles/me endpoint
   - [x] 2.4 Add structured @orchestr8/logger integration with proper error telemetry
   - [x] 2.5 Configure blocking authentication validation to prevent cascade failures
   - [x] 2.6 Verify all tests pass for authentication validation

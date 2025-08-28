@@ -1,16 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-import type { WorkItem, IAzureDevOpsClient } from '../../packages/azure-devops-client/dist/index.js'
+import type {
+  WorkItem,
+  AzureDevOpsRestClient,
+} from '../../packages/azure-devops-client/dist/index.js'
 
 import { FieldDiscoveryService } from '../field-discovery'
 
 describe('FieldDiscoveryService', () => {
   let service: FieldDiscoveryService
-  let mockClient: IAzureDevOpsClient
+  let mockClient: AzureDevOpsRestClient
 
   beforeEach(() => {
     vi.resetAllMocks()
-    
+
     mockClient = {
       getWorkItem: vi.fn(),
       getWorkItemsBatch: vi.fn(),
@@ -19,8 +22,11 @@ describe('FieldDiscoveryService', () => {
       addWorkItemComment: vi.fn(),
       batchGetWorkItems: vi.fn(),
       batchGetComments: vi.fn(),
-    }
-    
+      getCurrentUserProfile: vi.fn(),
+      getCurrentUserProfileDirect: vi.fn(),
+      linkWorkItemToPullRequest: vi.fn(),
+    } as unknown as AzureDevOpsRestClient
+
     service = new FieldDiscoveryService(mockClient)
   })
 
@@ -30,12 +36,17 @@ describe('FieldDiscoveryService', () => {
         id: 1234,
         rev: 15,
         fields: {
+          'System.Id': 1234,
           'System.Title': 'Comprehensive Test Work Item',
           'System.State': 'Active',
           'System.WorkItemType': 'User Story',
           'System.AssignedTo': {
             displayName: 'Nathan Vale',
             uniqueName: 'nathan.vale@example.com',
+            url: 'https://test.dev.azure.com/user1',
+            id: '123',
+            imageUrl: 'https://test.dev.azure.com/avatar1',
+            descriptor: 'descriptor123'
           },
           'System.ChangedDate': '2025-08-21T10:30:00Z',
           'System.CreatedDate': '2025-08-15T09:00:00Z',
@@ -55,10 +66,18 @@ describe('FieldDiscoveryService', () => {
           'System.CreatedBy': {
             displayName: 'Product Owner',
             uniqueName: 'po@example.com',
+            url: 'https://test.dev.azure.com/user-po',
+            id: '456',
+            imageUrl: 'https://test.dev.azure.com/avatar-po',
+            descriptor: 'descriptor-po',
           },
           'System.ChangedBy': {
             displayName: 'Nathan Vale',
             uniqueName: 'nathan.vale@example.com',
+            url: 'https://test.dev.azure.com/user1',
+            id: '123',
+            imageUrl: 'https://test.dev.azure.com/avatar1',
+            descriptor: 'descriptor123'
           },
           'Microsoft.VSTS.Common.Priority': 1,
           'Microsoft.VSTS.Common.Severity': '2 - High',
@@ -103,9 +122,13 @@ describe('FieldDiscoveryService', () => {
           },
         ],
         _links: {
-          self: {
-            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
-          },
+          self: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234' },
+          workItemUpdates: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/comments' },
+          html: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/html' },
+          workItemType: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/type' },
+          fields: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/fields' }
         },
       }
 
@@ -118,7 +141,9 @@ describe('FieldDiscoveryService', () => {
     })
 
     it('should handle REST API errors when fetching work item', async () => {
-      vi.mocked(mockClient.getWorkItem).mockRejectedValue(new Error('Work item not found'))
+      vi.mocked(mockClient.getWorkItem).mockRejectedValue(
+        new Error('Work item not found'),
+      )
 
       await expect(service.fetchWorkItemWithAllFields(9999)).rejects.toThrow(
         'Work item not found',
@@ -126,9 +151,13 @@ describe('FieldDiscoveryService', () => {
     })
 
     it('should handle REST API client errors', async () => {
-      vi.mocked(mockClient.getWorkItem).mockRejectedValue(new Error('Invalid response'))
+      vi.mocked(mockClient.getWorkItem).mockRejectedValue(
+        new Error('Invalid response'),
+      )
 
-      await expect(service.fetchWorkItemWithAllFields(1234)).rejects.toThrow('Invalid response')
+      await expect(service.fetchWorkItemWithAllFields(1234)).rejects.toThrow(
+        'Invalid response',
+      )
     })
   })
 
@@ -145,6 +174,10 @@ describe('FieldDiscoveryService', () => {
           'System.AssignedTo': {
             displayName: 'Nathan Vale',
             uniqueName: 'nathan.vale@example.com',
+            url: 'https://test.dev.azure.com/user1',
+            id: '123',
+            imageUrl: 'https://test.dev.azure.com/avatar1',
+            descriptor: 'descriptor123'
           },
           'System.CreatedDate': '2025-08-21T09:00:00Z',
           'System.ChangedDate': '2025-08-21T10:30:00Z',
@@ -159,9 +192,13 @@ describe('FieldDiscoveryService', () => {
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         relations: [],
         _links: {
-          self: {
-            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
-          },
+          self: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234' },
+          workItemUpdates: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/comments' },
+          html: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/html' },
+          workItemType: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/type' },
+          fields: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/fields' }
         },
       }
 
@@ -197,9 +234,13 @@ describe('FieldDiscoveryService', () => {
         },
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         _links: {
-          self: {
-            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
-          },
+          self: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234' },
+          workItemUpdates: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/comments' },
+          html: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/html' },
+          workItemType: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/type' },
+          fields: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/fields' }
         },
       }
 
@@ -226,16 +267,27 @@ describe('FieldDiscoveryService', () => {
           'System.CommentCount': 5,
           'Microsoft.VSTS.Scheduling.StoryPoints': 3.5,
           'System.BoardColumnDone': true,
-          'System.AssignedTo': { displayName: 'User' },
-          'System.Tags': null,
+          'System.AssignedTo': {
+            displayName: 'User',
+            uniqueName: 'user@example.com',
+            url: 'https://test.dev.azure.com/user',
+            id: '789',
+            imageUrl: 'https://test.dev.azure.com/avatar-user',
+            descriptor: 'descriptor-user',
+          },
+          'System.Tags': undefined,
           'System.Description': '',
           'Custom.Array': [1, 2, 3],
         },
         url: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
         _links: {
-          self: {
-            href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234',
-          },
+          self: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234' },
+          workItemUpdates: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/comments' },
+          html: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/html' },
+          workItemType: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/type' },
+          fields: { href: 'https://dev.azure.com/fwcdev/_apis/wit/workItems/1234/fields' }
         },
       }
 
@@ -248,7 +300,7 @@ describe('FieldDiscoveryService', () => {
       )
       expect(result.fieldTypes['System.BoardColumnDone']).toBe('boolean')
       expect(result.fieldTypes['System.AssignedTo']).toBe('object')
-      expect(result.fieldTypes['System.Tags']).toBe('null')
+      expect(result.fieldTypes['System.Tags']).toBe('undefined')
       expect(result.fieldTypes['System.Description']).toBe('string')
       expect(result.fieldTypes['Custom.Array']).toBe('array')
     })
@@ -328,25 +380,49 @@ describe('FieldDiscoveryService', () => {
         id: 1234,
         rev: 15,
         fields: {
+          'System.Id': 1234,
           'System.Title': 'Work Item 1',
           'System.State': 'Active',
+          'System.WorkItemType': 'User Story',
+          'System.CreatedDate': '2025-01-01T00:00:00Z',
+          'System.ChangedDate': '2025-01-01T00:00:00Z',
           'Microsoft.VSTS.Common.Priority': 1,
         },
         url: 'https://dev.azure.com/test/1234',
-        _links: { self: { href: 'https://dev.azure.com/test/1234' } },
+        _links: {
+          self: { href: 'https://dev.azure.com/test/1234' },
+          workItemUpdates: { href: 'https://dev.azure.com/test/1234/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/test/1234/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/test/1234/comments' },
+          html: { href: 'https://dev.azure.com/test/1234/html' },
+          workItemType: { href: 'https://dev.azure.com/test/1234/type' },
+          fields: { href: 'https://dev.azure.com/test/1234/fields' }
+        },
       }
 
       const workItem2: WorkItem = {
         id: 5678,
         rev: 8,
         fields: {
+          'System.Id': 5678,
           'System.Title': 'Work Item 2',
+          'System.State': 'Active',
           'System.WorkItemType': 'Bug',
+          'System.CreatedDate': '2025-01-01T00:00:00Z',
+          'System.ChangedDate': '2025-01-01T00:00:00Z',
           'Microsoft.VSTS.Scheduling.StoryPoints': 3.0,
           'Custom.RiskLevel': 'Low',
         },
         url: 'https://dev.azure.com/test/5678',
-        _links: { self: { href: 'https://dev.azure.com/test/5678' } },
+        _links: {
+          self: { href: 'https://dev.azure.com/test/5678' },
+          workItemUpdates: { href: 'https://dev.azure.com/test/5678/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/test/5678/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/test/5678/comments' },
+          html: { href: 'https://dev.azure.com/test/5678/html' },
+          workItemType: { href: 'https://dev.azure.com/test/5678/type' },
+          fields: { href: 'https://dev.azure.com/test/5678/fields' }
+        },
       }
 
       vi.mocked(mockClient.getWorkItem)
@@ -369,10 +445,25 @@ describe('FieldDiscoveryService', () => {
     it('should handle errors when fetching individual work items', async () => {
       const successWorkItem: WorkItem = {
         id: 1234,
-        fields: { 'System.Title': 'Success' },
+        fields: {
+          'System.Id': 1234,
+          'System.Title': 'Success',
+          'System.State': 'Active',
+          'System.WorkItemType': 'User Story',
+          'System.CreatedDate': '2025-01-01T00:00:00Z',
+          'System.ChangedDate': '2025-01-01T00:00:00Z',
+        },
         rev: 1,
         url: 'https://dev.azure.com/test/1234',
-        _links: { self: { href: 'https://dev.azure.com/test/1234' } },
+        _links: {
+          self: { href: 'https://dev.azure.com/test/1234' },
+          workItemUpdates: { href: 'https://dev.azure.com/test/1234/updates' },
+          workItemRevisions: { href: 'https://dev.azure.com/test/1234/revisions' },
+          workItemComments: { href: 'https://dev.azure.com/test/1234/comments' },
+          html: { href: 'https://dev.azure.com/test/1234/html' },
+          workItemType: { href: 'https://dev.azure.com/test/1234/type' },
+          fields: { href: 'https://dev.azure.com/test/1234/fields' }
+        },
       }
 
       vi.mocked(mockClient.getWorkItem)

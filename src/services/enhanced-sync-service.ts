@@ -1,18 +1,20 @@
 import type { Logger } from '@orchestr8/logger'
-import { LoggerFactory } from '../utils/logger.js'
-import { ProductionResilienceAdapter } from '@orchestr8/resilience'
 import type { ResiliencePolicy } from '@orchestr8/resilience'
 
+import { ProductionResilienceAdapter } from '@orchestr8/resilience'
+
 import type { IAzureDevOpsClient } from '../packages/azure-devops-client/src/interfaces/client.js'
-import type { WorkItemData } from './azure-devops.js'
+import type { WorkItemData, WorkItemCommentData } from './azure-devops.js'
 import type { DatabaseService } from './database.js'
-import { AuthValidationService } from './auth-validation.js'
-import { ResiliencePolicySelector } from '../utils/resilience-policies.js'
+
 import { ErrorAggregator } from '../utils/error-aggregator.js'
+import { LoggerFactory } from '../utils/logger.js'
+import { ResiliencePolicySelector } from '../utils/resilience-policies.js'
+import { AuthValidationService } from './auth-validation.js'
 
 /**
  * Enhanced Sync Service with @orchestr8/resilience integration
- * 
+ *
  * Replaces the original SyncService with comprehensive resilience patterns:
  * - Blocking authentication validation prevents cascade failures
  * - Operation-specific resilience policies (auth, sync, batch, rate-limit)
@@ -27,12 +29,12 @@ export class EnhancedSyncService {
 
   constructor(
     private client: IAzureDevOpsClient,
-    private database: DatabaseService
+    private database: DatabaseService,
   ) {
     this.initializeServices()
     this.authValidationService = new AuthValidationService(client)
     this.resilienceAdapter = new ProductionResilienceAdapter({
-      telemetry: this.createResilienceTelemetry()
+      telemetry: this.createResilienceTelemetry() as any,
     })
   }
 
@@ -46,7 +48,7 @@ export class EnhancedSyncService {
 
   /**
    * Enhanced sync operation with comprehensive resilience and authentication validation
-   * 
+   *
    * Flow:
    * 1. Blocking authentication validation (prevents cascade failures)
    * 2. Discover work item IDs using sync operations policy
@@ -57,7 +59,7 @@ export class EnhancedSyncService {
    */
   async performEnhancedSync(concurrencyLimit: number = 5): Promise<void> {
     const start = performance.now()
-    
+
     // Ensure services are initialized
     if (!this.logger || !this.resilienceAdapter) {
       await this.initializeServices()
@@ -66,7 +68,7 @@ export class EnhancedSyncService {
     this.logger?.info('Starting enhanced sync operation', {
       component: 'enhanced-sync-service',
       concurrencyLimit,
-      operation: 'enhanced_sync'
+      operation: 'enhanced_sync',
     })
 
     const errorAggregator = new ErrorAggregator(this.logger)
@@ -81,14 +83,14 @@ export class EnhancedSyncService {
       this.logger?.info('Work items discovered for enhanced sync', {
         component: 'enhanced-sync-service',
         discoveredCount: workItemIds.length,
-        operation: 'work_item_discovery'
+        operation: 'work_item_discovery',
       })
 
       // Step 3: Fetch detailed work items using batch operations policy
       const detailedWorkItems = await this.fetchWorkItemsWithBatchResilience(
         workItemIds,
         concurrencyLimit,
-        errorAggregator
+        errorAggregator,
       )
 
       // Step 4: Store work items
@@ -103,11 +105,11 @@ export class EnhancedSyncService {
         component: 'enhanced-sync-service',
         durationMs: duration,
         totalWorkItems: detailedWorkItems.length,
-        operation: 'enhanced_sync'
+        operation: 'enhanced_sync',
       })
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       const duration = performance.now() - start
 
       errorAggregator.recordError(errorMessage)
@@ -116,7 +118,7 @@ export class EnhancedSyncService {
         component: 'enhanced-sync-service',
         error: errorMessage,
         durationMs: duration,
-        operation: 'enhanced_sync'
+        operation: 'enhanced_sync',
       })
 
       throw error
@@ -131,14 +133,18 @@ export class EnhancedSyncService {
     const result = await this.authValidationService.validateAuthentication()
 
     if (!result.success) {
-      const errorMessage = result.error ? result.error.message : 'Unknown authentication error'
-      throw new Error(`Authentication validation failed before sync: ${errorMessage}`)
+      const errorMessage = result.error
+        ? result.error.message
+        : 'Unknown authentication error'
+      throw new Error(
+        `Authentication validation failed before sync: ${errorMessage}`,
+      )
     }
 
     this.logger?.debug('Authentication validation passed', {
       component: 'enhanced-sync-service',
       userId: result.profile?.id,
-      operation: 'auth_validation'
+      operation: 'auth_validation',
     })
   }
 
@@ -148,12 +154,13 @@ export class EnhancedSyncService {
   private async discoverWorkItemIds(): Promise<number[]> {
     const syncPolicy = ResiliencePolicySelector.getPolicy('sync')
 
-    const workItems = await this.resilienceAdapter.applyNormalizedPolicy(
-      () => this.client.fetchWorkItems(),
-      syncPolicy
-    ) as WorkItemData[]
+    const workItems = (await this.resilienceAdapter.applyNormalizedPolicy(
+      () => this.client.getWorkItemsBatch(),
+      syncPolicy,
+      'retry-cb-timeout',
+    )) as unknown as WorkItemData[]
 
-    return workItems.map(item => item.id)
+    return workItems.map((item) => Number(item.id))
   }
 
   /**
@@ -162,11 +169,11 @@ export class EnhancedSyncService {
   private async fetchWorkItemsWithBatchResilience(
     idList: number[],
     concurrencyLimit: number,
-    errorAggregator: ErrorAggregator
+    errorAggregator: ErrorAggregator,
   ): Promise<WorkItemData[]> {
     const results: WorkItemData[] = []
     const batchPolicy = ResiliencePolicySelector.getPolicy('batch')
-    
+
     // Process items with controlled concurrency
     const semaphore = new Array(concurrencyLimit).fill(null)
     let currentIndex = 0
@@ -180,22 +187,25 @@ export class EnhancedSyncService {
           if (!workItemId) continue
 
           try {
-            const workItem = await this.resilienceAdapter.applyNormalizedPolicy(
-              () => this.client.fetchSingleWorkItem(workItemId),
-              batchPolicy
-            ) as WorkItemData
+            const workItem =
+              (await this.resilienceAdapter.applyNormalizedPolicy(
+                () => this.client.getWorkItem(workItemId),
+                batchPolicy,
+                'timeout-cb-retry',
+              )) as unknown as WorkItemData
 
             results[index] = workItem
             errorAggregator.recordSuccess(workItemId)
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error)
+            const errorMessage =
+              error instanceof Error ? error.message : String(error)
             errorAggregator.recordError(errorMessage, workItemId)
-            
+
             this.logger?.warn('Failed to fetch work item', {
               component: 'enhanced-sync-service',
               workItemId,
               error: errorMessage,
-              operation: 'work_item_fetch'
+              operation: 'work_item_fetch',
             })
           }
         }
@@ -215,7 +225,7 @@ export class EnhancedSyncService {
    */
   private async syncCommentsWithResilience(
     workItems: WorkItemData[],
-    errorAggregator: ErrorAggregator
+    errorAggregator: ErrorAggregator,
   ): Promise<void> {
     const lastSyncTime = await this.database.getLastSyncTime()
     let checkedCount = 0
@@ -225,7 +235,7 @@ export class EnhancedSyncService {
     this.logger?.info('Starting comment sync', {
       component: 'enhanced-sync-service',
       workItemCount: workItems.length,
-      operation: 'comment_sync'
+      operation: 'comment_sync',
     })
 
     // Filter work items that need comment sync
@@ -235,24 +245,25 @@ export class EnhancedSyncService {
 
       try {
         const needsSync = await this.database.needsCommentSync(
-          workItem.id,
+          Number(workItem.id),
           workItem.commentCount || 0,
-          workItem.changedDate || null,
-          lastSyncTime
+          workItem.changedDate ? new Date(workItem.changedDate) : null,
+          lastSyncTime,
         )
 
         if (needsSync) {
           workItemsNeedingSync.push(workItem)
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        errorAggregator.recordError(errorMessage, workItem.id)
-        
+        const errorMessage =
+          error instanceof Error ? error.message : String(error)
+        errorAggregator.recordError(errorMessage, Number(workItem.id))
+
         this.logger?.warn('Failed to check comment sync status', {
           component: 'enhanced-sync-service',
           workItemId: workItem.id,
           error: errorMessage,
-          operation: 'comment_sync_check'
+          operation: 'comment_sync_check',
         })
       }
     }
@@ -261,7 +272,7 @@ export class EnhancedSyncService {
       this.logger?.info('No work items need comment sync', {
         component: 'enhanced-sync-service',
         checkedCount,
-        operation: 'comment_sync'
+        operation: 'comment_sync',
       })
       return
     }
@@ -275,14 +286,18 @@ export class EnhancedSyncService {
       // Start new tasks up to concurrency limit
       while (inProgress.size < CONCURRENCY && queue.length > 0) {
         const workItem = queue.shift()!
-        const promise = this.syncSingleWorkItemCommentsWithResilience(workItem, syncPolicy)
+        const promise = this.syncSingleWorkItemCommentsWithResilience(
+          workItem,
+          syncPolicy,
+        )
           .then(() => {
             syncedCount++
-            errorAggregator.recordSuccess(workItem.id)
+            errorAggregator.recordSuccess(Number(workItem.id))
           })
           .catch((error) => {
-            const errorMessage = error instanceof Error ? error.message : String(error)
-            errorAggregator.recordError(errorMessage, workItem.id)
+            const errorMessage =
+              error instanceof Error ? error.message : String(error)
+            errorAggregator.recordError(errorMessage, Number(workItem.id))
           })
           .finally(() => {
             inProgress.delete(promise)
@@ -301,7 +316,7 @@ export class EnhancedSyncService {
       component: 'enhanced-sync-service',
       checkedCount,
       syncedCount,
-      operation: 'comment_sync'
+      operation: 'comment_sync',
     })
   }
 
@@ -310,25 +325,27 @@ export class EnhancedSyncService {
    */
   private async syncSingleWorkItemCommentsWithResilience(
     workItem: WorkItemData,
-    policy: ResiliencePolicy
+    policy: ResiliencePolicy,
   ): Promise<void> {
     try {
       const comments = await this.resilienceAdapter.applyNormalizedPolicy(
-        () => this.client.fetchWorkItemComments(workItem.id),
-        policy
+        () => this.client.getWorkItemComments(Number(workItem.id)),
+        policy,
+        'retry-cb-timeout',
       )
 
-      await this.database.storeWorkItemComments(comments)
+      await this.database.storeWorkItemComments(comments as unknown as WorkItemCommentData[])
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
       this.logger?.warn('Failed to sync comments for work item', {
         component: 'enhanced-sync-service',
         workItemId: workItem.id,
         error: errorMessage,
-        operation: 'single_comment_sync'
+        operation: 'single_comment_sync',
       })
-      
+
       throw error
     }
   }
@@ -351,7 +368,7 @@ export class EnhancedSyncService {
       } catch (error) {
         this.logger?.error('Background enhanced sync failed', {
           component: 'enhanced-sync-service',
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }, SYNC_INTERVAL)
@@ -359,7 +376,7 @@ export class EnhancedSyncService {
     this.logger?.info('Background enhanced sync started', {
       component: 'enhanced-sync-service',
       intervalMinutes,
-      operation: 'background_sync_start'
+      operation: 'background_sync_start',
     })
   }
 
@@ -370,9 +387,9 @@ export class EnhancedSyncService {
     if (this.syncInterval) {
       clearInterval(this.syncInterval)
       this.syncInterval = null
-      
+
       this.logger?.info('Background enhanced sync stopped', {
-        component: 'enhanced-sync-service'
+        component: 'enhanced-sync-service',
       })
     }
   }
@@ -390,7 +407,7 @@ export class EnhancedSyncService {
         this.logger?.warn('Invalid sync interval, using default', {
           component: 'enhanced-sync-service',
           invalidValue: envInterval,
-          defaultInterval
+          defaultInterval,
         })
         return defaultInterval * 60 * 1000
       }
@@ -406,9 +423,9 @@ export class EnhancedSyncService {
   async close(): Promise<void> {
     this.stopBackgroundSync()
     await this.database.close()
-    
+
     this.logger?.info('Enhanced sync service closed', {
-      component: 'enhanced-sync-service'
+      component: 'enhanced-sync-service',
     })
   }
 
@@ -417,42 +434,58 @@ export class EnhancedSyncService {
    */
   private createResilienceTelemetry() {
     return {
-      logEvent: (type: string, context: any, metadata?: Record<string, unknown>) => {
+      logEvent: (
+        type: string,
+        context: unknown,
+        metadata?: Record<string, unknown>,
+      ) => {
         this.logger?.info(`Resilience event: ${type}`, { context, metadata })
       },
-      
+
       createCircuitBreakerObserver: () => ({
-        onStateChange: (key: string, state: 'closed' | 'open' | 'half-open') => {
+        onStateChange: (
+          key: string,
+          state: 'closed' | 'open' | 'half-open',
+        ) => {
           if (state === 'open') {
-            this.logger?.error('Sync circuit breaker opened - sync failures detected', { 
-              circuitKey: key,
-              action: 'blocking_further_attempts'
-            })
+            this.logger?.error(
+              'Sync circuit breaker opened - sync failures detected',
+              {
+                circuitKey: key,
+                action: 'blocking_further_attempts',
+              },
+            )
           } else if (state === 'closed') {
-            this.logger?.info('Sync circuit breaker closed - sync operations recovered', { 
-              circuitKey: key 
-            })
+            this.logger?.info(
+              'Sync circuit breaker closed - sync operations recovered',
+              {
+                circuitKey: key,
+              },
+            )
           } else if (state === 'half-open') {
-            this.logger?.warn('Sync circuit breaker half-open - testing recovery', {
-              circuitKey: key
-            })
+            this.logger?.warn(
+              'Sync circuit breaker half-open - testing recovery',
+              {
+                circuitKey: key,
+              },
+            )
           }
-        }
+        },
       }),
-      
+
       startTimer: (operation: string) => {
         const start = performance.now()
         return () => {
           const duration = performance.now() - start
           this.logger?.debug('Enhanced sync timing', {
             operation,
-            durationMs: duration
+            durationMs: duration,
           })
           return duration
         }
       },
-      
-      getLogger: () => this.logger
+
+      getLogger: () => this.logger,
     }
   }
 }

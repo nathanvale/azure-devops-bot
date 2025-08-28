@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "mcp": "tsx src/mcp-server.ts",
+    "mcp:v2": "tsx src/mcp-server-v2.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
@@ -60,7 +61,9 @@
     "pino-pretty": "^13.1.1",
     "prisma": "^6.11.1",
     "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "zod": "^4.1.4",
+    "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

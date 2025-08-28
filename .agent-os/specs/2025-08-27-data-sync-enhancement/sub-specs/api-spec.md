@@ -47,11 +47,11 @@ private async handleGetWorkItemsByAssignee(args?: {
   includeComments?: boolean
 }) {
   const logger = getLogger()
-  
+
   if (!args?.email) {
     throw new Error('Email address is required')
   }
-  
+
   logger.info('Querying work items by assignee', {
     component: 'mcp-server',
     assignee: args.email,
@@ -59,13 +59,13 @@ private async handleGetWorkItemsByAssignee(args?: {
     includeComments: args.includeComments || false,
     operation: 'get_by_assignee'
   })
-  
+
   const workItems = await this.db.getWorkItemsByAssignee(
     args.email,
     args.state,
     args.includeComments
   )
-  
+
   return {
     content: [
       {
@@ -128,7 +128,7 @@ private async handleGetCurrentSprintItems(args?: {
   groupBy?: string
 }) {
   const logger = getLogger()
-  
+
   logger.info('Fetching current sprint items', {
     component: 'mcp-server',
     filters: {
@@ -138,15 +138,15 @@ private async handleGetCurrentSprintItems(args?: {
     },
     operation: 'get_current_sprint'
   })
-  
+
   const items = await this.db.getCurrentSprintItems(args)
-  
+
   // Group if requested
   let result = items
   if (args?.groupBy && args.groupBy !== 'none') {
     result = this.groupWorkItems(items, args.groupBy)
   }
-  
+
   return {
     content: [
       {
@@ -213,7 +213,7 @@ private async handleGetWorkItemsByState(args?: {
   if (!args?.state) {
     throw new Error('State is required')
   }
-  
+
   const logger = getLogger()
   logger.info('Querying work items by state', {
     component: 'mcp-server',
@@ -223,14 +223,14 @@ private async handleGetWorkItemsByState(args?: {
     sortBy: args.sortBy || 'changedDate',
     operation: 'get_by_state'
   })
-  
+
   const items = await this.db.getWorkItemsByState(
     args.state,
     args.type,
     args.limit,
     args.sortBy
   )
-  
+
   return {
     content: [
       {
@@ -294,7 +294,7 @@ private async handleGetTeamWorkItems(args?: {
   if (!args?.areaPath) {
     throw new Error('Area path is required')
   }
-  
+
   const logger = getLogger()
   logger.info('Fetching team work items', {
     component: 'mcp-server',
@@ -304,12 +304,12 @@ private async handleGetTeamWorkItems(args?: {
     activeOnly: args.activeOnly ?? false,
     operation: 'get_team_items'
   })
-  
+
   const items = await this.db.getTeamWorkItems(args)
-  
+
   // Calculate team metrics
   const metrics = this.calculateTeamMetrics(items)
-  
+
   return {
     content: [
       {
@@ -377,7 +377,7 @@ private async handleGetWorkItemWithRelations(args?: {
   if (!args?.id) {
     throw new Error('Work item ID is required')
   }
-  
+
   const logger = getLogger()
   logger.info('Fetching work item with relations', {
     component: 'mcp-server',
@@ -387,22 +387,22 @@ private async handleGetWorkItemWithRelations(args?: {
     depth: args.depth || 1,
     operation: 'get_with_relations'
   })
-  
+
   const workItem = await this.db.getWorkItemWithFullRelations(
     args.id,
     args.depth || 1
   )
-  
+
   if (!workItem) {
     throw new Error(`Work item ${args.id} not found`)
   }
-  
+
   // Build relationship tree
   const relationshipTree = await this.buildRelationshipTree(
     workItem,
     args.depth || 1
   )
-  
+
   return {
     content: [
       {
@@ -435,7 +435,7 @@ async getWorkItemsByAssignee(
   if (state && state !== 'all') {
     where.state = state
   }
-  
+
   return await this.prisma.workItem.findMany({
     where,
     include: includeComments ? {
@@ -457,24 +457,24 @@ async getCurrentSprintItems(filters?: {
   includeUnassigned?: boolean
 }) {
   const where: any = {}
-  
+
   // Find current sprint pattern (customize for your org)
   const currentDate = new Date()
   const sprintNumber = Math.floor((currentDate.getDate() - 1) / 14) + 1
   where.iterationPath = {
     contains: `Sprint ${sprintNumber}`,
   }
-  
+
   if (filters?.state && filters.state !== 'all') {
     where.state = filters.state
   }
-  
+
   if (filters?.assignee) {
     where.assignedTo = filters.assignee
   } else if (!filters?.includeUnassigned) {
     where.assignedTo = { not: 'Unassigned' }
   }
-  
+
   return await this.prisma.workItem.findMany({
     where,
     include: {
@@ -501,7 +501,7 @@ async getWorkItemsByState(
   if (type && type !== 'all') {
     where.type = type
   }
-  
+
   const orderBy: any = {}
   switch (sortBy) {
     case 'priority':
@@ -516,7 +516,7 @@ async getWorkItemsByState(
     default:
       orderBy.changedDate = 'desc'
   }
-  
+
   return await this.prisma.workItem.findMany({
     where,
     orderBy,
@@ -531,7 +531,7 @@ async getTeamWorkItems(options: {
   activeOnly?: boolean
 }) {
   const where: any = {}
-  
+
   if (options.includeSubAreas) {
     where.areaPath = {
       startsWith: options.areaPath,
@@ -539,17 +539,17 @@ async getTeamWorkItems(options: {
   } else {
     where.areaPath = options.areaPath
   }
-  
+
   if (options.iterationPath) {
     where.iterationPath = options.iterationPath
   }
-  
+
   if (options.activeOnly) {
     where.state = {
       notIn: ['Closed', 'Done', 'Removed'],
     }
   }
-  
+
   return await this.prisma.workItem.findMany({
     where,
     include: {
@@ -587,30 +587,30 @@ async getWorkItemWithFullRelations(
       links: true,
     },
   })
-  
+
   if (!workItem || depth <= 0) {
     return workItem
   }
-  
+
   // Recursively fetch related items up to depth
   const relatedIds = [
     ...workItem.sourceRelations.map(r => r.targetId),
     ...workItem.targetRelations.map(r => r.sourceId),
   ]
-  
+
   if (relatedIds.length > 0 && depth > 1) {
     const relatedItems = await Promise.all(
       relatedIds.map(id =>
         this.getWorkItemWithFullRelations(id, depth - 1)
       )
     )
-    
+
     return {
       ...workItem,
       relatedItems,
     }
   }
-  
+
   return workItem
 }
 ```
